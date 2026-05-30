@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  clientName  String
+  eventType   String
+  description String?
+  shareId     String   @unique
+  createdAt   DateTime @default(now())
+
+  folders Folder[]
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  images Image[]
+}
+
+model Image {
+  id         String   @id @default(cuid())
+  imageUrl   String
+  publicId   String?
+  fileName   String?
+  folderId   String
+  isSelected Boolean  @default(false)
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  selections Selection[]
+}
+
+model Selection {
+  id        String   @id @default(cuid())
+  imageId   String
+  comment   String?
+  createdAt DateTime @default(now())
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
