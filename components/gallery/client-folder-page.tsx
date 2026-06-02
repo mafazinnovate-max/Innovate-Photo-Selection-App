@@ -1,7 +1,9 @@
 "use client";
 
 import { saveSelections } from "@/actions/save-selections";
+import { ArrowLeft, LocateFixedIcon, MoveLeft, PhoneCall } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 interface GalleryImage {
@@ -16,12 +18,14 @@ interface ClientFolderPageProps {
   images: GalleryImage[];
   folderName: string;
   folderId: string;
+  shareId: string;
 }
 
 export default function ClientFolderPage({
   images,
   folderName,
   folderId,
+  shareId
 }: ClientFolderPageProps) {
   const [selectedImages, setSelectedImages] = useState(
     images.filter((img) => img.isSelected).map((img) => img.id),
@@ -48,6 +52,10 @@ export default function ClientFolderPage({
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const [showCommentedOnly, setShowCommentedOnly] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const toggleSelect = (id: string) => {
     setHasUnsavedChanges(true);
@@ -57,11 +65,25 @@ export default function ClientFolderPage({
     );
   };
 
-  const filteredImages = showSelectedOnly
-    ? images.filter((image) => selectedImages.includes(image.id))
-    : images;
+  let filteredImages = images;
+
+  if (showSelectedOnly) {
+    filteredImages = filteredImages.filter((image) =>
+      selectedImages.includes(image.id)
+    );
+  }
+
+  if (showCommentedOnly) {
+    filteredImages = filteredImages.filter(
+      (image) => (comments[image.id] || "").trim().length > 0
+    );
+  }
 
   const visibleImages = filteredImages.slice(0, visibleCount);
+
+  const getSelectionNumber = (imageId: string) => {
+    return selectedImages.indexOf(imageId) + 1;
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -140,6 +162,10 @@ export default function ClientFolderPage({
       setTimeout(() => {
         setShowSuccessToast(false);
       }, 3000);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.log(error);
 
@@ -287,10 +313,76 @@ export default function ClientFolderPage({
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-black/80 backdrop-blur">
+
+      {/* Logo + Contact Section (NOT STICKY) */}
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6 border-b border-zinc-800">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          {/* Logo */}
+          <div
+            className="flex justify-start gap-3 cursor-pointer"
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                setPendingNavigation(`/gallery/${shareId}`);
+                setShowLeaveModal(true);
+                return;
+              }
+
+              router.push(`/gallery/${shareId}`);
+            }}
+          >
+            <ArrowLeft
+              size={18}
+              className=""
+            />
+            <Image
+              src="/innovate-logo.png"
+              alt="logo"
+              className="h-auto w-[180px] object-contain sm:w-[220px] md:w-[250px]"
+              width={250}
+              height={150}
+              priority
+            />
+          </div>
+
+          {/* Contact Info */}
+          <div className="w-full max-w-lg space-y-4 text-sm text-zinc-300">
+            <div className="flex items-start gap-3">
+              <PhoneCall
+                size={18}
+                className="mt-0.5 shrink-0 text-zinc-400"
+              />
+
+              <a href="tel:+919876543210">
+                +91 98765 43210
+              </a>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <LocateFixedIcon
+                size={18}
+                className="mt-0.5 shrink-0 text-zinc-400"
+              />
+
+              <p>
+                Innovate Wedding Company,
+                Pattakasalianvilai Rd,
+                Vattakarai,
+                Maravankudieruppu,
+                Nagercoil,
+                Tamil Nadu 629002
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* STICKY SECTION */}
+      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-black/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{folderName}</h1>
+            <h1 className="text-2xl font-bold">
+              {folderName}
+            </h1>
 
             <p className="mt-1 text-sm text-zinc-400">
               Select your favorite photos
@@ -300,25 +392,51 @@ export default function ClientFolderPage({
           <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
             <button
               onClick={() => setShowSelectedOnly((prev) => !prev)}
-              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${
-                showSelectedOnly
-                  ? "border-white bg-white text-black"
-                  : "border-zinc-700 hover:bg-zinc-900"
-              }`}
+              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${showSelectedOnly
+                ? "border-white bg-white text-black"
+                : "border-zinc-700 hover:bg-zinc-900"
+                }`}
             >
               {showSelectedOnly ? "Show All" : "Show Selected"}
             </button>
 
-            <button
+            {/* <button
+              onClick={() => setShowCommentedOnly((prev) => !prev)}
+              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${showCommentedOnly
+                ? "border-white bg-white text-black"
+                : "border-zinc-700 hover:bg-zinc-900"
+                }`}
+            >
+              {showCommentedOnly ? "Show All" : "Commented"}
+            </button> */}
+
+            {hasUnsavedChanges && (<button
               onClick={() => setShowConfirmModal(true)}
-              className="flex-1 rounded-full bg-white px-4 py-2 text-center text-sm font-medium text-black md:flex-none"
+              className="flex-1 rounded-full bg-white hidden md:block px-4 py-2 text-center text-sm font-medium text-black md:flex-none"
             >
               Submit Selection
             </button>
+            )}
 
-            <div className="flex-1 rounded-full bg-zinc-800 px-4 py-2 text-center text-sm md:flex-none">
+            {/* <div className="rounded-full bg-zinc-800 px-4 py-2 text-sm">
               {selectedImages.length} Selected
-            </div>
+
+              {hasUnsavedChanges && (
+                <span className="ml-2 text-amber-400">
+                  • Unsaved
+                </span>
+              )}
+            </div> */}
+
+            <button
+              onClick={() => setShowCommentedOnly((prev) => !prev)}
+              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${showCommentedOnly
+                ? "border-white bg-white text-black"
+                : "border-zinc-700 hover:bg-zinc-900"
+                }`}
+            >
+              {showCommentedOnly ? "Show All" : "Commented"}
+            </button>
           </div>
         </div>
       </div>
@@ -332,9 +450,8 @@ export default function ClientFolderPage({
             <div
               key={image.id}
               onClick={() => setActiveImage(image.id)}
-              className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${
-                isSelected ? "border-white" : "border-zinc-800"
-              }`}
+              className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${isSelected ? "border-white" : "border-zinc-800"
+                }`}
             >
               <div className="relative aspect-[3/4] overflow-hidden">
                 <Image
@@ -350,16 +467,14 @@ export default function ClientFolderPage({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-
                   toggleSelect(image.id);
                 }}
-                className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-medium transition ${
-                  isSelected
-                    ? "bg-white text-black"
-                    : "bg-black/60 text-white backdrop-blur"
-                }`}
+                className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isSelected
+                  ? "bg-white text-black"
+                  : "bg-black/60 text-white backdrop-blur"
+                  }`}
               >
-                {isSelected ? "Selected" : "Select"}
+                {isSelected ? getSelectionNumber(image.id) : "+"}
               </button>
 
               <div className="absolute bottom-0 left-0 right-0 p-3">
@@ -494,6 +609,11 @@ export default function ClientFolderPage({
                   setShowLeaveModal(false);
                   setHasUnsavedChanges(false);
 
+                  if (pendingNavigation) {
+                    router.push(pendingNavigation);
+                    return;
+                  }
+
                   window.history.back();
                 }}
                 className="flex-1 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90"
@@ -602,13 +722,14 @@ export default function ClientFolderPage({
               {/* Select Button */}
               <button
                 onClick={() => toggleSelect(currentImage.id)}
-                className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${
-                  selectedImages.includes(currentImage.id)
-                    ? "bg-white text-black"
-                    : "bg-zinc-800 text-white"
-                }`}
+                className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${selectedImages.includes(currentImage.id)
+                  ? "bg-white text-black"
+                  : "bg-zinc-800 text-white"
+                  }`}
               >
-                {selectedImages.includes(currentImage.id) ? "✓" : "+"}
+                {selectedImages.includes(currentImage.id)
+                  ? getSelectionNumber(currentImage.id)
+                  : "+"}
               </button>
             </div>
           </div>

@@ -60,7 +60,12 @@ export default async function GalleryPage({ params }: GalleryPageProps) {
                   className="mt-0.5 shrink-0 text-zinc-400"
                 />
 
-                <p>+91 98765 43210</p>
+                <a
+                  href="tel:+919876543210"
+                  className="transition"
+                >
+                  +91 98765 43210
+                </a>
               </div>
 
               <div className="flex items-start gap-3">

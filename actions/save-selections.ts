@@ -37,6 +37,9 @@ export const saveSelections = async ({
         data: {
           isSelected,
           comment: comments[imageId] || null,
+          selectionOrder: isSelected
+            ? selectedImages.indexOf(imageId) + 1
+            : null,
         },
       });
 
@@ -74,6 +77,7 @@ export const saveSelections = async ({
           },
           data: {
             isSelected: true,
+            selectionOrder: selectedImages.indexOf(imageId) + 1,
           },
         });
         await prisma.selection.create({
