@@ -8,6 +8,10 @@ interface CreateEventProps {
   clientName: string;
   eventType: string;
   description?: string;
+  eventDate?: string;
+  coverImageUrl?: string;
+  coverImagePublicId?: string;
+  coverPosition?: number;
 }
 
 export const createEvent = async ({
@@ -15,6 +19,10 @@ export const createEvent = async ({
   clientName,
   eventType,
   description,
+  eventDate,
+  coverImageUrl,
+  coverImagePublicId,
+  coverPosition,
 }: CreateEventProps) => {
   try {
     const event = await prisma.event.create({
@@ -23,6 +31,10 @@ export const createEvent = async ({
         clientName,
         eventType,
         description,
+        eventDate: eventDate ? new Date(eventDate) : null,
+        coverImageUrl,
+        coverImagePublicId,
+        coverPosition,
         shareId: randomUUID(),
       },
     });

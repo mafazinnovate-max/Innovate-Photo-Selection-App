@@ -38,6 +38,57 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const compressImage = async (
+    file: File,
+    maxSizeMB = 2,
+  ): Promise<File> => {
+    if (file.size <= maxSizeMB * 1024 * 1024) {
+      return file;
+    }
+
+    return new Promise((resolve) => {
+      const img = document.createElement("img");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        const MAX_WIDTH = 2500;
+
+        if (width > MAX_WIDTH) {
+          height = (height * MAX_WIDTH) / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+
+            resolve(
+              new File([blob], file.name, {
+                type: "image/jpeg",
+              }),
+            );
+          },
+          "image/jpeg",
+          0.8,
+        );
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const convertToBase64 = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -64,9 +115,9 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
           prev.map((item, index) =>
             index === i
               ? {
-                  ...item,
-                  status: "uploading",
-                }
+                ...item,
+                status: "uploading",
+              }
               : item,
           ),
         );
@@ -79,15 +130,17 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
             prev.map((item, index) =>
               index === i
                 ? {
-                    ...item,
-                    progress,
-                  }
+                  ...item,
+                  progress,
+                }
                 : item,
             ),
           );
         }
 
-        const base64Image = await convertToBase64(files[i].file);
+        const compressedFile = await compressImage(files[i].file, 2);
+
+        const base64Image = await convertToBase64(compressedFile);
 
         const uploadResponse = await fetch("/api/upload", {
           method: "POST",
@@ -124,11 +177,11 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
           prev.map((item, index) =>
             index === i
               ? {
-                  ...item,
-                  progress: 100,
-                  status: "completed",
-                  uploadedUrl: response.url,
-                }
+                ...item,
+                progress: 100,
+                status: "completed",
+                uploadedUrl: response.url,
+              }
               : item,
           ),
         );
@@ -141,9 +194,9 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
           prev.map((item, index) =>
             index === i
               ? {
-                  ...item,
-                  status: "error",
-                }
+                ...item,
+                status: "error",
+              }
               : item,
           ),
         );
@@ -161,11 +214,10 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
       {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${
-          isDragActive
-            ? "border-white bg-zinc-800"
-            : "border-zinc-700 bg-zinc-900"
-        }`}
+        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${isDragActive
+          ? "border-white bg-zinc-800"
+          : "border-zinc-700 bg-zinc-900"
+          }`}
       >
         <input {...getInputProps()} />
 
