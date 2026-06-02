@@ -8,15 +8,18 @@ datasource db {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  name        String
-  clientName  String
-  eventType   String
-  description String?
-  shareId     String   @unique
-  createdAt   DateTime @default(now())
-
-  folders Folder[]
+  id                 String    @id @default(cuid())
+  name               String
+  clientName         String
+  eventType          String
+  shareId            String    @unique
+  createdAt          DateTime  @default(now())
+  description        String?
+  coverImagePublicId String?
+  coverImageUrl      String?
+  coverPosition      Int       @default(0)
+  eventDate          DateTime?
+  folders            Folder[]
 }
 
 model Folder {
@@ -24,21 +27,21 @@ model Folder {
   name      String
   eventId   String
   createdAt DateTime @default(now())
-
-  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  images Image[]
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  images    Image[]
 }
 
 model Image {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   imageUrl   String
   publicId   String?
-  fileName   String?
   folderId   String
-  isSelected Boolean  @default(false)
+  isSelected Boolean     @default(false)
+  selectionOrder Int?
+  status     Boolean     @default(false)
   comment    String?
-  createdAt  DateTime @default(now())
-
+  createdAt  DateTime    @default(now())
+  fileName   String?
   folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   selections Selection[]
 }
@@ -48,6 +51,5 @@ model Selection {
   imageId   String
   comment   String?
   createdAt DateTime @default(now())
-
-  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
 }

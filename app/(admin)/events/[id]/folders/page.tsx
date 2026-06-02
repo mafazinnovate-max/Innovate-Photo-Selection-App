@@ -22,5 +22,22 @@ export default async function EventFoldersPage({
     },
   });
 
-  return <FoldersPage eventId={id} initialFolders={folders} />;
+  const event = await prisma.event.findUnique({
+    where: {
+      id: id,
+    },
+    include: {
+      folders: {
+        include: {
+          images: true,
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return <div>Event not found</div>;
+  }
+
+  // return <FoldersPage eventId={id} initialFolders={folders} event={event} />;
 }

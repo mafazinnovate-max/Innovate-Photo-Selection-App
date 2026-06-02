@@ -10,7 +10,8 @@ interface FolderPageProps {
 }
 
 export default async function FolderPage({ params }: FolderPageProps) {
-  const { folderId } = await params;
+  const { shareId, folderId } = await params;
+  console.log(shareId, 'checking shareId in folder page')
 
   const folder = await prisma.folder.findUnique({
     where: {
@@ -34,6 +35,7 @@ export default async function FolderPage({ params }: FolderPageProps) {
       images={folder.images}
       folderName={folder.name}
       folderId={folder.id}
+      shareId={shareId}
     />
   );
 }
