@@ -17,11 +17,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Innovate Digital Photo Selection App",
-  description: "A web application for event photo selection and management, built with Next.js, Prisma, and Tailwind CSS.",
+  description:
+    "A web application for event photo selection and management, built with Next.js, Prisma, and Tailwind CSS.",
   icons: {
     icon: "/innovate-logo.png",
+    shortcut: "/innovate-logo.png",
+    apple: "/innovate-logo.png",
   },
-
 };
 
 export default function RootLayout({
