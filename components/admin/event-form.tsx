@@ -89,7 +89,6 @@ export default function EventForm({
                 const base64Image = await convertToBase64(
                     coverImage,
                 );
-
                 const uploadResponse = await fetch(
                     "/api/upload",
                     {
