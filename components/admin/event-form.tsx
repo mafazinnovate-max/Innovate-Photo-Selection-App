@@ -14,6 +14,9 @@ interface EventFormProps {
         eventType: string;
         description: string;
         eventDate: string;
+        galleryMode: string;
+        phoneNumber: string;
+        email: string;
         coverImageUrl: string;
         coverPosition: number;
     };
@@ -31,10 +34,6 @@ export default function EventForm({
 
     const [eventName, setEventName] = useState(
         initialData?.name ?? "",
-    );
-
-    const [eventType, setEventType] = useState(
-        initialData?.eventType ?? "Wedding",
     );
 
     const [description, setDescription] = useState(
@@ -55,11 +54,44 @@ export default function EventForm({
         initialData?.coverPosition ?? 0,
     );
 
+    const [galleryMode, setGalleryMode] = useState(
+        initialData?.galleryMode ?? "single"
+    );
+
+    const [phoneNumber, setPhoneNumber] = useState(
+        initialData?.phoneNumber ?? ""
+    );
+
+    const [email, setEmail] = useState(
+        initialData?.email ?? ""
+    );
+
     const [isDragging, setIsDragging] = useState(false);
 
     const [startY, setStartY] = useState(0);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const defaultEventTypes = [
+        "Wedding",
+        "Reception",
+        "Birthday",
+        "Engagement",
+        "Puberty",
+    ];
+
+    const isDefaultType =
+        initialData?.eventType
+            ? defaultEventTypes.includes(initialData.eventType)
+            : true;
+
+    const [eventType, setEventType] = useState(
+        isDefaultType ? initialData?.eventType ?? "Wedding" : "Other"
+    );
+
+    const [customEventType, setCustomEventType] = useState(
+        isDefaultType ? "" : initialData?.eventType ?? ""
+    );
 
     const convertToBase64 = (file: File) =>
         new Promise<string>((resolve, reject) => {
@@ -71,6 +103,9 @@ export default function EventForm({
 
             reader.onerror = reject;
         });
+
+    const finalEventType =
+        eventType === "Other" ? customEventType : eventType;
 
     const handleSubmit = async () => {
         if (!clientName || !eventName || !eventType || !eventDate) {
@@ -120,9 +155,12 @@ export default function EventForm({
                 const response = await createEvent({
                     name: eventName,
                     clientName,
-                    eventType,
+                    eventType: finalEventType,
                     description,
                     eventDate,
+                    phoneNumber,
+                    email,
+                    galleryMode,
                     coverImageUrl,
                     coverImagePublicId,
                     coverPosition,
@@ -138,9 +176,12 @@ export default function EventForm({
                     id: initialData!.id,
                     name: eventName,
                     clientName,
-                    eventType,
+                    eventType: finalEventType,
                     description,
                     eventDate,
+                    phoneNumber,
+                    email,
+                    galleryMode,
                     coverImageUrl,
                     coverPosition,
                 });
@@ -209,23 +250,31 @@ export default function EventForm({
 
                 <div>
                     <label className="mb-2 block text-sm font-medium">
-                        Event Type
+                        Event Category
                     </label>
 
                     <select
                         value={eventType}
-                        onChange={(e) =>
-                            setEventType(e.target.value)
-                        }
+                        onChange={(e) => setEventType(e.target.value)}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     >
-                        <option>Wedding</option>
-                        <option>Reception</option>
-                        <option>Birthday</option>
-                        <option>Engagement</option>
-                        <option>Puberty</option>
-                        <option>Other</option>
+                        <option value="Wedding">Wedding</option>
+                        <option value="Reception">Reception</option>
+                        <option value="Birthday">Birthday</option>
+                        <option value="Engagement">Engagement</option>
+                        <option value="Puberty">Puberty</option>
+                        <option value="Other">Other</option>
                     </select>
+
+                    {eventType === "Other" && (
+                        <input
+                            type="text"
+                            placeholder="Enter custom event type"
+                            value={customEventType}
+                            onChange={(e) => setCustomEventType(e.target.value)}
+                            className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
+                        />
+                    )}
                 </div>
 
                 <div>
@@ -236,9 +285,57 @@ export default function EventForm({
                     <input
                         type="date"
                         value={eventDate}
-                        onChange={(e) =>
-                            setEventDate(e.target.value)
-                        }
+                        onChange={(e) => setEventDate(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-white"
+                        style={{
+                            colorScheme: "dark",
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label className="mb-2 block text-sm font-medium">
+                        Gallery Mode
+                    </label>
+
+                    <select
+                        value={galleryMode}
+                        onChange={(e) => setGalleryMode(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
+                    >
+                        <option value="single">Single Folder</option>
+                        <option value="bride_groom">Bride & Groom Separate</option>
+                    </select>
+
+                    <p className="mt-2 text-xs text-zinc-500">
+                        Choose how images should be organized
+                    </p>
+                </div>
+
+                <div>
+                    <label className="mb-2 block text-sm font-medium">
+                        Phone Number (Optional)
+                    </label>
+
+                    <input
+                        type="tel"
+                        value={phoneNumber}
+                        placeholder="9876543210"
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
+                    />
+                </div>
+
+                <div>
+                    <label className="mb-2 block text-sm font-medium">
+                        Email (Optional)
+                    </label>
+
+                    <input
+                        type="email"
+                        value={email}
+                        placeholder="innovate@gmail.com"
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
                 </div>

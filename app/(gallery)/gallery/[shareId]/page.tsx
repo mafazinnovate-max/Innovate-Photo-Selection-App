@@ -3,27 +3,23 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import { LocateFixedIcon, PhoneCall } from "lucide-react";
+import { hasGalleryAccess } from "@/lib/gallery-access";
+import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 
 interface GalleryPageProps {
-  params: Promise<{
-    shareId: string;
-  }>;
+  params: Promise<{ shareId: string }>;
+  searchParams: Promise<{ parentId?: string }>;
 }
 
-export default async function GalleryPage({ params }: GalleryPageProps) {
+export default async function GalleryPage({
+  params,
+  searchParams,
+}: GalleryPageProps) {
   const { shareId } = await params;
+  const { parentId } = (await searchParams) || {};
 
   const event = await prisma.event.findUnique({
-    where: {
-      shareId,
-    },
-    include: {
-      folders: {
-        include: {
-          images: true,
-        },
-      },
-    },
+    where: { shareId },
   });
 
   if (!event) {
@@ -33,6 +29,49 @@ export default async function GalleryPage({ params }: GalleryPageProps) {
       </div>
     );
   }
+
+  const hasAccess = await hasGalleryAccess(
+    shareId,
+    parentId ?? null,
+  );
+
+  if (!hasAccess) {
+    return (
+      <GalleryAccessModal
+        shareId={shareId}
+        parentId={parentId ?? null}
+      />
+    );
+  }
+
+  const folders = await prisma.folder.findMany({
+    where: {
+      eventId: event!.id, // ✅ IMPORTANT FIX
+      ...(parentId ? { parentId } : {}),
+    },
+    include: {
+      images: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  // const event = await prisma.event.findUnique({
+  //   where: {
+  //     shareId,
+  //   },
+  //   include: {
+  //     folders: {
+  //       where: parentId
+  //         ? { parentId: parentId }
+  //         : undefined, // 👈 KEY FIX
+  //       include: {
+  //         images: true,
+  //       },
+  //     },
+  //   },
+  // });
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -84,25 +123,53 @@ export default async function GalleryPage({ params }: GalleryPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-5">
-        <div className="mt-8 rounded-3xl border border-zinc-800 bg-zinc-900/50 p-6 sm:mt-10 sm:p-8">
-          <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">
-            {event.name}
-          </h1>
+      <div className="relative mx-auto mt-8 max-w-7xl overflow-hidden rounded-3xl border border-zinc-800">
+        {event.coverImageUrl && (
+          <>
+            <img
+              src={event.coverImageUrl}
+              alt={event.name}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{
+                objectPosition: `center ${event.coverPosition ?? 50}%`,
+              }}
+            />
 
-          <p className="mt-3 text-sm text-zinc-400 sm:text-base">
-            Select your favorite memories ✨
-          </p>
+            {/* Dark overlay */}
+            <div className="absolute inset-0 bg-black/70" />
 
-          <p className="mt-4 text-sm text-zinc-500">
-            Client: {event.clientName}
-          </p>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          </>
+        )}
+
+        <div className="relative min-h-[280px] px-6 py-10 sm:px-8 sm:py-14 md:min-h-[320px] flex flex-col justify-end">
+          <div className="max-w-2xl">
+            <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-zinc-300 backdrop-blur">
+              Photo Selection Gallery
+            </span>
+
+            <h1 className="mt-4 text-3xl font-bold sm:text-4xl md:text-5xl">
+              {event.name}
+            </h1>
+
+            <p className="mt-3 text-zinc-300">
+              Select your favorite memories ✨
+            </p>
+
+            <p className="mt-5 text-sm text-zinc-400">
+              Client:{" "}
+              <span className="font-medium text-zinc-200">
+                {event.clientName}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Folder Grid */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4">
-        {event.folders.map((folder) => (
+        {folders.map((folder) => (
           <Link
             key={folder.id}
             href={`/gallery/${shareId}/folder/${folder.id}`}

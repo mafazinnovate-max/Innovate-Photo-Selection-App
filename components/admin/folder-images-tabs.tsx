@@ -1,11 +1,14 @@
 "use client";
 
+import { deleteImage } from "@/actions/delete-image";
 import { toggleImageStatus } from "@/actions/toggle-image-status";
+import { Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface FolderImage {
     id: string;
     imageUrl: string;
+    publicId: string | null;
     fileName: string | null;
     isSelected: boolean;
     comment: string | null;
@@ -28,6 +31,9 @@ export default function FolderImagesTabs({
 }: Props) {
     const [activeTab, setActiveTab] = useState<TabType>("all");
     const [localImages, setLocalImages] = useState(images);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleStatusToggle = async (
         imageId: string,
@@ -79,6 +85,37 @@ export default function FolderImagesTabs({
                 return localImages;
         }
     }, [activeTab, localImages]);
+
+    const handleDelete = async () => {
+        if (!selectedImageId) return;
+
+        try {
+            setIsDeleting(true);
+
+            const response = await deleteImage(
+                selectedImageId,
+            );
+
+            if (response.success) {
+                setLocalImages((prev) =>
+                    prev.filter(
+                        (img) =>
+                            img.id !== selectedImageId,
+                    ),
+                );
+            } else {
+                alert("Failed to delete image");
+            }
+        } catch (error) {
+            console.log(error);
+
+            alert("Something went wrong");
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+            setSelectedImageId(null);
+        }
+    };
 
     return (
         <div>
@@ -202,6 +239,19 @@ export default function FolderImagesTabs({
                                         {image.selectionOrder}
                                     </div>
                                 )}
+                                {activeTab === "all" && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+
+                                            setSelectedImageId(image.id);
+                                            setShowDeleteModal(true);
+                                        }}
+                                        className="absolute top-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-lg p-2 text-red-500 transition hover:text-red-400 cursor-pointer"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
                             </div>
 
                             <div className="space-y-2 p-3">
@@ -223,6 +273,75 @@ export default function FolderImagesTabs({
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-5 backdrop-blur-sm"
+                    onClick={() =>
+                        !isDeleting &&
+                        setShowDeleteModal(false)
+                    }
+                >
+                    <div
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                        className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6"
+                    >
+                        <h2 className="text-2xl font-bold text-white">
+                            Delete Image?
+                        </h2>
+
+                        <p className="mt-3 text-sm text-zinc-400">
+                            This image will be permanently
+                            removed from:
+                        </p>
+
+                        <ul className="mt-4 space-y-2 text-sm text-zinc-400">
+                            <li>• Database</li>
+                            <li>• Cloudinary</li>
+                            <li>• Client selections</li>
+                        </ul>
+
+                        <p className="mt-4 text-sm font-medium text-red-400">
+                            This action cannot be undone.
+                        </p>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() =>
+                                    setShowDeleteModal(false)
+                                }
+                                disabled={isDeleting}
+                                className="flex-1 rounded-2xl border border-zinc-700 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-500"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <Loader2
+                                            size={16}
+                                            className="animate-spin"
+                                        />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={16} />
+                                        Delete Image
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
