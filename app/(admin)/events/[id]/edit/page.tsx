@@ -36,6 +36,9 @@ export default async function EditEventPage({
                 eventDate: event.eventDate
                     ? event.eventDate.toISOString().split("T")[0]
                     : "",
+                phoneNumber: event.phoneNumber ?? "",
+                email: event.email ?? "",
+                galleryMode: event.galleryMode ?? "single",
                 coverImageUrl: event.coverImageUrl ?? "",
                 coverPosition: event.coverPosition ?? 0,
             }}

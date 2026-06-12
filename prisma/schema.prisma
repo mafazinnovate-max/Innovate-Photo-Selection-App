@@ -13,13 +13,20 @@ model Event {
   clientName         String
   eventType          String
   shareId            String    @unique
+  accessCode         String
   createdAt          DateTime  @default(now())
   description        String?
   coverImagePublicId String?
   coverImageUrl      String?
   coverPosition      Int       @default(0)
   eventDate          DateTime?
+  phoneNumber        String?
+  email              String?
+  galleryMode        String    @default("single")
   folders            Folder[]
+
+  galleryAccesses   GalleryAccess[]
+  accessCodeVersion Int             @default(1)
 }
 
 model Folder {
@@ -27,23 +34,25 @@ model Folder {
   name      String
   eventId   String
   createdAt DateTime @default(now())
+  type      String   @default("general")
+  parentId  String?
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images    Image[]
 }
 
 model Image {
-  id         String      @id @default(cuid())
-  imageUrl   String
-  publicId   String?
-  folderId   String
-  isSelected Boolean     @default(false)
+  id             String      @id @default(cuid())
+  imageUrl       String
+  publicId       String?
+  folderId       String
+  isSelected     Boolean     @default(false)
   selectionOrder Int?
-  status     Boolean     @default(false)
-  comment    String?
-  createdAt  DateTime    @default(now())
-  fileName   String?
-  folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  selections Selection[]
+  status         Boolean     @default(false)
+  comment        String?
+  createdAt      DateTime    @default(now())
+  fileName       String?
+  folder         Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  selections     Selection[]
 }
 
 model Selection {
@@ -52,4 +61,15 @@ model Selection {
   comment   String?
   createdAt DateTime @default(now())
   image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model GalleryAccess {
+  id String @id @default(cuid())
+  eventId String
+  parentId String?
+  deviceId String
+  accessVersion Int @default(1)
+  createdAt DateTime @default(now())
+ event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@unique([eventId, parentId, deviceId, accessVersion])
 }

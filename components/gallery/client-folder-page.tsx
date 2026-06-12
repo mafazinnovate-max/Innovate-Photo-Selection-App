@@ -735,6 +735,28 @@ export default function ClientFolderPage({
           </div>
         </div>
       )}
+      {/* 📌 LEFT BOTTOM STATS */}
+      <div className="fixed bottom-4 left-4 z-[200]">
+        <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-4 py-2 text-xs text-white backdrop-blur-md shadow-lg">
+
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-400">Selected:</span>
+            <span className="font-semibold text-white">
+              {selectedImages.length}
+            </span>
+          </div>
+
+          <span className="text-zinc-600">/</span>
+
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-400">Total:</span>
+            <span className="font-semibold text-white">
+              {images.length}
+            </span>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
