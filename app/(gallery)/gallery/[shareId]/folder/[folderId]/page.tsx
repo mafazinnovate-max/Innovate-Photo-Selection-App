@@ -1,4 +1,6 @@
 import ClientFolderPage from "@/components/gallery/client-folder-page";
+import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
+import { hasGalleryAccess } from "@/lib/gallery-access";
 
 import { prisma } from "@/lib/prisma";
 
@@ -11,7 +13,14 @@ interface FolderPageProps {
 
 export default async function FolderPage({ params }: FolderPageProps) {
   const { shareId, folderId } = await params;
-  console.log(shareId, 'checking shareId in folder page')
+  const hasAccess = await hasGalleryAccess(shareId);
+  if (!hasAccess) {
+    return (
+      <GalleryAccessModal
+        shareId={shareId}
+      />
+    );
+  }
 
   const folder = await prisma.folder.findUnique({
     where: {

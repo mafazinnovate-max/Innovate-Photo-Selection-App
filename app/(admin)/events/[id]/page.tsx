@@ -1,7 +1,5 @@
 import FoldersPage from "@/components/admin/folders-page";
 import { prisma } from "@/lib/prisma";
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
 
 interface EventPageProps {
   params: Promise<{
@@ -31,6 +29,9 @@ export default async function EventPage({ params }: EventPageProps) {
     },
     orderBy: {
       createdAt: "desc",
+    },
+    include: {
+      images: true,
     },
   });
 
@@ -62,51 +63,20 @@ export default async function EventPage({ params }: EventPageProps) {
 
       {/* Event Card */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-        {/* <div className="flex items-center justify-between">
-          <div>
-            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-300">
-              {event.eventType}
-            </span>
-
-            <h2 className="mt-4 text-2xl font-semibold">{event.name}</h2>
-
-            <p className="mt-2 text-zinc-400">Client: {event.clientName}</p>
-
-            {event.description && (
-              <p className="mt-4 max-w-2xl text-sm text-zinc-500">
-                {event.description}
-              </p>
-            )}
-          </div>
-          <div>
-            <Link
-              href={`/gallery/${event.shareId}`}
-              target="_blank"
-              className="rounded-xl bg-white px-5 py-3 text-black"
-            >
-              Open Client Gallery
-            </Link>
-          </div>
-        </div> */}
-
         {/* Folder Grid */}
         <FoldersPage
           eventId={id}
           initialFolders={folders}
           event={{
             ...event,
+            shareId: event.shareId,
             eventDate: event.eventDate?.toISOString() ?? null,
+            galleryMode: event.galleryMode as "single" | "bride_groom",
           }}
         />
 
         {/* Stats */}
         <div className="mt-8 grid gap-4 md:grid-cols-3 items-center">
-          {/* <div className="rounded-xl bg-zinc-950 p-4">
-            <p className="text-sm text-zinc-400">Total Folders</p>
-
-            <h3 className="mt-2 text-2xl font-bold">{totalFolders}</h3>
-          </div> */}
-
           <div className="rounded-xl bg-zinc-950 p-4">
             <p className="text-sm text-zinc-400">Total Images</p>
 
@@ -119,7 +89,7 @@ export default async function EventPage({ params }: EventPageProps) {
             <h3 className="mt-2 text-2xl font-bold">{selectedImages}</h3>
           </div>
 
-          <div>
+          {/* <div>
             <Link
               href={`/gallery/${event.shareId}`}
               target="_blank"
@@ -132,7 +102,7 @@ export default async function EventPage({ params }: EventPageProps) {
                 className="translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100"
               />
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

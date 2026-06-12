@@ -2,6 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 
+const generateAccessCode = () => {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+};
 interface UpdateEventProps {
     id: string;
     name: string;
@@ -9,6 +12,9 @@ interface UpdateEventProps {
     eventType: string;
     description?: string;
     eventDate?: string;
+    phoneNumber?: string;
+    email?: string;
+    galleryMode?: string;
     coverImageUrl?: string;
     coverImagePublicId?: string;
     coverPosition?: number;
@@ -21,6 +27,9 @@ export const updateEvent = async ({
     eventType,
     description,
     eventDate,
+    phoneNumber,
+    email,
+    galleryMode,
     coverImageUrl,
     coverImagePublicId,
     coverPosition,
@@ -36,9 +45,13 @@ export const updateEvent = async ({
                 eventType,
                 description,
                 eventDate: eventDate ? new Date(eventDate) : null,
+                phoneNumber,
+                email,
+                galleryMode: galleryMode,
                 coverImageUrl,
                 coverImagePublicId,
                 coverPosition,
+                accessCode: generateAccessCode(),
             },
         });
 
