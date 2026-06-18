@@ -3,14 +3,14 @@
 import { uploadImage } from "@/actions/upload-image";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
 
 interface UploadFile {
   file: File;
   preview: string;
   progress: number;
-  status: "pending" | "uploading" | "completed" | "error";
+  status: | "pending" | "uploading" | "processing" | "completed" | "error";
   uploadedUrl?: string;
 }
 
@@ -22,6 +22,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   const router = useRouter();
 
   const [files, setFiles] = useState<UploadFile[]>([]);
+  const [isRefreshing, startTransition] = useTransition();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const mappedFiles = acceptedFiles.map((file) => ({
@@ -55,7 +56,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         let width = img.width;
         let height = img.height;
 
-        const MAX_WIDTH = 2500;
+        const MAX_WIDTH = 1200;
 
         if (width > MAX_WIDTH) {
           height = (height * MAX_WIDTH) / width;
@@ -81,7 +82,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
             );
           },
           "image/jpeg",
-          0.8,
+          0.55,
         );
       };
 
@@ -108,105 +109,125 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   });
 
   const uploadAll = async () => {
-    for (let i = 0; i < files.length; i++) {
-      try {
-        // Start Upload
-        setFiles((prev) =>
-          prev.map((item, index) =>
-            index === i
-              ? {
-                ...item,
-                status: "uploading",
-              }
-              : item,
-          ),
-        );
+    await Promise.all(
+      files.map(async (fileItem, i) => {
+        let progressInterval: ReturnType<typeof setInterval> | null = null;
 
-        // Fake Progress
-        for (let progress = 0; progress <= 90; progress += 10) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+        try {
+          setFiles((prev) =>
+            prev.map((item, index) =>
+              index === i
+                ? {
+                  ...item,
+                  status: "uploading",
+                  progress: 5,
+                }
+                : item,
+            ),
+          );
+
+          progressInterval = setInterval(() => {
+            setFiles((prev) =>
+              prev.map((item, index) => {
+                if (index !== i) return item;
+
+                if (item.progress >= 90) return item;
+
+                return {
+                  ...item,
+                  progress: Math.min(
+                    item.progress + Math.floor(Math.random() * 8) + 2,
+                    90,
+                  ),
+                };
+              }),
+            );
+          }, 300);
+
+          const compressedFile = await compressImage(fileItem.file, 1);
+
+          const base64Image = await convertToBase64(compressedFile);
+
+          const uploadResponse = await fetch("/api/upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              image: base64Image,
+              fileName: fileItem.file.name,
+            }),
+          });
+
+          const response = await uploadResponse.json();
+
+          if (!response.success || !response.url) {
+            throw new Error(response.error || "Upload failed");
+          }
+
+          await uploadImage({
+            imageUrl: response.url,
+            publicId: response.publicId,
+            fileName: response.fileName,
+            folderId,
+          });
+
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
 
           setFiles((prev) =>
             prev.map((item, index) =>
               index === i
                 ? {
                   ...item,
-                  progress,
+                  status: "processing",
+                  progress: 95,
+                }
+                : item,
+            ),
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          setFiles((prev) =>
+            prev.map((item, index) =>
+              index === i
+                ? {
+                  ...item,
+                  progress: 100,
+                  status: "completed",
+                  uploadedUrl: response.url,
+                }
+                : item,
+            ),
+          );
+        } catch (error) {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
+          console.log(error);
+
+          setFiles((prev) =>
+            prev.map((item, index) =>
+              index === i
+                ? {
+                  ...item,
+                  status: "error",
                 }
                 : item,
             ),
           );
         }
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        const compressedFile = await compressImage(files[i].file, 2);
-
-        const base64Image = await convertToBase64(compressedFile);
-
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            image: base64Image,
-            fileName: files[i].file.name,
-          }),
-        });
-
-        const response = await uploadResponse.json();
-
-        if (!response.success || !response.url) {
-          throw new Error(response.error || "Upload failed");
-        }
-
-        // SAVE TO DATABASE
-        await uploadImage({
-          imageUrl: response.url,
-          publicId: response.publicId,
-          fileName: response.fileName,
-          folderId,
-        });
-
-        // VALIDATE RESPONSE
-        if (!response || !response.success || !response.url) {
-          throw new Error("Upload failed");
-        }
-
-        // Complete
-        setFiles((prev) =>
-          prev.map((item, index) =>
-            index === i
-              ? {
-                ...item,
-                progress: 100,
-                status: "completed",
-                uploadedUrl: response.url,
-              }
-              : item,
-          ),
-        );
-      } catch (error) {
-        console.log(error);
-
-        alert(error instanceof Error ? error.message : "Upload failed");
-
-        setFiles((prev) =>
-          prev.map((item, index) =>
-            index === i
-              ? {
-                ...item,
-                status: "error",
-              }
-              : item,
-          ),
-        );
-      }
-    }
-
-    // AFTER ALL UPLOADS
     setFiles([]);
 
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   return (
@@ -269,7 +290,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
                   <div className="mt-3">
                     <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
                       <div
-                        className="h-full bg-white transition-all"
+                        className="h-full bg-white transition-all duration-300 ease-out"
                         style={{
                           width: `${item.progress}%`,
                         }}
@@ -288,7 +309,17 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
                               : "text-zinc-400"
                         }
                       >
-                        {item.status}
+                        {
+                          item.status === "pending"
+                            ? "Pending"
+                            : item.status === "uploading"
+                              ? "Uploading..."
+                              : item.status === "processing"
+                                ? "Processing..."
+                                : item.status === "completed"
+                                  ? "Completed"
+                                  : "Failed"
+                        }
                       </span>
                     </div>
                   </div>
@@ -307,6 +338,18 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {isRefreshing && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-700 border-t-white" />
+
+            <p className="text-sm text-zinc-400">
+              Refreshing gallery...
+            </p>
           </div>
         </div>
       )}
