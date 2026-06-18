@@ -2,6 +2,7 @@
 
 import { createEvent } from "@/actions/create-event";
 import { updateEvent } from "@/actions/update-event";
+import imageCompression from "browser-image-compression";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -92,6 +93,16 @@ export default function EventForm({
     const [customEventType, setCustomEventType] = useState(
         isDefaultType ? "" : initialData?.eventType ?? ""
     );
+
+    const compressImage = async (file: File) => {
+        const options = {
+            maxSizeMB: 0.3, // 300KB
+            maxWidthOrHeight: 1600,
+            useWebWorker: true,
+        };
+
+        return await imageCompression(file, options);
+    };
 
     const convertToBase64 = (file: File) =>
         new Promise<string>((resolve, reject) => {
@@ -348,18 +359,26 @@ export default function EventForm({
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
-                            const file =
-                                e.target.files?.[0];
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
 
-                            if (file) {
-                                setCoverImage(file);
+                            if (!file) return;
+
+                            try {
+                                const compressedFile =
+                                    await compressImage(file);
+
+                                setCoverImage(compressedFile);
+
                                 setCoverPreview(
-                                    URL.createObjectURL(file),
+                                    URL.createObjectURL(compressedFile),
                                 );
+                            } catch (error) {
+                                console.log(error);
+                                alert("Image compression failed");
                             }
                         }}
-                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-black"
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
 
                     {coverPreview && (
