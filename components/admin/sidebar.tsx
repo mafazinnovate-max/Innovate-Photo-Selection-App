@@ -49,14 +49,15 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
       <div className="border-b border-zinc-800 px-6 py-8">
-        <Image
+        {/* <Image
           src="/innovate-logo.png"
           alt="logo"
           width={180}
           height={100}
           className="mx-auto h-auto"
           priority
-        />
+        /> */}
+        <img src="/images/A1_red_logo.png" alt="test" />
       </div>
 
       {/* Menu */}
@@ -74,8 +75,8 @@ export default function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${isActive
-                    ? "bg-white text-black shadow-lg"
-                    : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                  ? "bg-white text-black shadow-lg"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
                   }`}
               >
                 <Icon size={18} />

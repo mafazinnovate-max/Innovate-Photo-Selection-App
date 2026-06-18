@@ -50,14 +50,15 @@ export default function GalleryAccessModal({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 px-4">
             <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-zinc-900/95 p-8 shadow-2xl backdrop-blur-xl">
                 <div className="mb-8 flex flex-col items-center">
-                    <Image
+                    {/* <Image
                         src="/innovate-logo.png"
                         alt="logo"
                         width={180}
                         height={60}
                         priority
                         className="h-auto object-contain"
-                    />
+                    /> */}
+                    <img src="/images/A1_red_logo.png" alt="test" />
 
                     <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4">
                         <Lock size={26} />
