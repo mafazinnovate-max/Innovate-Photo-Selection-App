@@ -736,7 +736,14 @@ export default function ClientFolderPage({
         </div>
       )}
       {/* 📌 LEFT BOTTOM STATS */}
-      <div className="fixed bottom-18 md:bottom-4 left-4 z-[200]">
+      <div
+        className={`fixed left-4 z-[200] ${activeImage !== null && currentImage
+          ? "bottom-24"
+          : hasUnsavedChanges
+            ? "bottom-20 md:bottom-4"
+            : "bottom-4"
+          }`}
+      >
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-2 py-1 text-xs text-white backdrop-blur-md shadow-lg">
 
           <div className="flex items-center gap-1">
