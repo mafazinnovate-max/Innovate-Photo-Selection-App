@@ -81,14 +81,15 @@ export default async function GalleryPage({
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             {/* Logo */}
             <div className="flex justify-center lg:justify-start">
-              <Image
+              <img src="/images/A1_red_logo.png" alt="test" />
+              {/* <Image
                 src="/innovate-logo.png"
                 alt="logo"
                 className="h-auto w-[180px] object-contain sm:w-[220px] md:w-[250px]"
                 width={250}
                 height={150}
                 priority
-              />
+              /> */}
             </div>
 
             {/* Contact Info */}
