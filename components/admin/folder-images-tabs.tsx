@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteImage } from "@/actions/delete-image";
+import { deleteImages } from "@/actions/delete-images";
 import { toggleImageStatus } from "@/actions/toggle-image-status";
 import { Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -34,6 +35,28 @@ export default function FolderImagesTabs({
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedImages, setSelectedImages] = useState<string[]>([]);
+    const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+    const toggleImageSelection = (imageId: string) => {
+        setSelectedImages((prev) =>
+            prev.includes(imageId)
+                ? prev.filter((id) => id !== imageId)
+                : [...prev, imageId],
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (
+            selectedImages.length === filteredImages.length
+        ) {
+            setSelectedImages([]);
+        } else {
+            setSelectedImages(
+                filteredImages.map((img) => img.id),
+            );
+        }
+    };
 
     const handleStatusToggle = async (
         imageId: string,
@@ -87,33 +110,48 @@ export default function FolderImagesTabs({
     }, [activeTab, localImages]);
 
     const handleDelete = async () => {
-        if (!selectedImageId) return;
-
         try {
             setIsDeleting(true);
 
-            const response = await deleteImage(
-                selectedImageId,
-            );
-
-            if (response.success) {
-                setLocalImages((prev) =>
-                    prev.filter(
-                        (img) =>
-                            img.id !== selectedImageId,
-                    ),
+            if (isBulkDelete) {
+                const response = await deleteImages(
+                    selectedImages,
                 );
+
+                if (response.success) {
+                    setLocalImages((prev) =>
+                        prev.filter(
+                            (img) =>
+                                !selectedImages.includes(img.id),
+                        ),
+                    );
+
+                    setSelectedImages([]);
+                }
             } else {
-                alert("Failed to delete image");
+                if (!selectedImageId) return;
+
+                const response = await deleteImage(
+                    selectedImageId,
+                );
+
+                if (response.success) {
+                    setLocalImages((prev) =>
+                        prev.filter(
+                            (img) =>
+                                img.id !== selectedImageId,
+                        ),
+                    );
+                }
             }
         } catch (error) {
             console.log(error);
-
             alert("Something went wrong");
         } finally {
             setIsDeleting(false);
             setShowDeleteModal(false);
             setSelectedImageId(null);
+            setIsBulkDelete(false);
         }
     };
 
@@ -169,6 +207,31 @@ export default function FolderImagesTabs({
                 >
                     Selected File Names
                 </button>
+            </div>
+
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+                <button
+                    onClick={handleSelectAll}
+                    className="rounded-xl border border-zinc-700 px-4 py-2 text-sm"
+                >
+                    {selectedImages.length ===
+                        filteredImages.length
+                        ? "Unselect All"
+                        : "Select All"}
+                </button>
+
+                {selectedImages.length > 0 && (
+                    <button
+                        onClick={() => {
+                            setIsBulkDelete(true);
+                            setShowDeleteModal(true);
+                        }}
+                        className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white"
+                    >
+                        Delete Selected (
+                        {selectedImages.length})
+                    </button>
+                )}
             </div>
 
             {/* File Names Tab */}
@@ -229,6 +292,18 @@ export default function FolderImagesTabs({
                             className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
                         >
                             <div className="relative aspect-[3/4] overflow-hidden">
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleImageSelection(image.id);
+                                    }}
+                                    className={`absolute left-3 top-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-200 ${selectedImages.includes(image.id)
+                                        ? "border-white bg-white text-black"
+                                        : "border-white/30 bg-black/40 text-transparent hover:border-white"
+                                        }`}
+                                >
+                                    ✓
+                                </div>
                                 <img
                                     src={image.imageUrl}
                                     alt="Wedding"
@@ -244,6 +319,7 @@ export default function FolderImagesTabs({
                                         onClick={(e) => {
                                             e.stopPropagation();
 
+                                            setIsBulkDelete(false);
                                             setSelectedImageId(image.id);
                                             setShowDeleteModal(true);
                                         }}
@@ -291,12 +367,15 @@ export default function FolderImagesTabs({
                         className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6"
                     >
                         <h2 className="text-2xl font-bold text-white">
-                            Delete Image?
+                            {isBulkDelete
+                                ? `Delete ${selectedImages.length} Images?`
+                                : "Delete Image?"}
                         </h2>
 
                         <p className="mt-3 text-sm text-zinc-400">
-                            This image will be permanently
-                            removed from:
+                            {isBulkDelete
+                                ? `${selectedImages.length} selected images will be permanently removed from:`
+                                : "This image will be permanently removed from:"}
                         </p>
 
                         <ul className="mt-4 space-y-2 text-sm text-zinc-400">
