@@ -334,15 +334,14 @@ export default function ClientFolderPage({
               size={18}
               className=""
             />
-            <img src="/images/A1_red_logo.png" alt="test" />
-            {/* <Image
+            <Image
               src="/innovate-logo.png"
               alt="logo"
               className="h-auto w-[180px] object-contain sm:w-[220px] md:w-[250px]"
               width={250}
               height={150}
               priority
-            /> */}
+            />
           </div>
 
           {/* Contact Info */}
