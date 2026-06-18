@@ -73,8 +73,7 @@ export default function GalleryAccessModal({
                 </h2>
 
                 <p className="mt-2 text-center text-sm text-zinc-400">
-                    Enter the gallery access code
-                    provided by your photographer.
+                    Enter the gallery access code provided.
                 </p>
 
                 <input
