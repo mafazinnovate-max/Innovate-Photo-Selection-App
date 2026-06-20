@@ -3,6 +3,7 @@
 import { createEvent } from "@/actions/create-event";
 import { updateEvent } from "@/actions/update-event";
 import imageCompression from "browser-image-compression";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -178,10 +179,13 @@ export default function EventForm({
                 });
 
                 if (response.success && response.event) {
-                    router.push(
+                    router.replace(
                         `/events/${response.event.id}`,
                     );
+                    return;
                 }
+
+                setIsSubmitting(false);
             } else {
                 const response = await updateEvent({
                     id: initialData!.id,
@@ -198,16 +202,17 @@ export default function EventForm({
                 });
 
                 if (response.success) {
-                    router.push(
+                    router.replace(
                         `/events/${initialData!.id}`,
                     );
+                    return;
                 }
+
+                setIsSubmitting(false);
             }
         } catch (error) {
             console.log(error);
-
             alert("Something went wrong");
-        } finally {
             setIsSubmitting(false);
         }
     };
@@ -444,7 +449,6 @@ export default function EventForm({
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
                 </div>
-
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
@@ -453,13 +457,21 @@ export default function EventForm({
                         : "bg-white text-black hover:opacity-90"
                         }`}
                 >
-                    {isSubmitting
-                        ? mode === "create"
-                            ? "Creating Event..."
-                            : "Updating Event..."
-                        : mode === "create"
+                    {isSubmitting ? (
+                        <span className="flex items-center gap-2">
+                            <Loader2
+                                size={16}
+                                className="animate-spin"
+                            />
+                            {mode === "create"
+                                ? "Creating Event..."
+                                : "Updating Event..."}
+                        </span>
+                    ) : (
+                        mode === "create"
                             ? "Create Event"
-                            : "Update Event"}
+                            : "Update Event"
+                    )}
                 </button>
             </div>
         </div>

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 const generateAccessCode = () => {
     return Math.floor(1000 + Math.random() * 9000).toString();
@@ -54,6 +55,9 @@ export const updateEvent = async ({
                 accessCode: generateAccessCode(),
             },
         });
+
+        revalidatePath("/events");
+        revalidatePath(`/events/${id}`);
 
         return {
             success: true,
