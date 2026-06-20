@@ -127,7 +127,7 @@ export default function EventCard({ event }: any) {
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-
+                                setIsNavigating(true);
                                 router.push(`/events/${event.id}/edit`);
                             }}
                             className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 transition hover:bg-zinc-700"

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 
 const generateAccessCode = () => {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -52,6 +53,8 @@ export const createEvent = async ({
         accessCode: generateAccessCode(),
       },
     });
+
+    revalidatePath("/events");
 
     return {
       success: true,
