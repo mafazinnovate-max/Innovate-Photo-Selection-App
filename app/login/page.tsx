@@ -1,15 +1,21 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        setIsLoading(true);
 
         const res = await fetch("/api/login", {
             method: "POST",
@@ -23,10 +29,12 @@ export default function LoginPage() {
         });
 
         if (res.ok) {
-            window.location.href = "/";
-        } else {
-            alert("Invalid Credentials");
+            router.replace("/events");
+            return; // IMPORTANT
         }
+
+        setIsLoading(false);
+        alert("Invalid Credentials");
     };
 
     return (
@@ -35,11 +43,21 @@ export default function LoginPage() {
                 onSubmit={handleLogin}
                 className="w-full max-w-md rounded-2xl bg-zinc-900 p-6"
             >
-                <h1 className="text-3xl font-bold text-white">
+                <div className="mb-8 flex flex-col items-center">
+                    <Image
+                        src="/innovate-logo.png"
+                        alt="logo"
+                        width={210}
+                        height={70}
+                        priority
+                        className="h-auto object-contain"
+                    />
+                </div>
+                <h1 className="text-3xl font-bold text-white text-center">
                     Admin Panel
                 </h1>
 
-                <p className="my-2 text-sm text-zinc-400">
+                <p className="mt-2 mb-4 text-sm text-zinc-400 text-center">
                     Sign in to access the dashboard
                 </p>
                 <div className="space-y-4">
@@ -63,7 +81,7 @@ export default function LoginPage() {
                         <button
                             type="button"
                             onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
                         >
                             {showPassword ? (
                                 <EyeOff size={20} />
@@ -75,10 +93,18 @@ export default function LoginPage() {
                 </div>
 
                 <button
+                    disabled={isLoading}
                     type="submit"
-                    className="mt-4 w-full rounded-xl bg-white p-3 font-medium text-black"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-white p-3 font-medium text-black"
                 >
-                    Login
+                    {isLoading ? (
+                        <>
+                            <Loader2 size={18} className="animate-spin" />
+                            Signing In...
+                        </>
+                    ) : (
+                        "Login"
+                    )}
                 </button>
             </form>
         </div>
