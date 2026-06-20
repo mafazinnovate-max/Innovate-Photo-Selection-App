@@ -1,4 +1,3 @@
-import EventCard from "@/components/admin/EventCard";
 import EventsList from "@/components/admin/EventsList";
 import { prisma } from "@/lib/prisma";
 

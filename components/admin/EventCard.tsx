@@ -10,6 +10,7 @@ export default function EventCard({ event }: any) {
     const [openMenu, setOpenMenu] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isNavigating, setIsNavigating] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -52,7 +53,10 @@ export default function EventCard({ event }: any) {
                 : ""
                 }`}
         >
-            <Link href={`/events/${event.id}`}>
+            <Link
+                href={`/events/${event.id}`}
+                onClick={() => setIsNavigating(true)}
+            >
                 {event.coverImageUrl ? (
                     <img
                         src={event.coverImageUrl}
@@ -222,6 +226,11 @@ export default function EventCard({ event }: any) {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+            {isNavigating && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <Loader2 className="h-8 w-8 animate-spin text-white" />
                 </div>
             )}
         </div>
