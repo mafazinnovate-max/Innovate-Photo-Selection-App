@@ -103,7 +103,7 @@ export default function FoldersPage({
       });
 
       if (response.success && response.folder) {
-        setFolders((prev) => [response.folder, ...prev]);
+        setFolders((prev) => [...prev, response.folder]);
         setFolderName("");
       }
     } catch (error) {

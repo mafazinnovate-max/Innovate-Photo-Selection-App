@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
+import { revalidatePath } from "next/cache";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -98,6 +99,8 @@ export const deleteFolder = async (
                 id: folderId,
             },
         });
+
+        revalidatePath("/events");
 
         return {
             success: true,

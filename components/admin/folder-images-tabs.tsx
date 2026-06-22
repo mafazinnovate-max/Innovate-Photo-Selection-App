@@ -4,7 +4,7 @@ import { deleteImage } from "@/actions/delete-image";
 import { deleteImages } from "@/actions/delete-images";
 import { toggleImageStatus } from "@/actions/toggle-image-status";
 import { Loader2, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface FolderImage {
     id: string;
@@ -37,6 +37,10 @@ export default function FolderImagesTabs({
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
     const [isBulkDelete, setIsBulkDelete] = useState(false);
+
+    useEffect(() => {
+        setLocalImages(images);
+    }, [images]);
 
     const toggleImageSelection = (imageId: string) => {
         setSelectedImages((prev) =>

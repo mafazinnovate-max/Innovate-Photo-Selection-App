@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
+import { revalidatePath } from "next/cache";
 
 export const deleteImages = async (
     imageIds: string[],
@@ -37,6 +38,8 @@ export const deleteImages = async (
                 },
             },
         });
+
+        revalidatePath("/events");
 
         return {
             success: true,
