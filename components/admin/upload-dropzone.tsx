@@ -189,7 +189,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   };
 
   const uploadAll = async () => {
-    const CONCURRENT_UPLOADS = 6;
+    const CONCURRENT_UPLOADS = 3;
 
     if (isUploading) return;
 
