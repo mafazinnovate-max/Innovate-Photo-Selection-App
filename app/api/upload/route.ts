@@ -9,23 +9,45 @@ cloudinary.config({
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
 
-    const originalName = body.fileName.split(".")[0].replace(/\s+/g, "-");
+    const file = formData.get("file") as File;
 
-    const result = await cloudinary.uploader.upload(body.image, {
-      folder: "wedding-gallery",
-      public_id: originalName,
-      overwrite: false,
-      unique_filename: false,
-      resource_type: "image",
-    });
+    const fileName = formData.get("fileName") as string;
+
+    const originalName = fileName.split(".")[0].replace(/\s+/g, "-");
+
+    const bytes = await file.arrayBuffer();
+
+    const buffer = Buffer.from(bytes);
+
+    const result = await new Promise<any>(
+      (resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "wedding-gallery",
+              public_id: originalName,
+              overwrite: false,
+              unique_filename: false,
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error)
+                reject(error);
+              else
+                resolve(result);
+            }
+          )
+          .end(buffer);
+      }
+    );
 
     return NextResponse.json({
       success: true,
       url: result.secure_url,
       publicId: result.public_id,
-      fileName: body.fileName,
+      fileName: fileName,
     });
   } catch (error) {
     console.log(error);

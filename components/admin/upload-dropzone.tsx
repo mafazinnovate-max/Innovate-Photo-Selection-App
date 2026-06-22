@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
+import imageCompression from "browser-image-compression";
 
 interface UploadFile {
   file: File;
@@ -25,6 +26,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   const [isRefreshing, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -44,65 +46,18 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
 
   const compressImage = async (
     file: File,
-    maxSizeMB = 2,
   ): Promise<File> => {
-    if (file.size <= maxSizeMB * 1024 * 1024) {
+    if (file.size <= 1024 * 1024) {
       return file;
     }
 
-    return new Promise((resolve) => {
-      const img = document.createElement("img");
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        const MAX_WIDTH = 1200;
-
-        if (width > MAX_WIDTH) {
-          height = (height * MAX_WIDTH) / width;
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              resolve(file);
-              return;
-            }
-
-            resolve(
-              new File([blob], file.name, {
-                type: "image/jpeg",
-              }),
-            );
-          },
-          "image/jpeg",
-          0.55,
-        );
-      };
-
-      img.src = URL.createObjectURL(file);
+    return imageCompression(file, {
+      maxSizeMB: 1.5,
+      maxWidthOrHeight: 1920,
+      initialQuality: 0.8,
+      useWebWorker: true,
     });
   };
-
-  const convertToBase64 = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.readAsDataURL(file);
-
-      reader.onload = () => resolve(reader.result as string);
-
-      reader.onerror = reject;
-    });
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -124,7 +79,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
             ? {
               ...item,
               status: "uploading",
-              progress: 8,
+              progress: 5,
             }
             : item,
         ),
@@ -150,27 +105,32 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         );
       }, 300);
 
-      const compressedFile = await compressImage(
-        fileItem.file,
-        1,
+      const compressedFile =
+        await compressImage(
+          fileItem.file
+        );
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "file",
+        compressedFile
       );
 
-      const base64Image =
-        await convertToBase64(compressedFile);
-
-      const uploadResponse = await fetch(
-        "/api/upload",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            image: base64Image,
-            fileName: fileItem.file.name,
-          }),
-        },
+      formData.append(
+        "fileName",
+        fileItem.file.name
       );
+
+      const uploadResponse =
+        await fetch(
+          "/api/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
       const response =
         await uploadResponse.json();
@@ -209,6 +169,8 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
     } catch (error) {
       console.log(error);
 
+      setFailedCount((prev) => prev + 1);
+
       if (progressInterval) {
         clearInterval(progressInterval);
       }
@@ -227,12 +189,13 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   };
 
   const uploadAll = async () => {
-    const CONCURRENT_UPLOADS = 5;
+    const CONCURRENT_UPLOADS = 6;
 
     if (isUploading) return;
 
     setIsUploading(true);
     setUploadedCount(0);
+    setFailedCount(0);
     setTotalCount(files.length);
 
     try {
@@ -260,9 +223,13 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         setTimeout(resolve, 1500),
       );
 
-      setFiles([]);
-      setUploadedCount(0);
-      setTotalCount(0);
+      setFiles((prev) =>
+        prev.filter(
+          (file) => file.status === "error"
+        )
+      );
+      // setUploadedCount(0);
+      // setTotalCount(0);
 
       startTransition(() => {
         router.refresh();
@@ -301,16 +268,24 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         </div>
       </div>
 
-      {totalCount > 0 && (
+      {isUploading && (
         <div className="my-6 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm text-zinc-300">
               Upload Progress
             </span>
 
-            <span className="text-sm font-semibold text-white">
-              {uploadedCount} / {totalCount}
-            </span>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-white">
+                {uploadedCount} / {totalCount}
+              </p>
+
+              {failedCount > 0 && (
+                <p className="text-xs text-red-400">
+                  Failed: {failedCount}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
