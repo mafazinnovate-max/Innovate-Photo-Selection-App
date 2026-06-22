@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export const updateFolder = async (
     folderId: string,
@@ -15,6 +16,8 @@ export const updateFolder = async (
                 name,
             },
         });
+
+        revalidatePath("/events");
 
         return {
             success: true,
