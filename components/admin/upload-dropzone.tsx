@@ -23,6 +23,9 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
 
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isRefreshing, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const mappedFiles = acceptedFiles.map((file) => ({
@@ -108,127 +111,171 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
     },
   });
 
-  const uploadAll = async () => {
-    await Promise.all(
-      files.map(async (fileItem, i) => {
-        let progressInterval: ReturnType<typeof setInterval> | null = null;
+  const uploadSingleFile = async (
+    fileItem: UploadFile,
+    i: number,
+  ) => {
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
 
-        try {
-          setFiles((prev) =>
-            prev.map((item, index) =>
-              index === i
-                ? {
-                  ...item,
-                  status: "uploading",
-                  progress: 5,
-                }
-                : item,
-            ),
-          );
+    try {
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "uploading",
+              progress: 8,
+            }
+            : item,
+        ),
+      );
 
-          progressInterval = setInterval(() => {
-            setFiles((prev) =>
-              prev.map((item, index) => {
-                if (index !== i) return item;
+      progressInterval = setInterval(() => {
+        setFiles((prev) =>
+          prev.map((item, index) => {
+            if (index !== i) return item;
 
-                if (item.progress >= 90) return item;
+            if (item.progress >= 90) return item;
 
-                return {
-                  ...item,
-                  progress: Math.min(
-                    item.progress + Math.floor(Math.random() * 8) + 2,
-                    90,
-                  ),
-                };
-              }),
-            );
-          }, 300);
+            return {
+              ...item,
+              progress: Math.min(
+                item.progress +
+                Math.floor(Math.random() * 8) +
+                2,
+                90,
+              ),
+            };
+          }),
+        );
+      }, 300);
 
-          const compressedFile = await compressImage(fileItem.file, 1);
+      const compressedFile = await compressImage(
+        fileItem.file,
+        1,
+      );
 
-          const base64Image = await convertToBase64(compressedFile);
+      const base64Image =
+        await convertToBase64(compressedFile);
 
-          const uploadResponse = await fetch("/api/upload", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              image: base64Image,
-              fileName: fileItem.file.name,
-            }),
-          });
+      const uploadResponse = await fetch(
+        "/api/upload",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            image: base64Image,
+            fileName: fileItem.file.name,
+          }),
+        },
+      );
 
-          const response = await uploadResponse.json();
+      const response =
+        await uploadResponse.json();
 
-          if (!response.success || !response.url) {
-            throw new Error(response.error || "Upload failed");
-          }
+      if (!response.success || !response.url) {
+        throw new Error(
+          response.error || "Upload failed",
+        );
+      }
 
-          await uploadImage({
-            imageUrl: response.url,
-            publicId: response.publicId,
-            fileName: response.fileName,
-            folderId,
-          });
+      await uploadImage({
+        imageUrl: response.url,
+        publicId: response.publicId,
+        fileName: response.fileName,
+        folderId,
+      });
 
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
+      setUploadedCount((prev) => prev + 1);
 
-          setFiles((prev) =>
-            prev.map((item, index) =>
-              index === i
-                ? {
-                  ...item,
-                  status: "processing",
-                  progress: 95,
-                }
-                : item,
-            ),
-          );
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
 
-          await new Promise((resolve) => setTimeout(resolve, 300));
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "completed",
+              progress: 100,
+              uploadedUrl: response.url,
+            }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.log(error);
 
-          setFiles((prev) =>
-            prev.map((item, index) =>
-              index === i
-                ? {
-                  ...item,
-                  progress: 100,
-                  status: "completed",
-                  uploadedUrl: response.url,
-                }
-                : item,
-            ),
-          );
-        } catch (error) {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
-          console.log(error);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
 
-          setFiles((prev) =>
-            prev.map((item, index) =>
-              index === i
-                ? {
-                  ...item,
-                  status: "error",
-                }
-                : item,
-            ),
-          );
-        }
-      }),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setFiles([]);
-
-    startTransition(() => {
-      router.refresh();
-    });
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "error",
+            }
+            : item,
+        ),
+      );
+    }
   };
+
+  const uploadAll = async () => {
+    const CONCURRENT_UPLOADS = 5;
+
+    if (isUploading) return;
+
+    setIsUploading(true);
+    setUploadedCount(0);
+    setTotalCount(files.length);
+
+    try {
+      for (
+        let i = 0;
+        i < files.length;
+        i += CONCURRENT_UPLOADS
+      ) {
+        const batch = files.slice(
+          i,
+          i + CONCURRENT_UPLOADS,
+        );
+
+        await Promise.all(
+          batch.map((fileItem, batchIndex) =>
+            uploadSingleFile(
+              fileItem,
+              i + batchIndex,
+            ),
+          ),
+        );
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1500),
+      );
+
+      setFiles([]);
+      setUploadedCount(0);
+      setTotalCount(0);
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const overallProgress =
+    totalCount > 0
+      ? Math.round((uploadedCount / totalCount) * 100)
+      : 0;
 
   return (
     <div>
@@ -240,7 +287,10 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
           : "border-zinc-700 bg-zinc-900"
           }`}
       >
-        <input {...getInputProps()} />
+        <input
+          {...getInputProps()}
+          disabled={isUploading}
+        />
 
         <div className="text-center">
           <h2 className="text-xl font-semibold">Drag & Drop Images</h2>
@@ -251,6 +301,35 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         </div>
       </div>
 
+      {totalCount > 0 && (
+        <div className="my-6 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm text-zinc-300">
+              Upload Progress
+            </span>
+
+            <span className="text-sm font-semibold text-white">
+              {uploadedCount} / {totalCount}
+            </span>
+          </div>
+
+          <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
+            <div
+              className="h-full bg-white transition-all duration-300"
+              style={{
+                width: `${overallProgress}%`,
+              }}
+            />
+          </div>
+
+          <p className="mt-2 text-xs text-zinc-400">
+            {uploadedCount === totalCount
+              ? "Upload Completed ✓"
+              : `${overallProgress}% Completed`}
+          </p>
+        </div>
+      )}
+
       {/* Preview Grid */}
       {files.length > 0 && (
         <div className="mt-8">
@@ -259,9 +338,12 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
 
             <button
               onClick={uploadAll}
-              className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90"
+              disabled={isUploading}
+              className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Upload All
+              {isUploading
+                ? "Uploading..."
+                : "Upload All"}
             </button>
           </div>
 
@@ -325,8 +407,9 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
                   </div>
 
                   <button
+                    disabled={isUploading}
                     onClick={() => removeFile(index)}
-                    className="mt-3 w-full rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white"
+                    className="mt-3 w-full rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Remove
                   </button>

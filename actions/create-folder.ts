@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 interface CreateFolderProps {
   name: string;
@@ -24,7 +25,7 @@ export const createFolder = async ({
         parentId: parentId ?? null, // 👈 safe DB insert
       },
     });
-
+    revalidatePath(`/events/${eventId}`);
     return {
       success: true,
       folder,

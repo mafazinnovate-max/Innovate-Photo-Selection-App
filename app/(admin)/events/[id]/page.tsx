@@ -28,7 +28,7 @@ export default async function EventPage({ params }: EventPageProps) {
       eventId: id,
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: "asc",
     },
     include: {
       images: true,

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 interface UploadImageProps {
   imageUrl: string;
@@ -24,6 +25,8 @@ export const uploadImage = async ({
         folderId,
       },
     });
+
+    revalidatePath("/events");
 
     return {
       success: true,
