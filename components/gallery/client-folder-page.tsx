@@ -44,6 +44,8 @@ export default function ClientFolderPage({
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isBrowserBack, setIsBrowserBack] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
 
   const lastTapRef = useRef(0);
   const pinchDistanceRef = useRef(0);
@@ -114,14 +116,13 @@ export default function ClientFolderPage({
 
   useEffect(() => {
     const handlePopState = () => {
-      if (hasUnsavedChanges) {
-        setShowLeaveModal(true);
-
-        window.history.pushState(null, "", window.location.href);
+      if (!hasUnsavedChanges) {
+        return;
       }
-    };
 
-    window.history.pushState(null, "", window.location.href);
+      setIsBrowserBack(true);
+      setShowLeaveModal(true);
+    };
 
     window.addEventListener("popstate", handlePopState);
 
@@ -156,6 +157,7 @@ export default function ClientFolderPage({
         comments,
       });
 
+      setShowConfirmModal(false);
       setHasUnsavedChanges(false);
       setShowSuccessToast(true);
 
@@ -172,7 +174,7 @@ export default function ClientFolderPage({
       alert("Failed to submit selections");
     } finally {
       setIsSaving(false);
-      setShowConfirmModal(false);
+      // setShowConfirmModal(false);
     }
   };
 
@@ -207,24 +209,59 @@ export default function ClientFolderPage({
 
   const currentImage = images.find((img) => img.id === activeImage);
 
+  useEffect(() => {
+    if (activeImage !== null) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [activeImage]);
+
   const goNext = () => {
-    if (activeImage === null) return;
+    setSlideDirection("left");
 
-    const currentIndex = images.findIndex((img) => img.id === activeImage);
+    setTimeout(() => {
+      if (activeImage === null) return;
 
-    const nextImage = images[(currentIndex + 1) % images.length];
+      const currentIndex =
+        images.findIndex(
+          (img) => img.id === activeImage
+        );
 
-    setActiveImage(nextImage.id);
+      const nextImage =
+        images[(currentIndex + 1) % images.length];
+
+      setActiveImage(nextImage.id);
+
+      setSlideDirection(null);
+    }, 120);
   };
 
   const goPrevious = () => {
-    if (activeImage === null) return;
+    setSlideDirection("right");
 
-    const currentIndex = images.findIndex((img) => img.id === activeImage);
+    setTimeout(() => {
+      if (activeImage === null) return;
 
-    const previousIndex = (currentIndex - 1 + images.length) % images.length;
+      const currentIndex =
+        images.findIndex(
+          (img) => img.id === activeImage
+        );
 
-    setActiveImage(images[previousIndex].id);
+      const previousIndex =
+        (currentIndex - 1 + images.length) %
+        images.length;
+
+      setActiveImage(
+        images[previousIndex].id
+      );
+
+      setSlideDirection(null);
+    }, 120);
   };
 
   useEffect(() => {
@@ -538,6 +575,7 @@ export default function ClientFolderPage({
 
             <div className="mt-6 flex gap-3">
               <button
+                disabled={isSaving}
                 onClick={() => setShowConfirmModal(false)}
                 className="flex-1 rounded-2xl border border-zinc-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
               >
@@ -614,7 +652,12 @@ export default function ClientFolderPage({
                     return;
                   }
 
-                  window.history.back();
+                  if (isBrowserBack) {
+                    router.back();
+                    return;
+                  }
+
+                  router.push(`/gallery/${shareId}`);
                 }}
                 className="flex-1 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90"
               >
@@ -659,9 +702,20 @@ export default function ClientFolderPage({
           {/* Image */}
           <div className="relative flex h-full items-center justify-center">
             <div
-              className="relative h-[78vh] w-full transition-transform duration-300"
+              className="relative h-[78vh] w-full transition-all duration-300 ease-out"
               style={{
-                transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`,
+                transform: `
+      translateX(
+        ${slideDirection === "left"
+                    ? "-40px"
+                    : slideDirection === "right"
+                      ? "40px"
+                      : "0px"
+                  }
+      )
+      scale(${zoom})
+    `,
+                opacity: slideDirection ? 0.4 : 1,
               }}
             >
               <Image
