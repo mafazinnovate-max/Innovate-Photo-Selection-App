@@ -26,67 +26,47 @@ export const saveSelections = async ({
 
     const folderImageIds = folderImages.map((img) => img.id);
 
-    for (const imageId of folderImageIds) {
-      const isSelected = selectedImages.includes(imageId);
+    await prisma.image.updateMany({
+      where: {
+        folderId,
+      },
+      data: {
+        isSelected: false,
+        selectionOrder: null,
+      },
+    });
 
-      // UPDATE IMAGE TABLE
-      await prisma.image.update({
-        where: {
-          id: imageId,
+    await prisma.selection.deleteMany({
+      where: {
+        imageId: {
+          in: folderImageIds,
         },
-        data: {
-          isSelected,
-          comment: comments[imageId] || null,
-          selectionOrder: isSelected
-            ? selectedImages.indexOf(imageId) + 1
-            : null,
-        },
-      });
-
-      // REMOVE FROM SELECTION TABLE
-      if (!isSelected) {
-        await prisma.selection.deleteMany({
-          where: {
-            imageId,
-          },
-        });
-      }
-    }
+      },
+    });
 
     // CREATE / UPDATE selected images
-    for (const imageId of selectedImages) {
-      const existingSelection = await prisma.selection.findFirst({
-        where: {
-          imageId,
-        },
-      });
-
-      if (existingSelection) {
-        await prisma.selection.update({
-          where: {
-            id: existingSelection.id,
-          },
-          data: {
-            comment: comments[imageId] || "",
-          },
-        });
-      } else {
-        await prisma.image.update({
+    await prisma.$transaction(
+      selectedImages.map((imageId, index) =>
+        prisma.image.update({
           where: {
             id: imageId,
           },
           data: {
             isSelected: true,
-            selectionOrder: selectedImages.indexOf(imageId) + 1,
+            selectionOrder: index + 1,
+            comment: comments[imageId] || null,
           },
-        });
-        await prisma.selection.create({
-          data: {
-            imageId,
-            comment: comments[imageId] || "",
-          },
-        });
-      }
+        })
+      )
+    );
+
+    if (selectedImages.length > 0) {
+      await prisma.selection.createMany({
+        data: selectedImages.map((imageId) => ({
+          imageId,
+          comment: comments[imageId] || "",
+        })),
+      });
     }
 
     return {
