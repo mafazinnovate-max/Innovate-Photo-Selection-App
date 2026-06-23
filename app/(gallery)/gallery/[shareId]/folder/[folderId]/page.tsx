@@ -26,8 +26,17 @@ export default async function FolderPage({ params }: FolderPageProps) {
     where: {
       id: folderId,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
       images: {
+        select: {
+          id: true,
+          imageUrl: true,
+          fileName: true,
+          isSelected: true,
+          comment: true,
+        },
         orderBy: {
           createdAt: "desc",
         },
