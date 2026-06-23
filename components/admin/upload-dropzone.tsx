@@ -123,6 +123,11 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         fileItem.file.name
       );
 
+      formData.append(
+        "folderId",
+        folderId
+      );
+
       const uploadResponse =
         await fetch(
           "/api/upload",
@@ -141,12 +146,14 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
         );
       }
 
-      await uploadImage({
-        imageUrl: response.url,
-        publicId: response.publicId,
-        fileName: response.fileName,
-        folderId,
-      });
+      if (!response.skipped) {
+        await uploadImage({
+          imageUrl: response.url,
+          publicId: response.publicId,
+          fileName: response.fileName,
+          folderId,
+        });
+      }
 
       setUploadedCount((prev) => prev + 1);
 
@@ -189,7 +196,7 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   };
 
   const uploadAll = async () => {
-    const CONCURRENT_UPLOADS = 3;
+    const CONCURRENT_UPLOADS = 5;
 
     if (isUploading) return;
 

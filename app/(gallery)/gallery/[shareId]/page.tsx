@@ -46,11 +46,23 @@ export default async function GalleryPage({
 
   const folders = await prisma.folder.findMany({
     where: {
-      eventId: event!.id, // ✅ IMPORTANT FIX
+      eventId: event.id,
       ...(parentId ? { parentId } : {}),
     },
-    include: {
-      images: true,
+    select: {
+      id: true,
+      name: true,
+      _count: {
+        select: {
+          images: true,
+        },
+      },
+      images: {
+        take: 1,
+        select: {
+          imageUrl: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -173,6 +185,7 @@ export default async function GalleryPage({
           <Link
             key={folder.id}
             href={`/gallery/${shareId}/folder/${folder.id}`}
+            prefetch={true}
             className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
           >
             {/* Thumbnail */}
@@ -192,7 +205,7 @@ export default async function GalleryPage({
               <h2 className="text-xl font-semibold">{folder.name}</h2>
 
               <p className="mt-2 text-sm text-zinc-400">
-                {folder.images.length} Photos
+                {folder._count.images} Photos
               </p>
             </div>
           </Link>

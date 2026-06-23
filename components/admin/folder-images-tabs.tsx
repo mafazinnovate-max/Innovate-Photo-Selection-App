@@ -296,29 +296,31 @@ export default function FolderImagesTabs({
                             className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
                         >
                             <div className="relative aspect-[3/4] overflow-hidden">
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleImageSelection(image.id);
-                                    }}
-                                    className={`absolute left-3 top-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-200 ${selectedImages.includes(image.id)
-                                        ? "border-white bg-white text-black"
-                                        : "border-white/30 bg-black/40 text-transparent hover:border-white"
-                                        }`}
-                                >
-                                    ✓
-                                </div>
+                                {(activeTab === "all" && !image.isSelected) && (
+                                    <div
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleImageSelection(image.id);
+                                        }}
+                                        className={`absolute left-3 top-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-200 ${selectedImages.includes(image.id)
+                                            ? "border-white bg-white text-black"
+                                            : "border-white/30 bg-black/40 text-transparent hover:border-white"
+                                            }`}
+                                    >
+                                        ✓
+                                    </div>
+                                )}
                                 <img
                                     src={image.imageUrl}
                                     alt="Wedding"
                                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                                 />
-                                {(image.isSelected && activeTab === "selected") && (
+                                {(image.isSelected && (activeTab === "all" || activeTab === "selected")) && (
                                     <div className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition bg-white text-black z-20">
                                         {image.selectionOrder}
                                     </div>
                                 )}
-                                {activeTab === "all" && (
+                                {(activeTab === "all" && !image.isSelected) && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
