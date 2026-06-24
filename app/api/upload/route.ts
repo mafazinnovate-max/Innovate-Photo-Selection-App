@@ -16,24 +16,24 @@ export async function POST(request: Request) {
     const fileName = formData.get("fileName") as string;
     const folderId = formData.get("folderId") as string;
 
-    const existingImage =
-      await prisma.image.findFirst({
-        where: {
-          folderId,
-          fileName,
-        },
-      });
+    if (folderId) {
+      const existingImage =
+        await prisma.image.findFirst({
+          where: {
+            folderId,
+            fileName,
+          },
+        });
 
-    if (existingImage) {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        url: existingImage.imageUrl,
-        publicId:
-          existingImage.publicId,
-        fileName:
-          existingImage.fileName,
-      });
+      if (existingImage) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          url: existingImage.imageUrl,
+          publicId: existingImage.publicId,
+          fileName: existingImage.fileName,
+        });
+      }
     }
 
     const originalName = fileName.split(".")[0].replace(/\s+/g, "-");
