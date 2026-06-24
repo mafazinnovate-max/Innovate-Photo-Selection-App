@@ -130,17 +130,6 @@ export default function EventForm({
         }
     };
 
-    const convertToBase64 = (file: File) =>
-        new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-
-            reader.readAsDataURL(file);
-
-            reader.onload = () => resolve(reader.result as string);
-
-            reader.onerror = reject;
-        });
-
     const finalEventType =
         eventType === "Other" ? customEventType : eventType;
 
@@ -158,21 +147,24 @@ export default function EventForm({
             let coverImagePublicId = "";
 
             if (coverImage) {
-                const base64Image = await convertToBase64(
-                    coverImage,
+                const formData = new FormData();
+
+                formData.append(
+                    "file",
+                    coverImage
                 );
+
+                formData.append(
+                    "fileName",
+                    coverImage.name
+                );
+
                 const uploadResponse = await fetch(
                     "/api/upload",
                     {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            image: base64Image,
-                            fileName: coverImage.name,
-                        }),
-                    },
+                        body: formData,
+                    }
                 );
 
                 const uploadResult =
