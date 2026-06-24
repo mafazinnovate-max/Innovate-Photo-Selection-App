@@ -96,13 +96,38 @@ export default function EventForm({
     );
 
     const compressImage = async (file: File) => {
-        const options = {
-            maxSizeMB: 0.3, // 300KB
-            maxWidthOrHeight: 1600,
-            useWebWorker: true,
-        };
+        try {
+            console.log(
+                "Original:",
+                (file.size / 1024).toFixed(2),
+                "KB",
+            );
 
-        return await imageCompression(file, options);
+            if (file.size <= 400 * 1024) {
+                console.log("Compression Skipped");
+                return file;
+            }
+
+            const compressedFile = await imageCompression(
+                file,
+                {
+                    maxSizeMB: 0.4,
+                    maxWidthOrHeight: 1600,
+                    useWebWorker: true,
+                },
+            );
+
+            console.log(
+                "Compressed:",
+                (compressedFile.size / 1024).toFixed(2),
+                "KB",
+            );
+
+            return compressedFile;
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
     };
 
     const convertToBase64 = (file: File) =>
