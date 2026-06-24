@@ -4,7 +4,7 @@ import { createFolder } from "@/actions/create-folder";
 import { deleteFolder } from "@/actions/delete-folder";
 import { regenerateAccessCode } from "@/actions/regenerate-access-code";
 import { updateFolder } from "@/actions/update-folder";
-import { ArrowRight, Check, Copy, Link2, MoreVertical, Pencil, RefreshCcw, Trash2 } from "lucide-react";
+import { ArrowRight, Check, Copy, Link2, Loader2, MoreVertical, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -57,6 +57,7 @@ export default function FoldersPage({
   const [editName, setEditName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -429,6 +430,7 @@ export default function FoldersPage({
                 <Link
                   key={folder.id}
                   href={`/events/${eventId}/folders/${folder.id}`}
+                  onClick={() => setIsNavigating(true)}
                 // className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 h-32"
                 >
                   <div className="flex justify-between">
@@ -591,6 +593,7 @@ export default function FoldersPage({
                   <Link
                     key={folder.id}
                     href={`/events/${eventId}/folders/${folder.id}`}
+                    onClick={() => setIsNavigating(true)}
                   >
                     <div className="flex justify-between">
                       <div>
@@ -758,6 +761,11 @@ export default function FoldersPage({
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {isNavigating && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
       )}
     </div>

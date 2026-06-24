@@ -5,6 +5,7 @@ import Image from "next/image";
 import { LocateFixedIcon, PhoneCall } from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
+import FolderLink from "@/components/gallery/folder-link";
 
 interface GalleryPageProps {
   params: Promise<{ shareId: string }>;
@@ -182,11 +183,11 @@ export default async function GalleryPage({
       {/* Folder Grid */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4">
         {folders.map((folder) => (
-          <Link
+          <FolderLink
             key={folder.id}
             href={`/gallery/${shareId}/folder/${folder.id}`}
-            prefetch={true}
-            className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
+          // prefetch={true}
+          // className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
           >
             {/* Thumbnail */}
             <div className="relative aspect-[4/3] overflow-hidden">
@@ -208,7 +209,7 @@ export default async function GalleryPage({
                 {folder._count.images} Photos
               </p>
             </div>
-          </Link>
+          </FolderLink>
         ))}
       </div>
     </div>
