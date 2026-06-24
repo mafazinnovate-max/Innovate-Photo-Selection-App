@@ -195,8 +195,60 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
     }
   };
 
+  // const uploadAll = async () => {
+  //   const CONCURRENT_UPLOADS = 5;
+
+  //   if (isUploading) return;
+
+  //   setIsUploading(true);
+  //   setUploadedCount(0);
+  //   setFailedCount(0);
+  //   setTotalCount(files.length);
+
+  //   try {
+  //     for (
+  //       let i = 0;
+  //       i < files.length;
+  //       i += CONCURRENT_UPLOADS
+  //     ) {
+  //       const batch = files.slice(
+  //         i,
+  //         i + CONCURRENT_UPLOADS,
+  //       );
+
+  //       await Promise.all(
+  //         batch.map((fileItem, batchIndex) =>
+  //           uploadSingleFile(
+  //             fileItem,
+  //             i + batchIndex,
+  //           ),
+  //         ),
+  //       );
+  //     }
+
+  //     await new Promise((resolve) =>
+  //       setTimeout(resolve, 1500),
+  //     );
+
+  //     setFiles((prev) =>
+  //       prev.filter(
+  //         (file) => file.status === "error"
+  //       )
+  //     );
+  //     // setUploadedCount(0);
+  //     // setTotalCount(0);
+
+  //     startTransition(() => {
+  //       router.refresh();
+  //     });
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+
   const uploadAll = async () => {
-    const CONCURRENT_UPLOADS = 5;
+    const CONCURRENT_UPLOADS = 10;
 
     if (isUploading) return;
 
@@ -206,25 +258,28 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
     setTotalCount(files.length);
 
     try {
-      for (
-        let i = 0;
-        i < files.length;
-        i += CONCURRENT_UPLOADS
-      ) {
-        const batch = files.slice(
-          i,
-          i + CONCURRENT_UPLOADS,
-        );
+      const queue = files.map((file, index) => ({
+        file,
+        index,
+      }));
 
-        await Promise.all(
-          batch.map((fileItem, batchIndex) =>
-            uploadSingleFile(
-              fileItem,
-              i + batchIndex,
-            ),
-          ),
-        );
-      }
+      const workers = Array.from(
+        { length: CONCURRENT_UPLOADS },
+        async () => {
+          while (queue.length > 0) {
+            const item = queue.shift();
+
+            if (!item) break;
+
+            await uploadSingleFile(
+              item.file,
+              item.index,
+            );
+          }
+        },
+      );
+
+      await Promise.all(workers);
 
       await new Promise((resolve) =>
         setTimeout(resolve, 1500),
@@ -232,11 +287,9 @@ export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
 
       setFiles((prev) =>
         prev.filter(
-          (file) => file.status === "error"
-        )
+          (file) => file.status === "error",
+        ),
       );
-      // setUploadedCount(0);
-      // setTotalCount(0);
 
       startTransition(() => {
         router.refresh();
