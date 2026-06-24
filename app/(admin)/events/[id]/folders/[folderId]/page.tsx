@@ -1,3 +1,4 @@
+import ExportSelectedImages from "@/components/admin/export-selected-images";
 import FolderImagesTabs from "@/components/admin/folder-images-tabs";
 import UploadDropzone from "@/components/admin/upload-dropzone";
 
@@ -37,6 +38,11 @@ export default async function FolderDetailPage({
     },
   });
 
+  const selectedImages = folder?.images
+    .filter((img) => img.isSelected)
+    .map((img) => img.fileName)
+    .filter(Boolean) as string[];
+
   if (!event) {
     return <div className="p-10 text-white">Event not found</div>;
   }
@@ -62,11 +68,19 @@ export default async function FolderDetailPage({
         <div>
           <h1 className="text-3xl font-bold">{folder.name}</h1>
 
-          <p className="mt-2 text-zinc-400">Event ID: {id}</p>
+          <p className="mt-2 text-zinc-400">
+            Event ID: {id}
+          </p>
         </div>
 
-        <div className="rounded-xl bg-zinc-900 px-5 py-3 text-sm">
-          {folder.images.length} Images
+        <div className="flex items-center gap-3">
+          {(selectedImages?.length !== 0) && <ExportSelectedImages
+            selectedImages={selectedImages}
+            verifyFileName={selectedImages[0] ?? ""}
+          />}
+          <div className="rounded-xl bg-zinc-900 px-5 py-3 text-sm">
+            {folder.images.length} Images
+          </div>
         </div>
       </div>
 
