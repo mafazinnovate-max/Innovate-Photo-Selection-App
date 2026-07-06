@@ -46,6 +46,8 @@ export default function ClientFolderPage({
   const [isZoomed, setIsZoomed] = useState(false);
   const [isBrowserBack, setIsBrowserBack] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAutoSavingRef = useRef(false);
 
   const lastTapRef = useRef(0);
   const pinchDistanceRef = useRef(0);
@@ -147,8 +149,11 @@ export default function ClientFolderPage({
     };
   }, [hasUnsavedChanges]);
 
-  const handleSubmitSelection = async () => {
+  const performSave = async () => {
+    if (isAutoSavingRef.current) return;
+
     try {
+      isAutoSavingRef.current = true;
       setIsSaving(true);
 
       await saveSelections({
@@ -157,26 +162,32 @@ export default function ClientFolderPage({
         comments,
       });
 
-      setShowConfirmModal(false);
       setHasUnsavedChanges(false);
-      setShowSuccessToast(true);
-
-      setTimeout(() => {
-        setShowSuccessToast(false);
-      }, 3000);
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } catch (error) {
       console.log(error);
-
-      alert("Failed to submit selections");
     } finally {
       setIsSaving(false);
-      // setShowConfirmModal(false);
+      isAutoSavingRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      performSave();
+    }, 1000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [selectedImages, comments]);
 
   const handleDoubleTap = () => {
     if (zoom > 1) {
@@ -583,7 +594,7 @@ export default function ClientFolderPage({
               </button>
 
               <button
-                onClick={handleSubmitSelection}
+                onClick={performSave}
                 disabled={isSaving}
                 className="flex-1 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
               >
