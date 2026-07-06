@@ -46,8 +46,6 @@ export default function ClientFolderPage({
   const [isZoomed, setIsZoomed] = useState(false);
   const [isBrowserBack, setIsBrowserBack] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isAutoSavingRef = useRef(false);
 
   const lastTapRef = useRef(0);
   const pinchDistanceRef = useRef(0);
@@ -58,6 +56,19 @@ export default function ClientFolderPage({
   const touchEndX = useRef(0);
   const [showCommentedOnly, setShowCommentedOnly] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const saveRequestedRef = useRef(false);
+  const selectedImagesRef = useRef(selectedImages);
+  const commentsRef = useRef(comments);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAutoSavingRef = useRef(false);
+
+  useEffect(() => {
+    selectedImagesRef.current = selectedImages;
+  }, [selectedImages]);
+
+  useEffect(() => {
+    commentsRef.current = comments;
+  }, [comments]);
 
   const router = useRouter();
 
@@ -135,9 +146,8 @@ export default function ClientFolderPage({
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges || isAutoSavingRef.current) {
         event.preventDefault();
-
         event.returnValue = "";
       }
     };
@@ -150,24 +160,37 @@ export default function ClientFolderPage({
   }, [hasUnsavedChanges]);
 
   const performSave = async () => {
-    if (isAutoSavingRef.current) return;
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    if (isAutoSavingRef.current) {
+      saveRequestedRef.current = true;
+      return;
+    }
+
+    isAutoSavingRef.current = true;
+    saveRequestedRef.current = false;
 
     try {
-      isAutoSavingRef.current = true;
       setIsSaving(true);
 
       await saveSelections({
         folderId,
-        selectedImages,
-        comments,
+        selectedImages: selectedImagesRef.current,
+        comments: commentsRef.current,
       });
 
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.log(error);
+      if (!saveRequestedRef.current) {
+        setHasUnsavedChanges(false);
+      }
     } finally {
       setIsSaving(false);
       isAutoSavingRef.current = false;
+
+      if (saveRequestedRef.current) {
+        performSave();
+      }
     }
   };
 
@@ -187,7 +210,7 @@ export default function ClientFolderPage({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [selectedImages, comments]);
+  }, [selectedImages, comments, hasUnsavedChanges]);
 
   const handleDoubleTap = () => {
     if (zoom > 1) {
@@ -462,7 +485,7 @@ export default function ClientFolderPage({
               onClick={() => setShowConfirmModal(true)}
               className="flex-1 rounded-full bg-white hidden md:block px-4 py-2 text-center text-sm font-medium text-black md:flex-none"
             >
-              Submit Selection
+              {isSaving ? "Saving..." : "Submit Selection"}
             </button>
             )}
 
@@ -654,6 +677,7 @@ export default function ClientFolderPage({
               </button>
 
               <button
+                disabled={isSaving}
                 onClick={() => {
                   setShowLeaveModal(false);
                   setHasUnsavedChanges(false);
