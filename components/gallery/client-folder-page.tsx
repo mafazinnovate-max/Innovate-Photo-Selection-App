@@ -180,7 +180,7 @@ export default function ClientFolderPage({
 
     autoSaveTimeoutRef.current = setTimeout(() => {
       performSave();
-    }, 1000);
+    }, 3000);
 
     return () => {
       if (autoSaveTimeoutRef.current) {
