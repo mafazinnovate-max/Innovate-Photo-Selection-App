@@ -28,9 +28,13 @@ export default function ExportSelectedImages({
         try {
             setIsExporting(true);
 
-            const sourceFolder = await (
-                window as any
-            ).showDirectoryPicker();
+            // const sourceFolder = await (
+            //     window as any
+            // ).showDirectoryPicker();
+
+            const sourceFolder = await (window as any).showDirectoryPicker({
+                mode: "readwrite",
+            });
 
             try {
                 await sourceFolder.getFileHandle(
@@ -44,6 +48,15 @@ export default function ExportSelectedImages({
                 return;
             }
 
+            const permission = await sourceFolder.requestPermission({
+                mode: "readwrite",
+            });
+
+            if (permission !== "granted") {
+                alert("Folder permission denied.");
+                return;
+            }
+
             const selectedFolder =
                 await sourceFolder.getDirectoryHandle(
                     "Selected Images",
@@ -52,41 +65,72 @@ export default function ExportSelectedImages({
                     }
                 );
 
-            let copiedCount = 0;
+            // let copiedCount = 0;
 
+            // const totalFiles = selectedImages.length;
+
+            // let processedFiles = 0;
+
+            // for await (const entry of sourceFolder.values()) {
+            //     if (
+            //         entry.kind === "file" &&
+            //         selectedImages.includes(entry.name)
+            //     ) {
+            //         const file = await entry.getFile();
+
+            //         const newFile =
+            //             await selectedFolder.getFileHandle(
+            //                 entry.name,
+            //                 {
+            //                     create: true,
+            //                 }
+            //             );
+
+            //         const writable = await newFile.createWritable();
+
+            //         await writable.write(file);
+
+            //         await writable.close();
+
+            //         copiedCount++;
+            //         processedFiles++;
+
+            //         setProgress(
+            //             Math.round(
+            //                 (processedFiles / totalFiles) * 100
+            //             )
+            //         );
+            //     }
+            // }
+
+            let copiedCount = 0;
             const totalFiles = selectedImages.length;
 
-            let processedFiles = 0;
+            for (let i = 0; i < selectedImages.length; i++) {
+                const fileName = selectedImages[i];
 
-            for await (const entry of sourceFolder.values()) {
-                if (
-                    entry.kind === "file" &&
-                    selectedImages.includes(entry.name)
-                ) {
-                    const file = await entry.getFile();
+                try {
+                    const sourceFileHandle = await sourceFolder.getFileHandle(fileName);
 
-                    const newFile =
-                        await selectedFolder.getFileHandle(
-                            entry.name,
-                            {
-                                create: true,
-                            }
-                        );
+                    const file = await sourceFileHandle.getFile();
 
-                    const writable = await newFile.createWritable();
+                    const targetFileHandle = await selectedFolder.getFileHandle(fileName, {
+                        create: true,
+                    });
+
+                    const writable = await targetFileHandle.createWritable();
 
                     await writable.write(file);
 
                     await writable.close();
 
                     copiedCount++;
-                    processedFiles++;
 
                     setProgress(
-                        Math.round(
-                            (processedFiles / totalFiles) * 100
-                        )
+                        Math.round(((i + 1) / totalFiles) * 100)
                     );
+                } catch (err) {
+                    console.error(`Failed to copy ${fileName}`, err);
                 }
             }
 
