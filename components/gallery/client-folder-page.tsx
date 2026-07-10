@@ -19,13 +19,17 @@ interface ClientFolderPageProps {
   folderName: string;
   folderId: string;
   shareId: string;
+  maxSelections: number | null;
+  parentId?: string | null;
 }
 
 export default function ClientFolderPage({
   images,
   folderName,
   folderId,
-  shareId
+  shareId,
+  maxSelections,
+  parentId,
 }: ClientFolderPageProps) {
   const [selectedImages, setSelectedImages] = useState(
     images.filter((img) => img.isSelected).map((img) => img.id),
@@ -46,6 +50,7 @@ export default function ClientFolderPage({
   const [isZoomed, setIsZoomed] = useState(false);
   const [isBrowserBack, setIsBrowserBack] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
+  const [showLimitWarning, setShowLimitWarning] = useState(false);
 
   const lastTapRef = useRef(0);
   const pinchDistanceRef = useRef(0);
@@ -72,12 +77,40 @@ export default function ClientFolderPage({
 
   const router = useRouter();
 
+  // const toggleSelect = (id: string) => {
+  //   setHasUnsavedChanges(true);
+
+  //   setSelectedImages((prev) =>
+  //     prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+  //   );
+  // };
+
   const toggleSelect = (id: string) => {
     setHasUnsavedChanges(true);
 
-    setSelectedImages((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
+    const alreadySelected = selectedImages.includes(id);
+
+    // Unselect always allowed
+    if (alreadySelected) {
+      setSelectedImages((prev) => prev.filter((item) => item !== id));
+      return;
+    }
+
+    // Limit check
+    if (
+      maxSelections !== null &&
+      selectedImages.length >= maxSelections
+    ) {
+      setShowLimitWarning(true);
+
+      setTimeout(() => {
+        setShowLimitWarning(false);
+      }, 2500);
+
+      return;
+    }
+
+    setSelectedImages((prev) => [...prev, id]);
   };
 
   let filteredImages = images;
@@ -381,6 +414,10 @@ export default function ClientFolderPage({
     }
   };
 
+  const backUrl = parentId
+    ? `/gallery/${shareId}?parentId=${parentId}`
+    : `/gallery/${shareId}`;
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -393,12 +430,12 @@ export default function ClientFolderPage({
             className="flex justify-start gap-3 cursor-pointer"
             onClick={() => {
               if (hasUnsavedChanges) {
-                setPendingNavigation(`/gallery/${shareId}`);
+                setPendingNavigation(backUrl);
                 setShowLeaveModal(true);
                 return;
               }
 
-              router.push(`/gallery/${shareId}`);
+              router.push(backUrl);
             }}
           >
             <ArrowLeft
@@ -470,6 +507,17 @@ export default function ClientFolderPage({
             >
               {showSelectedOnly ? "Show All" : "Show Selected"}
             </button>
+            {maxSelections === null && (
+              <div className="rounded-full bg-zinc-800 px-4 py-2 text-sm">
+                {selectedImages.length} Selected
+              </div>
+            )}
+
+            {maxSelections !== null && (
+              <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300">
+                {selectedImages.length} / {maxSelections} Selected
+              </div>
+            )}
 
             {/* <button
               onClick={() => setShowCommentedOnly((prev) => !prev)}
@@ -628,6 +676,34 @@ export default function ClientFolderPage({
         </div>
       )}
 
+      {showLimitWarning && (
+        <div className="fixed inset-x-0 top-4 z-[200] flex justify-center px-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-red-500/10 p-4 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-300">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-xl">
+                ⚠️
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-red-300 sm:text-base">
+                  Selection Limit Reached
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-200 sm:text-sm">
+                  You have reached the maximum selection limit.
+                  <br />
+                  You can select only{" "}
+                  <span className="font-bold text-white">
+                    {maxSelections}
+                  </span>{" "}
+                  photos.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSuccessToast && (
         <div className="fixed bottom-24 left-1/2 z-[150] w-[90%] max-w-sm -translate-x-1/2 md:bottom-5 md:left-auto md:right-5 md:translate-x-0">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-4 shadow-2xl backdrop-blur">
@@ -692,7 +768,7 @@ export default function ClientFolderPage({
                     return;
                   }
 
-                  router.push(`/gallery/${shareId}`);
+                  router.push(backUrl);
                 }}
                 className="flex-1 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:opacity-90"
               >
@@ -835,10 +911,21 @@ export default function ClientFolderPage({
       >
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-2 py-1 text-xs text-white backdrop-blur-md shadow-lg">
 
-          <div className="flex items-center gap-1">
+          {/* <div className="flex items-center gap-1">
             <span className="text-zinc-400">Selected:</span>
             <span className="font-semibold text-white">
               {selectedImages.length}
+            </span>
+          </div> */}
+
+          <div className="flex items-center gap-1">
+            <span className="text-zinc-400">Selected:</span>
+
+            <span className="font-semibold text-white">
+              {selectedImages.length}
+              {maxSelections !== null
+                ? ` / ${maxSelections}`
+                : ` / ${images.length}`}
             </span>
           </div>
 

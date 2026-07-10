@@ -22,6 +22,28 @@ export default async function FolderPage({ params }: FolderPageProps) {
     );
   }
 
+  // const folder = await prisma.folder.findUnique({
+  //   where: {
+  //     id: folderId,
+  //   },
+  //   select: {
+  //     id: true,
+  //     name: true,
+  //     images: {
+  //       select: {
+  //         id: true,
+  //         imageUrl: true,
+  //         fileName: true,
+  //         isSelected: true,
+  //         comment: true,
+  //       },
+  //       orderBy: {
+  //         createdAt: "desc",
+  //       },
+  //     },
+  //   },
+  // });
+
   const folder = await prisma.folder.findUnique({
     where: {
       id: folderId,
@@ -29,6 +51,13 @@ export default async function FolderPage({ params }: FolderPageProps) {
     select: {
       id: true,
       name: true,
+      parentId: true,
+      event: {
+        select: {
+          galleryMode: true,
+          maxSelections: true,
+        },
+      },
       images: {
         select: {
           id: true,
@@ -44,6 +73,23 @@ export default async function FolderPage({ params }: FolderPageProps) {
     },
   });
 
+  let maxSelections: number | null = null;
+
+  if (folder?.event.galleryMode === "single") {
+    maxSelections = folder.event.maxSelections;
+  } else if (folder?.parentId) {
+    const parentFolder = await prisma.folder.findUnique({
+      where: {
+        id: folder.parentId,
+      },
+      select: {
+        maxSelections: true,
+      },
+    });
+
+    maxSelections = parentFolder?.maxSelections ?? null;
+  }
+
   if (!folder) {
     return <div>Folder not found</div>;
   }
@@ -54,6 +100,8 @@ export default async function FolderPage({ params }: FolderPageProps) {
       folderName={folder.name}
       folderId={folder.id}
       shareId={shareId}
+      maxSelections={maxSelections}
+      parentId={folder.parentId}
     />
   );
 }

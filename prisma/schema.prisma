@@ -25,6 +25,9 @@ model Event {
   galleryMode        String    @default("single")
   folders            Folder[]
 
+  // Used only when galleryMode = "single"
+  maxSelections      Int?
+
   galleryAccesses   GalleryAccess[]
   accessCodeVersion Int             @default(1)
 }
@@ -36,6 +39,10 @@ model Folder {
   createdAt DateTime @default(now())
   type      String   @default("general")
   parentId  String?
+
+  // Used only when galleryMode = "bride_groom"
+  maxSelections Int?
+
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images    Image[]
 }

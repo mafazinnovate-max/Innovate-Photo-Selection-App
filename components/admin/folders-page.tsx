@@ -4,6 +4,7 @@ import { createFolder } from "@/actions/create-folder";
 import { deleteFolder } from "@/actions/delete-folder";
 import { regenerateAccessCode } from "@/actions/regenerate-access-code";
 import { updateFolder } from "@/actions/update-folder";
+import { updateMaxSelections } from "@/actions/update-max-selections";
 import { ArrowRight, Check, Copy, Link2, Loader2, MoreVertical, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ interface Folder {
   name: string;
   type?: string;
   parentId?: string | null;
+  maxSelections?: number | null;
   images?: {
     isSelected: boolean;
   }[];
@@ -34,6 +36,7 @@ interface FoldersPageProps {
     galleryMode: "single" | "bride_groom";
     shareId: string;
     accessCode: string;
+    maxSelections?: number | null;
   };
 }
 
@@ -58,8 +61,23 @@ export default function FoldersPage({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [maxSelections, setMaxSelections] = useState(event.maxSelections?.toString() ?? "");
+  const [isLoading, setIsLoading] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (event.galleryMode === "single") {
+      setMaxSelections(event.maxSelections?.toString() ?? "");
+      return;
+    }
+
+    const currentParent = folders.find(
+      (folder) => folder.id === selectedParent
+    );
+
+    setMaxSelections(currentParent?.maxSelections?.toString() ?? "");
+  }, [selectedParent, folders, event.galleryMode, event.maxSelections]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -237,6 +255,39 @@ export default function FoldersPage({
     }
   };
 
+  const handleSaveMaxSelections = async () => {
+    setIsLoading(true);
+
+    const value =
+      maxSelections === ""
+        ? null
+        : Number(maxSelections);
+
+    await updateMaxSelections(
+      eventId,
+      event.galleryMode === "bride_groom"
+        ? selectedParent
+        : null,
+      value
+    );
+
+    // 👇 update local folders state
+    if (event.galleryMode === "bride_groom" && selectedParent) {
+      setFolders((prev) =>
+        prev.map((folder) =>
+          folder.id === selectedParent
+            ? {
+              ...folder,
+              maxSelections: value,
+            }
+            : folder
+        )
+      );
+    }
+
+    setIsLoading(false);
+  };
+
   return (
     <div className="relative mx-auto mt-10 overflow-hidden rounded-3xl border border-zinc-800">
 
@@ -326,95 +377,136 @@ export default function FoldersPage({
           </div>
         </div>
 
+        {isNested && selectedParent && (
+          <button
+            onClick={() => setSelectedParent(null)}
+            className="mt-3 rounded-xl bg-zinc-800 px-4 py-2 text-white cursor-pointer"
+          >
+            ← Back
+          </button>
+        )}
+
         {((isNested && selectedParent) || (!isNested)) && (
-          <div className="mt-8 flex flex-col gap-4 md:flex-row">
-            {/* COPY LINK */}
-            <button
-              onClick={handleCopyLink}
-              className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10 md:min-w-[350px] cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-white/10 p-2">
-                  <Link2 size={18} />
-                </div>
-
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white">
-                    Gallery Link
-                  </p>
-
-                  <p className="text-xs text-zinc-400">
-                    Copy client gallery URL
-                  </p>
-                </div>
-              </div>
-
-              {copiedType === "link" ? (
-                <div className="flex items-center gap-1 text-emerald-400">
-                  <Check size={18} />
-                  <span className="text-xs">Copied</span>
-                </div>
-              ) : (
-                <Copy
-                  size={18}
-                  className="text-zinc-400 transition-transform group-hover:scale-110"
-                />
-              )}
-            </button>
-
-            {/* COPY CODE */}
-            <div className="flex items-center gap-3">
+          <>
+            <div className="mt-8 flex flex-col gap-4 md:flex-row">
+              {/* COPY LINK */}
               <button
-                onClick={() => handleCopy(accessCode, "code")}
-                className="group flex flex-1 items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10 md:min-w-[350px] cursor-pointer"
+                onClick={handleCopyLink}
+                className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10 md:min-w-[350px] cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-white/10 px-3 py-2 text-sm font-bold tracking-widest">
-                    {accessCode}
+                  <div className="rounded-xl bg-white/10 p-2">
+                    <Link2 size={18} />
                   </div>
 
                   <div className="text-left">
                     <p className="text-sm font-medium text-white">
-                      Access Code
+                      Gallery Link
                     </p>
 
                     <p className="text-xs text-zinc-400">
-                      Copy gallery access code
+                      Copy client gallery URL
                     </p>
                   </div>
                 </div>
 
-                {copiedType === "code" ? (
+                {copiedType === "link" ? (
                   <div className="flex items-center gap-1 text-emerald-400">
                     <Check size={18} />
-                    <span className="text-xs font-medium">
-                      Copied
-                    </span>
+                    <span className="text-xs">Copied</span>
                   </div>
                 ) : (
                   <Copy
                     size={18}
-                    className="text-zinc-400 transition-all duration-300 group-hover:scale-110"
+                    className="text-zinc-400 transition-transform group-hover:scale-110"
                   />
                 )}
               </button>
 
-              {/* Regenerate */}
-              <button
-                onClick={handleRegenerateCode}
-                disabled={isRegenerating}
-                className="group flex h-[72px] w-[72px] items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 transition-all hover:border-amber-500/40 hover:bg-amber-500/20 disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCcw
-                  size={20}
-                  className={`text-amber-400 ${isRegenerating
-                    ? "animate-spin"
-                    : "transition-transform group-hover:rotate-180"
-                    }`}
-                />
-              </button>
+              {/* COPY CODE */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleCopy(accessCode, "code")}
+                  className="group flex flex-1 items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10 md:min-w-[350px] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-white/10 px-3 py-2 text-sm font-bold tracking-widest">
+                      {accessCode}
+                    </div>
+
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-white">
+                        Access Code
+                      </p>
+
+                      <p className="text-xs text-zinc-400">
+                        Copy gallery access code
+                      </p>
+                    </div>
+                  </div>
+
+                  {copiedType === "code" ? (
+                    <div className="flex items-center gap-1 text-emerald-400">
+                      <Check size={18} />
+                      <span className="text-xs font-medium">
+                        Copied
+                      </span>
+                    </div>
+                  ) : (
+                    <Copy
+                      size={18}
+                      className="text-zinc-400 transition-all duration-300 group-hover:scale-110"
+                    />
+                  )}
+                </button>
+
+                {/* Regenerate */}
+                <button
+                  onClick={handleRegenerateCode}
+                  disabled={isRegenerating}
+                  className="group flex h-[72px] w-[72px] items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 transition-all hover:border-amber-500/40 hover:bg-amber-500/20 disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCcw
+                    size={20}
+                    className={`text-amber-400 ${isRegenerating
+                      ? "animate-spin"
+                      : "transition-transform group-hover:rotate-180"
+                      }`}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 mt-10 md:w-80">
+              <label className="mb-2 block text-sm font-medium text-white">
+                Maximum Photo Selection
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  placeholder="Unlimited"
+                  value={maxSelections}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setMaxSelections(value);
+                  }}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none"
+                />
+                <button
+                  onClick={handleSaveMaxSelections}
+                  className="rounded-xl bg-white px-4 py-2 text-black cursor-pointer"
+                >
+                  {isLoading ? "Saving..." : "Save"}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs text-zinc-400">
+                Leave empty for unlimited selections.
+              </p>
+            </div>
+          </>
         )}
 
         {/* =========================
@@ -579,88 +671,79 @@ export default function FoldersPage({
             BRIDE_GROOM MODE - CHILD
         ========================= */}
         {isNested && selectedParent && (
-          <>
-            <button
-              onClick={() => setSelectedParent(null)}
-              className="my-3 rounded-xl bg-zinc-800 px-4 py-2 text-white cursor-pointer"
-            >
-              ← Back
-            </button>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 mt-4">
+            {subFolders.map((folder) => (
+              <div className="relative group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 h-32">
+                <Link
+                  key={folder.id}
+                  href={`/events/${eventId}/folders/${folder.id}`}
+                  onClick={() => setIsNavigating(true)}
+                >
+                  <div className="flex justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        {folder.name}
+                      </h2>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {subFolders.map((folder) => (
-                <div className="relative group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 h-32">
-                  <Link
-                    key={folder.id}
-                    href={`/events/${eventId}/folders/${folder.id}`}
-                    onClick={() => setIsNavigating(true)}
-                  >
-                    <div className="flex justify-between">
-                      <div>
-                        <h2 className="text-xl font-semibold">
-                          {folder.name}
-                        </h2>
-
-                        <p className="text-sm text-zinc-400">
-                          Open Gallery
-                        </p>
-                      </div>
-
-                      <ArrowRight
-                        size={18}
-                        className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all"
-                      />
+                      <p className="text-sm text-zinc-400">
+                        Open Gallery
+                      </p>
                     </div>
 
-                    <p className="mt-2 text-xs text-zinc-400">
-                      {folder.images?.filter((i) => i.isSelected).length ?? 0} /{" "}
-                      {folder.images?.length ?? 0} Images
-                    </p>
-                  </Link>
-                  <div
-                    ref={openMenu === folder.id ? menuRef : null}
-                    className="absolute bottom-3 right-3"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenu(
-                          openMenu === folder.id
-                            ? null
-                            : folder.id,
-                        );
-                      }}
-                      className="rounded-lg p-2 hover:bg-zinc-800"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-
-                    {openMenu === folder.id && (
-                      <div className="absolute bottom-8 right-0 flex p-1 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl">
-                        <button
-                          onClick={() =>
-                            handleOpenEdit(folder)
-                          }
-                          className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-zinc-700"
-                        >
-                          <Pencil size={12} />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleOpenDelete(folder)
-                          }
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-zinc-800"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
+                    <ArrowRight
+                      size={18}
+                      className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all"
+                    />
                   </div>
+
+                  <p className="mt-2 text-xs text-zinc-400">
+                    {folder.images?.filter((i) => i.isSelected).length ?? 0} /{" "}
+                    {folder.images?.length ?? 0} Images
+                  </p>
+                </Link>
+                <div
+                  ref={openMenu === folder.id ? menuRef : null}
+                  className="absolute bottom-3 right-3"
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenu(
+                        openMenu === folder.id
+                          ? null
+                          : folder.id,
+                      );
+                    }}
+                    className="rounded-lg p-2 hover:bg-zinc-800"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+
+                  {openMenu === folder.id && (
+                    <div className="absolute bottom-8 right-0 flex p-1 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl">
+                      <button
+                        onClick={() =>
+                          handleOpenEdit(folder)
+                        }
+                        className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-zinc-700"
+                      >
+                        <Pencil size={12} />
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleOpenDelete(folder)
+                        }
+                        className="rounded-lg p-2 text-red-500 transition hover:bg-zinc-800"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       {showEditModal && selectedFolder && (
