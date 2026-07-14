@@ -577,6 +577,7 @@ export default function ClientFolderPage({
                   src={image.imageUrl}
                   alt="Wedding"
                   fill
+                  unoptimized
                   className="object-cover transition duration-300 group-hover:scale-105"
                 />
               </div>
@@ -834,6 +835,7 @@ export default function ClientFolderPage({
                 alt="Preview"
                 fill
                 priority
+                unoptimized
                 className="object-contain select-none"
                 draggable={false}
               />
