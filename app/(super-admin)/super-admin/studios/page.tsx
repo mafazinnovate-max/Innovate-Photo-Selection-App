@@ -651,12 +651,16 @@ export default function StudiosPage() {
                                                     }
                                                     className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
                                                 >
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
+                                                    <button
+                                                        onClick={() => { router.push(`/super-admin/studios/${studio.id}`); }}
+                                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
                                                         <Eye size={15} />
                                                         View Studio
                                                     </button>
 
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
+                                                    <button
+                                                        onClick={() => { router.push(`/super-admin/studios/${studio.id}/edit`); }}
+                                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
                                                         <Pencil size={15} />
                                                         Edit Studio
                                                     </button>
