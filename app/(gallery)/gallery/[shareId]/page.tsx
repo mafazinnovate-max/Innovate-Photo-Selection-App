@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
-import { LocateFixedIcon, PhoneCall } from "lucide-react";
+import {
+  LocateFixedIcon,
+  PhoneCall,
+  CheckCircle2,
+  Clock3,
+} from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import FolderLink from "@/components/gallery/folder-link";
@@ -53,6 +58,7 @@ export default async function GalleryPage({
     select: {
       id: true,
       name: true,
+      selectionStatus: true,
       _count: {
         select: {
           images: true,
@@ -70,6 +76,30 @@ export default async function GalleryPage({
     },
   });
 
+  const selectedImages = await prisma.image.findMany({
+    where: {
+      folder: {
+        eventId: event.id,
+        ...(parentId ? { parentId } : {}),
+      },
+      isSelected: true,
+    },
+    select: {
+      folderId: true,
+    },
+  });
+
+  const selectedCounts = new Map<string, number>();
+
+  for (const image of selectedImages) {
+    selectedCounts.set(
+      image.folderId,
+      (selectedCounts.get(image.folderId) ?? 0) + 1,
+    );
+  }
+
+  const totalSelected = selectedImages.length;
+
   let maxSelections = event.maxSelections;
 
   if (parentId) {
@@ -84,22 +114,6 @@ export default async function GalleryPage({
 
     maxSelections = parentFolder?.maxSelections ?? null;
   }
-
-  // const event = await prisma.event.findUnique({
-  //   where: {
-  //     shareId,
-  //   },
-  //   include: {
-  //     folders: {
-  //       where: parentId
-  //         ? { parentId: parentId }
-  //         : undefined, // 👈 KEY FIX
-  //       include: {
-  //         images: true,
-  //       },
-  //     },
-  //   },
-  // });
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -142,8 +156,9 @@ export default async function GalleryPage({
                 />
 
                 <p>
-                  Innovate Wedding Company, Pattakasalianvilai Rd, Vattakarai,
-                  Maravankudieruppu, Nagercoil, Tamil Nadu 629002
+                  Innovate Wedding Company, Pattakasalianvilai Rd,
+                  Vattakarai, Maravankudieruppu, Nagercoil, Tamil Nadu
+                  629002
                 </p>
               </div>
             </div>
@@ -151,7 +166,7 @@ export default async function GalleryPage({
         </div>
       </div>
 
-      <div className="relative mx-5 xl:mx-auto mt-8 max-w-7xl overflow-hidden rounded-3xl border border-zinc-800">
+      <div className="relative mx-5 mt-8 max-w-7xl overflow-hidden rounded-3xl border border-zinc-800 xl:mx-auto">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex-1">
             {event.coverImageUrl && (
@@ -160,11 +175,10 @@ export default async function GalleryPage({
                   src={event.coverImageUrl}
                   alt={event.name}
                   className="absolute inset-0 h-full w-full object-cover"
-                  // style={{
-                  //   objectPosition: `center ${event.coverPosition ?? 50}%`,
-                  // }}
                   style={{
-                    objectPosition: `center ${50 + event.coverPosition}%`,
+                    objectPosition: `center ${
+                      50 + event.coverPosition
+                    }%`,
                   }}
                 />
 
@@ -176,7 +190,7 @@ export default async function GalleryPage({
               </>
             )}
 
-            <div className="relative min-h-[280px] px-6 py-10 sm:px-8 sm:py-14 md:min-h-[320px] flex flex-col justify-end">
+            <div className="relative flex min-h-[280px] flex-col justify-end px-6 py-10 sm:px-8 sm:py-14 md:min-h-[320px]">
               <div className="max-w-2xl">
                 <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-zinc-300 backdrop-blur">
                   Photo Selection Gallery
@@ -199,9 +213,10 @@ export default async function GalleryPage({
               </div>
             </div>
           </div>
-          <div className="relative flex justify-center lg:justify-end lg:pr-8 mb-5 lg:mb-0 mx-3 md:mx-0">
+
+          <div className="relative mx-3 mb-5 flex justify-center md:mx-0 lg:mb-0 lg:justify-end lg:pr-8">
             {maxSelections && (
-              <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 backdrop-blur-xl shadow-xl">
+              <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-xl backdrop-blur-xl">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xl">
                     📸
@@ -227,14 +242,57 @@ export default async function GalleryPage({
         </div>
       </div>
 
+      {/* Selection Summary */}
+      <div className="mx-auto mt-8 max-w-7xl px-5">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+          <h2 className="text-lg font-semibold text-white">
+            Your Selection Summary
+          </h2>
+
+          <p className="mt-2 text-2xl font-bold text-amber-300">
+            {totalSelected} Photos Selected
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {folders.map((folder) => (
+              <div
+                key={folder.id}
+                className="flex items-center justify-between border-t border-zinc-800 pt-3"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="truncate text-sm text-zinc-300">
+                    {folder.name}
+                  </span>
+
+                  {/* Category Status */}
+                  {folder.selectionStatus === "COMPLETED" ? (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-medium text-green-300">
+                      <CheckCircle2 size={12} />
+                      Client Selected Photos
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
+                      <Clock3 size={12} />
+                      Client Selecting Photos
+                    </span>
+                  )}
+                </div>
+
+                <span className="ml-3 font-semibold text-white">
+                  {selectedCounts.get(folder.id) ?? 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Folder Grid */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4">
         {folders.map((folder) => (
           <FolderLink
             key={folder.id}
             href={`/gallery/${shareId}/folder/${folder.id}`}
-          // prefetch={true}
-          // className="group overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition hover:border-zinc-600"
           >
             {/* Thumbnail */}
             <div className="relative aspect-[4/3] overflow-hidden">
@@ -250,11 +308,28 @@ export default async function GalleryPage({
 
             {/* Content */}
             <div className="p-5">
-              <h2 className="text-xl font-semibold">{folder.name}</h2>
+              <h2 className="text-xl font-semibold">
+                {folder.name}
+              </h2>
 
               <p className="mt-2 text-sm text-zinc-400">
                 {folder._count.images} Photos
               </p>
+
+              {/* Category Status */}
+              <div className="mt-4">
+                {folder.selectionStatus === "COMPLETED" ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-300">
+                    <CheckCircle2 size={14} />
+                    Client Selected Photos
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+                    <Clock3 size={14} />
+                    Client Selecting Photos
+                  </div>
+                )}
+              </div>
             </div>
           </FolderLink>
         ))}

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 interface SaveSelectionsProps {
   folderId: string;
@@ -68,6 +69,25 @@ export const saveSelections = async ({
         })),
       });
     }
+    const folder = await prisma.folder.findUnique({
+  where: {
+    id: folderId,
+  },
+  select: {
+    event: {
+      select: {
+        shareId: true,
+      },
+    },
+  },
+});
+
+if (!folder) {
+  throw new Error("Folder not found");
+}
+
+revalidatePath(`/gallery/${folder.event.shareId}`);
+revalidatePath(`/gallery/${folder.event.shareId}/folder/${folderId}`);
 
     return {
       success: true,

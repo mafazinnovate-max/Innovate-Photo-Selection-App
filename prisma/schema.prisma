@@ -8,43 +8,40 @@ datasource db {
 }
 
 model Event {
-  id                 String    @id @default(cuid())
+  id                 String          @id @default(cuid())
+  studioId           String?
+  studio             Studio?         @relation(fields: [studioId], references: [id], onDelete: Cascade)
   name               String
   clientName         String
   eventType          String
-  shareId            String    @unique
+  shareId            String          @unique
   accessCode         String
-  createdAt          DateTime  @default(now())
+  createdAt          DateTime        @default(now())
   description        String?
   coverImagePublicId String?
   coverImageUrl      String?
-  coverPosition      Int       @default(0)
+  coverPosition      Int             @default(0)
   eventDate          DateTime?
   phoneNumber        String?
   email              String?
-  galleryMode        String    @default("single")
-  folders            Folder[]
-
-  // Used only when galleryMode = "single"
+  galleryMode        String          @default("single")
   maxSelections      Int?
-
-  galleryAccesses   GalleryAccess[]
-  accessCodeVersion Int             @default(1)
+  accessCodeVersion  Int             @default(1)
+  folders            Folder[]
+  galleryAccesses    GalleryAccess[]
 }
 
 model Folder {
-  id        String   @id @default(cuid())
-  name      String
-  eventId   String
-  createdAt DateTime @default(now())
-  type      String   @default("general")
-  parentId  String?
-
-  // Used only when galleryMode = "bride_groom"
-  maxSelections Int?
-
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  images    Image[]
+  id              String                @id @default(cuid())
+  name            String
+  eventId         String
+  createdAt       DateTime              @default(now())
+  type            String                @default("general")
+  parentId        String?
+  maxSelections   Int?
+  selectionStatus FolderSelectionStatus @default(SELECTING)
+  event           Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  images          Image[]
 }
 
 model Image {
@@ -71,12 +68,51 @@ model Selection {
 }
 
 model GalleryAccess {
-  id String @id @default(cuid())
-  eventId String
-  parentId String?
-  deviceId String
-  accessVersion Int @default(1)
-  createdAt DateTime @default(now())
- event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  eventId       String
+  parentId      String?
+  deviceId      String
+  accessVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, parentId, deviceId, accessVersion])
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+model Studio {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String?
+  createdAt DateTime @default(now())
+
+  admins Admin[]
+  events Event[]
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  studioId String
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model SuperAdmin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+enum FolderSelectionStatus {
+  SELECTING
+  COMPLETED
 }
