@@ -1,10 +1,32 @@
 import EventsList from "@/components/admin/EventsList";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { verifyAuthToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventsPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth-token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  const session = await verifyAuthToken(token);
+
+  if (
+    !session ||
+    session.role !== "admin" ||
+    !session.studioId
+  ) {
+    return null;
+  }
+
   const events = await prisma.event.findMany({
+    where: {
+      studioId: session.studioId,
+    },
     orderBy: {
       createdAt: "desc",
     },

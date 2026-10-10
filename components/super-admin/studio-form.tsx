@@ -37,6 +37,7 @@ export interface StudioFormData {
     description: string;
 
     adminName: string;
+    adminUsername: string;
     adminEmail: string;
     adminPhone: string;
     password: string;
@@ -73,6 +74,7 @@ const defaultFormData: StudioFormData = {
     description: "",
 
     adminName: "",
+    adminUsername: "",
     adminEmail: "",
     adminPhone: "",
     password: "",
@@ -150,6 +152,10 @@ export default function StudioForm({
             newErrors.adminName = "Admin name is required";
         }
 
+        if (!formData.adminUsername.trim()) {
+            newErrors.adminUsername = "Admin username is required";
+        }
+
         if (!formData.adminEmail.trim()) {
             newErrors.adminEmail = "Admin email is required";
         } else if (!/\S+@\S+\.\S+/.test(formData.adminEmail)) {
@@ -225,36 +231,46 @@ export default function StudioForm({
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async () => {
-        if (!validate()) {
-            return;
-        }
+   const handleSubmit = async () => {
+    if (!validate()) {
+        return;
+    }
 
-        setIsSaving(true);
+    setIsSaving(true);
 
-        /*
-         * UI ONLY FOR NOW
-         *
-         * Later:
-         * - Create mode -> POST /api/super-admin/studios
-         * - Edit mode   -> PUT /api/super-admin/studios/:id
-         */
-
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        console.log(
-            isEdit ? "Updating studio:" : "Creating studio:",
-            {
-                studioId,
+    try {
+        const response = await fetch("/api/super-admin/studios", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
                 ...formData,
                 plan,
                 status,
-            }
-        );
+            }),
+        });
 
-        setIsSaving(false);
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.message || "Failed to create studio.");
+            return;
+        }
+
+        console.log("Studio created successfully:", data);
+
         setSuccess(true);
-    };
+    } catch (error) {
+        console.error("Create studio error:", error);
+
+        alert(
+            "Something went wrong while creating the studio."
+        );
+    } finally {
+        setIsSaving(false);
+    }
+};
 
     if (success) {
         return (
@@ -477,6 +493,18 @@ export default function StudioForm({
                             placeholder="Admin full name"
                             icon={<User size={17} />}
                             error={errors.adminName}
+                        />
+
+                        <InputField
+                            label="Admin Username"
+                            required
+                            value={formData.adminUsername}
+                            onChange={(value) =>
+                                updateField("adminUsername", value)
+                            }
+                            placeholder="e.g. innovate"
+                            icon={<User size={17} />}
+                            error={errors.adminUsername}
                         />
 
                         <InputField

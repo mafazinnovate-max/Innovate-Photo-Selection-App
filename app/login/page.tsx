@@ -28,10 +28,17 @@ export default function LoginPage() {
             }),
         });
 
-        if (res.ok) {
-            router.replace("/events");
-            return; // IMPORTANT
-        }
+      if (res.ok) {
+    const data = await res.json();
+
+    if (data.role === "superadmin") {
+        router.replace("/super-admin/dashboard");
+    } else {
+        router.replace("/events");
+    }
+
+    return;
+}
 
         setIsLoading(false);
         alert("Invalid Credentials");

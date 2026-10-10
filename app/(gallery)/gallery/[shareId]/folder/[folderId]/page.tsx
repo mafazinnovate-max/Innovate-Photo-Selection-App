@@ -4,6 +4,12 @@ import { hasGalleryAccess } from "@/lib/gallery-access";
 
 import { prisma } from "@/lib/prisma";
 
+interface SelectionCategory {
+  folderId: string;
+  folderName: string;
+  selectedCount: number;
+}
+
 interface FolderPageProps {
   params: Promise<{
     shareId: string;
@@ -13,45 +19,26 @@ interface FolderPageProps {
 
 export default async function FolderPage({ params }: FolderPageProps) {
   const { shareId, folderId } = await params;
+
   const hasAccess = await hasGalleryAccess(shareId);
+
   if (!hasAccess) {
-    return (
-      <GalleryAccessModal
-        shareId={shareId}
-      />
-    );
+    return <GalleryAccessModal shareId={shareId} />;
   }
 
-  // const folder = await prisma.folder.findUnique({
-  //   where: {
-  //     id: folderId,
-  //   },
-  //   select: {
-  //     id: true,
-  //     name: true,
-  //     images: {
-  //       select: {
-  //         id: true,
-  //         imageUrl: true,
-  //         fileName: true,
-  //         isSelected: true,
-  //         comment: true,
-  //       },
-  //       orderBy: {
-  //         createdAt: "desc",
-  //       },
-  //     },
-  //   },
-  // });
-
-  const folder = await prisma.folder.findUnique({
+  const folder = await prisma.folder.findFirst({
     where: {
       id: folderId,
+      event: {
+        shareId: shareId,
+      },
     },
     select: {
       id: true,
       name: true,
+      eventId: true,
       parentId: true,
+      selectionStatus: true,
       event: {
         select: {
           galleryMode: true,
@@ -73,14 +60,19 @@ export default async function FolderPage({ params }: FolderPageProps) {
     },
   });
 
+  if (!folder) {
+    return <div>Folder not found</div>;
+  }
+
   let maxSelections: number | null = null;
 
-  if (folder?.event.galleryMode === "single") {
+  if (folder.event.galleryMode === "single") {
     maxSelections = folder.event.maxSelections;
-  } else if (folder?.parentId) {
-    const parentFolder = await prisma.folder.findUnique({
+  } else if (folder.parentId) {
+    const parentFolder = await prisma.folder.findFirst({
       where: {
         id: folder.parentId,
+        eventId: folder.eventId,
       },
       select: {
         maxSelections: true,
@@ -90,9 +82,32 @@ export default async function FolderPage({ params }: FolderPageProps) {
     maxSelections = parentFolder?.maxSelections ?? null;
   }
 
-  if (!folder) {
-    return <div>Folder not found</div>;
-  }
+  const categoryFolders = await prisma.folder.findMany({
+    where: {
+      eventId: folder.eventId,
+      parentId: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      images: {
+        where: {
+          isSelected: true,
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  const selectionSummary: SelectionCategory[] = categoryFolders.map(
+    (category) => ({
+      folderId: category.id,
+      folderName: category.name,
+      selectedCount: category.images.length,
+    }),
+  );
 
   return (
     <ClientFolderPage
@@ -102,6 +117,8 @@ export default async function FolderPage({ params }: FolderPageProps) {
       shareId={shareId}
       maxSelections={maxSelections}
       parentId={folder.parentId}
+      selectionSummary={selectionSummary}
+      selectionStatus={folder.selectionStatus}
     />
   );
 }

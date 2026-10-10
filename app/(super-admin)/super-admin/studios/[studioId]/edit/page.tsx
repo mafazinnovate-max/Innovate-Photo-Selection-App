@@ -23,6 +23,7 @@ const studioData: StudioFormData = {
         "Professional wedding photography and videography studio managing wedding events, customer galleries and photo selections.",
 
     adminName: "Mafaz Malik",
+    adminUsername: "",
     adminEmail: "admin@innovatewedding.com",
     adminPhone: "+91 98765 43210",
 
