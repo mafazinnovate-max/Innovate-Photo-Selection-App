@@ -127,18 +127,24 @@ export default function Sidebar() {
      Logout
   ----------------------------- */
 
-  const logout = async () => {
-    try {
-      await fetch("/api/logout", {
-        method: "POST",
-      });
+ const logout = async () => {
+  try {
+    await fetch("/api/logout", {
+      method: "POST",
+    });
 
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Unable to log out. Please try again.");
-    }
-  };
+    // Clear studio-specific browser data
+    localStorage.removeItem("studioLogo");
+    localStorage.removeItem("studioLogoZoom");
+    localStorage.removeItem("studioLogoPositionX");
+    localStorage.removeItem("studioLogoPositionY");
+
+    window.location.href = "/login";
+  } catch (error) {
+    console.error("Logout failed:", error);
+    alert("Unable to log out. Please try again.");
+  }
+};
 
   return (
     <>
