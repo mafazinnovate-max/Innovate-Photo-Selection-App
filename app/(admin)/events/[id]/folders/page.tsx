@@ -20,6 +20,16 @@ export default async function EventFoldersPage({
     orderBy: {
       createdAt: "desc",
     },
+    include: {
+      images: {
+        select: {
+          id: true,
+          fileName: true,
+          imageUrl: true,
+          isSelected: true,
+        },
+      },
+    },
   });
 
   const event = await prisma.event.findUnique({
@@ -39,5 +49,18 @@ export default async function EventFoldersPage({
     return <div>Event not found</div>;
   }
 
-  // return <FoldersPage eventId={id} initialFolders={folders} event={event} />;
+  return (
+    <FoldersPage
+      eventId={id}
+      initialFolders={folders}
+      event={{
+        ...event,
+        eventDate: event.eventDate?.toISOString() ?? null,
+        galleryMode:
+          event.galleryMode === "bride_groom"
+            ? "bride_groom"
+            : "single",
+      }}
+    />
+  );
 }

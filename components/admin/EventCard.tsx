@@ -102,6 +102,8 @@ export default function EventCard({ event }: any) {
                                 })
                                 : "No Date"}
                         </p>
+
+  
                     </div>
                 </div>
             </Link>
