@@ -1,7 +1,6 @@
 import ClientFolderPage from "@/components/gallery/client-folder-page";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import { hasGalleryAccess } from "@/lib/gallery-access";
-
 import { prisma } from "@/lib/prisma";
 
 interface SelectionCategory {
@@ -17,7 +16,9 @@ interface FolderPageProps {
   }>;
 }
 
-export default async function FolderPage({ params }: FolderPageProps) {
+export default async function FolderPage({
+  params,
+}: FolderPageProps) {
   const { shareId, folderId } = await params;
 
   const hasAccess = await hasGalleryAccess(shareId);
@@ -82,32 +83,61 @@ export default async function FolderPage({ params }: FolderPageProps) {
     maxSelections = parentFolder?.maxSelections ?? null;
   }
 
-  const categoryFolders = await prisma.folder.findMany({
-    where: {
-      eventId: folder.eventId,
-      parentId: null,
-    },
-    select: {
-      id: true,
-      name: true,
-      images: {
-        where: {
-          isSelected: true,
-        },
-        select: {
-          id: true,
-        },
-      },
-    },
-  });
+  /*
+   * Selection Summary
+   *
+   * SINGLE MODE:
+   * Only the currently opened folder is included.
+   *
+   * BRIDE & GROOM MODE:
+   * Only the child folders belonging to the
+   * currently opened folder's parent are included.
+   */
 
-  const selectionSummary: SelectionCategory[] = categoryFolders.map(
-    (category) => ({
+  const categoryFolders =
+    folder.event.galleryMode === "bride_groom" && folder.parentId
+      ? await prisma.folder.findMany({
+          where: {
+            eventId: folder.eventId,
+            parentId: folder.parentId,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        })
+      : await prisma.folder.findMany({
+          where: {
+            id: folder.id,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+  const selectionSummary: SelectionCategory[] =
+    categoryFolders.map((category) => ({
       folderId: category.id,
       folderName: category.name,
       selectedCount: category.images.length,
-    }),
-  );
+    }));
 
   return (
     <ClientFolderPage

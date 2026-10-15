@@ -5,8 +5,9 @@ import {
   Camera,
   Check,
   Globe,
+  KeyRound,
+  LockKeyhole,
   Mail,
-  MessageCircle,
   Phone,
   Save,
   Trash2,
@@ -17,11 +18,6 @@ import {
    Logo crop constants
 ========================================= */
 
-/*
- * Offsets (X / Y) are stored in a fixed 176px "reference circle"
- * (the original editor size), so the saved values stay the same
- * no matter how large the circle is on the current screen.
- */
 const REF_SIZE = 176;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
@@ -29,11 +25,6 @@ const MAX_ZOOM = 4;
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-/*
- * How far the image centre may be moved from the circle centre.
- * Grows with zoom so a zoomed-in image can be panned to its edges,
- * while some part of the image always stays inside the circle.
- */
 const clampOffset = (value: number, zoom: number) => {
   const max = (REF_SIZE / 2) * Math.max(1, zoom);
   return clamp(value, -max, max);
@@ -80,9 +71,39 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [country, setCountry] = useState("India");
+  const [description, setDescription] = useState("");
+
+  /* -----------------------------
+     Admin Profile
+  ----------------------------- */
+
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPhone, setAdminPhone] = useState("");
+
+  /* -----------------------------
+     Settings DB loading / saving
+  ----------------------------- */
+
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+
+  /* -----------------------------
+     Change Password
+  ----------------------------- */
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   /* -----------------------------
      Branding: Applied Logo
@@ -115,21 +136,8 @@ export default function SettingsPage() {
   const [logoError, setLogoError] = useState("");
   const [logoSuccess, setLogoSuccess] = useState("");
 
-  const [welcomeMessage, setWelcomeMessage] = useState(
-    "Welcome to your private photo gallery."
-  );
-
-  /*
-   * Editing mode exists only while a newly uploaded
-   * (pending) logo is waiting to be applied.
-   */
   const isEditingLogo = pendingLogo !== null;
 
-  /*
-   * What the circular area shows:
-   * - editing mode  -> the pending logo with its crop transform
-   * - otherwise     -> the applied logo with its saved transform
-   */
   const displayedLogo = isEditingLogo ? pendingLogo : appliedLogo;
   const displayedZoom = isEditingLogo ? pendingZoom : appliedZoom;
   const displayedPositionX = isEditingLogo
@@ -145,26 +153,22 @@ export default function SettingsPage() {
 
   const cropRef = useRef<HTMLDivElement | null>(null);
 
-  /* Rendered width of the circle in px (responsive) */
   const [cropSize, setCropSize] = useState(REF_SIZE);
 
-  /* True while the user is dragging / pinching */
   const [isDragging, setIsDragging] = useState(false);
 
-  /*
-   * Always-current copy of the pending transform, so rapid
-   * pointer / wheel events never read a stale React state value.
-   */
-  const transformRef = useRef<LogoTransform>({ zoom: 1, x: 0, y: 0 });
+  const transformRef = useRef<LogoTransform>({
+    zoom: 1,
+    x: 0,
+    y: 0,
+  });
 
-  /* Active pointers (mouse = 1, touch = 1 or 2) */
-  const pointersRef = useRef<Map<number, { x: number; y: number }>>(
-    new Map()
-  );
+  const pointersRef = useRef<
+    Map<number, { x: number; y: number }>
+  >(new Map());
 
   const gestureRef = useRef<Gesture>({ mode: "none" });
 
-  /* Single place that updates the pending crop transform */
   const commitPendingTransform = useCallback(
     (zoom: number, x: number, y: number) => {
       transformRef.current = { zoom, x, y };
@@ -176,68 +180,110 @@ export default function SettingsPage() {
   );
 
   /* -----------------------------
-     Gallery Settings
-  ----------------------------- */
-
-  const [allowComments, setAllowComments] = useState(true);
-  const [allowDownloads, setAllowDownloads] = useState(false);
-  const [showSelectionCount, setShowSelectionCount] = useState(true);
-  const [allowReselection, setAllowReselection] = useState(true);
-  const [showFilenames, setShowFilenames] = useState(false);
-
-  /* -----------------------------
-     Notifications
-  ----------------------------- */
-
-  const [selectionNotification, setSelectionNotification] =
-    useState(true);
-
-  const [commentNotification, setCommentNotification] =
-    useState(true);
-
-  /* -----------------------------
      UI State
   ----------------------------- */
 
   const [saved, setSaved] = useState(false);
 
   /* -----------------------------
+     Load Settings From DB
+  ----------------------------- */
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setLoadingSettings(true);
+        setSettingsError("");
+
+        const response = await fetch("/api/admin/settings", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || "Failed to load settings."
+          );
+        }
+
+        /* -----------------------------
+           Studio data
+        ----------------------------- */
+
+        setStudioName(data.studio?.name ?? "");
+        setEmail(data.studio?.email ?? "");
+        setPhone(data.studio?.phone ?? "");
+        setWebsite(data.studio?.website ?? "");
+        setAddress(data.studio?.address ?? "");
+        setCity(data.studio?.city ?? "");
+        setState(data.studio?.state ?? "");
+        setCountry(data.studio?.country ?? "India");
+        setDescription(data.studio?.description ?? "");
+
+        /* -----------------------------
+           Admin data
+        ----------------------------- */
+
+        setAdminName(data.admin?.name ?? "");
+        setAdminEmail(data.admin?.email ?? "");
+        setAdminPhone(data.admin?.phone ?? "");
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+
+        setSettingsError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load settings."
+        );
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  /* -----------------------------
      Load Existing Applied Logo
      (loaded as APPLIED only, never as pending)
   ----------------------------- */
 
-useEffect(() => {
-  const loadLogo = async () => {
-    try {
-      const response = await fetch("/api/upload-logo", {
-        cache: "no-store",
-      });
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch("/api/upload-logo", {
+          cache: "no-store",
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok && data.success) {
-        setAppliedLogo(data.logoUrl);
+        if (response.ok && data.success) {
+          setAppliedLogo(data.logoUrl);
+        }
+      } catch (error) {
+        console.error("Failed to load studio logo:", error);
       }
-    } catch (error) {
-      console.error("Failed to load studio logo:", error);
-    }
-  };
+    };
 
-  loadLogo();
+    loadLogo();
 
-  const savedZoom = localStorage.getItem("studioLogoZoom");
-  const savedPositionX = localStorage.getItem("studioLogoPositionX");
-  const savedPositionY = localStorage.getItem("studioLogoPositionY");
+    const savedZoom = localStorage.getItem("studioLogoZoom");
+    const savedPositionX = localStorage.getItem(
+      "studioLogoPositionX"
+    );
+    const savedPositionY = localStorage.getItem(
+      "studioLogoPositionY"
+    );
 
-  if (savedZoom) setAppliedZoom(Number(savedZoom));
-  if (savedPositionX) setAppliedPositionX(Number(savedPositionX));
-  if (savedPositionY) setAppliedPositionY(Number(savedPositionY));
-}, []);
+    if (savedZoom) setAppliedZoom(Number(savedZoom));
+    if (savedPositionX) setAppliedPositionX(Number(savedPositionX));
+    if (savedPositionY) setAppliedPositionY(Number(savedPositionY));
+  }, []);
 
   /* -----------------------------
      Track the circle's rendered size
-     (so the stored reference-space offsets render correctly
-     at every screen size)
   ----------------------------- */
 
   useEffect(() => {
@@ -281,8 +327,6 @@ useEffect(() => {
 
   /* -----------------------------
      Mouse wheel / trackpad pinch = zoom
-     (native non-passive listener so the page
-     does not scroll while zooming the crop)
   ----------------------------- */
 
   useEffect(() => {
@@ -297,19 +341,21 @@ useEffect(() => {
       const size = element.clientWidth || REF_SIZE;
       const k = REF_SIZE / size;
 
-      /* Cursor position relative to circle centre, in reference units */
-      const focalX = (event.clientX - (rect.left + rect.width / 2)) * k;
-      const focalY = (event.clientY - (rect.top + rect.height / 2)) * k;
+      const focalX =
+        (event.clientX - (rect.left + rect.width / 2)) * k;
+
+      const focalY =
+        (event.clientY - (rect.top + rect.height / 2)) * k;
 
       let delta = event.deltaY;
 
       if (event.deltaMode === 1) delta *= 16;
       else if (event.deltaMode === 2) delta *= rect.height;
 
-      /* Trackpad pinch arrives as ctrl+wheel with small deltas */
       const sensitivity = event.ctrlKey ? 0.01 : 0.0015;
 
       const current = transformRef.current;
+
       const nextZoom = clamp(
         current.zoom * Math.exp(-delta * sensitivity),
         MIN_ZOOM,
@@ -318,10 +364,13 @@ useEffect(() => {
 
       if (nextZoom === current.zoom) return;
 
-      /* Keep the image point under the cursor fixed while zooming */
       const ratio = nextZoom / current.zoom;
-      const nextX = focalX - (focalX - current.x) * ratio;
-      const nextY = focalY - (focalY - current.y) * ratio;
+
+      const nextX =
+        focalX - (focalX - current.x) * ratio;
+
+      const nextY =
+        focalY - (focalY - current.y) * ratio;
 
       commitPendingTransform(
         nextZoom,
@@ -330,7 +379,9 @@ useEffect(() => {
       );
     };
 
-    element.addEventListener("wheel", handleWheel, { passive: false });
+    element.addEventListener("wheel", handleWheel, {
+      passive: false,
+    });
 
     return () => {
       element.removeEventListener("wheel", handleWheel);
@@ -341,7 +392,6 @@ useEffect(() => {
      Pointer gestures: drag + pinch
   ----------------------------- */
 
-  /* Converts a client point to reference units relative to circle centre */
   const toCropSpace = (clientX: number, clientY: number) => {
     const element = cropRef.current;
 
@@ -352,19 +402,18 @@ useEffect(() => {
     const k = REF_SIZE / size;
 
     return {
-      x: (clientX - (rect.left + rect.width / 2)) * k,
-      y: (clientY - (rect.top + rect.height / 2)) * k,
+      x:
+        (clientX - (rect.left + rect.width / 2)) * k,
+      y:
+        (clientY - (rect.top + rect.height / 2)) * k,
     };
   };
 
-  /*
-   * Re-reads the active pointers and starts the right gesture
-   * from the CURRENT transform. Called whenever a pointer is
-   * added or removed, so going from 2 fingers to 1 continues
-   * smoothly as a drag instead of jumping.
-   */
   const rebaselineGesture = () => {
-    const pointers = Array.from(pointersRef.current.entries());
+    const pointers = Array.from(
+      pointersRef.current.entries()
+    );
+
     const current = transformRef.current;
 
     if (pointers.length === 0) {
@@ -383,6 +432,7 @@ useEffect(() => {
         originX: current.x,
         originY: current.y,
       };
+
       return;
     }
 
@@ -391,12 +441,16 @@ useEffect(() => {
 
     const midClientX = (a.x + b.x) / 2;
     const midClientY = (a.y + b.y) / 2;
+
     const mid = toCropSpace(midClientX, midClientY);
 
     gestureRef.current = {
       mode: "pinch",
       ids: [idA, idB],
-      startDistance: Math.max(Math.hypot(a.x - b.x, a.y - b.y), 1),
+      startDistance: Math.max(
+        Math.hypot(a.x - b.x, a.y - b.y),
+        1
+      ),
       startZoom: current.zoom,
       startMidX: mid.x,
       startMidY: mid.y,
@@ -422,45 +476,57 @@ useEffect(() => {
       const zoom = transformRef.current.zoom;
 
       const nextX =
-        gesture.originX + (point.x - gesture.startClientX) * k;
+        gesture.originX +
+        (point.x - gesture.startClientX) * k;
+
       const nextY =
-        gesture.originY + (point.y - gesture.startClientY) * k;
+        gesture.originY +
+        (point.y - gesture.startClientY) * k;
 
       commitPendingTransform(
         zoom,
         clampOffset(nextX, zoom),
         clampOffset(nextY, zoom)
       );
+
       return;
     }
 
-    /* Pinch: zoom and pan together */
     const a = pointersRef.current.get(gesture.ids[0]);
     const b = pointersRef.current.get(gesture.ids[1]);
 
     if (!a || !b) return;
 
-    const distance = Math.hypot(a.x - b.x, a.y - b.y);
+    const distance = Math.hypot(
+      a.x - b.x,
+      a.y - b.y
+    );
 
     const nextZoom = clamp(
-      gesture.startZoom * (distance / gesture.startDistance),
+      gesture.startZoom *
+        (distance / gesture.startDistance),
       MIN_ZOOM,
       MAX_ZOOM
     );
 
-    const mid = toCropSpace((a.x + b.x) / 2, (a.y + b.y) / 2);
+    const mid = toCropSpace(
+      (a.x + b.x) / 2,
+      (a.y + b.y) / 2
+    );
 
-    /*
-     * The image point that was under the fingers' midpoint when the
-     * pinch started stays under the (moving) midpoint.
-     */
     const imagePointX =
-      (gesture.startMidX - gesture.originX) / gesture.startZoom;
-    const imagePointY =
-      (gesture.startMidY - gesture.originY) / gesture.startZoom;
+      (gesture.startMidX - gesture.originX) /
+      gesture.startZoom;
 
-    const nextX = mid.x - nextZoom * imagePointX;
-    const nextY = mid.y - nextZoom * imagePointY;
+    const imagePointY =
+      (gesture.startMidY - gesture.originY) /
+      gesture.startZoom;
+
+    const nextX =
+      mid.x - nextZoom * imagePointX;
+
+    const nextY =
+      mid.y - nextZoom * imagePointY;
 
     commitPendingTransform(
       nextZoom,
@@ -474,15 +540,21 @@ useEffect(() => {
   ) => {
     if (!isEditingLogo) return;
 
-    /* Mouse: primary button only */
-    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (
+      event.pointerType === "mouse" &&
+      event.button !== 0
+    ) {
+      return;
+    }
 
     event.preventDefault();
 
     try {
-      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.setPointerCapture(
+        event.pointerId
+      );
     } catch {
-      /* Pointer may already be gone; safe to ignore */
+      /* Safe to ignore */
     }
 
     pointersRef.current.set(event.pointerId, {
@@ -515,9 +587,11 @@ useEffect(() => {
     if (!pointersRef.current.has(event.pointerId)) return;
 
     try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+      event.currentTarget.releasePointerCapture(
+        event.pointerId
+      );
     } catch {
-      /* Capture may already be released; safe to ignore */
+      /* Safe to ignore */
     }
 
     pointersRef.current.delete(event.pointerId);
@@ -570,22 +644,14 @@ useEffect(() => {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Logo upload failed.");
+        throw new Error(
+          data.message || "Logo upload failed."
+        );
       }
 
-      /*
-       * The uploaded image becomes the PENDING logo only.
-       *
-       * - The applied logo is not touched.
-       * - localStorage is not touched.
-       * - The Sidebar is not notified.
-       *
-       * If a previous pending logo existed, it is replaced.
-       */
       setPendingLogo(data.url);
       setPendingPublicId(data.publicId);
 
-      /* Every new pending logo starts centred at default zoom */
       commitPendingTransform(1, 0, 0);
 
       setLogoSuccess("");
@@ -593,12 +659,13 @@ useEffect(() => {
       console.error(error);
 
       setLogoError(
-        error instanceof Error ? error.message : "Logo upload failed."
+        error instanceof Error
+          ? error.message
+          : "Logo upload failed."
       );
     } finally {
       setUploadingLogo(false);
 
-      /* Allow selecting the same file again later */
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -607,37 +674,42 @@ useEffect(() => {
 
   /* -----------------------------
      Apply Logo
-     Pending -> Applied (final confirmation)
+     Pending -> Applied
   ----------------------------- */
 
   const applyLogo = () => {
     if (!pendingLogo) return;
 
-    /* Save URL + crop transform as the active studio logo */
     localStorage.setItem("studioLogo", pendingLogo);
-    localStorage.setItem("studioLogoZoom", String(pendingZoom));
+
+    localStorage.setItem(
+      "studioLogoZoom",
+      String(pendingZoom)
+    );
+
     localStorage.setItem(
       "studioLogoPositionX",
       String(pendingPositionX)
     );
+
     localStorage.setItem(
       "studioLogoPositionY",
       String(pendingPositionY)
     );
 
-    /* Pending becomes applied */
     setAppliedLogo(pendingLogo);
     setAppliedZoom(pendingZoom);
     setAppliedPositionX(pendingPositionX);
     setAppliedPositionY(pendingPositionY);
 
-    /* Leave editing mode */
     setPendingLogo(null);
     setPendingPublicId(null);
+
     commitPendingTransform(1, 0, 0);
 
-    /* Tell the Sidebar the applied logo changed */
-    window.dispatchEvent(new Event("studio-logo-changed"));
+    window.dispatchEvent(
+      new Event("studio-logo-changed")
+    );
 
     setLogoError("");
     setLogoSuccess("Logo applied successfully.");
@@ -646,12 +718,12 @@ useEffect(() => {
 
   /* -----------------------------
      Cancel Editing
-     Discards the pending logo; applied logo stays active
   ----------------------------- */
 
   const cancelLogoEditing = () => {
     setPendingLogo(null);
     setPendingPublicId(null);
+
     commitPendingTransform(1, 0, 0);
 
     setLogoError("");
@@ -680,7 +752,9 @@ useEffect(() => {
     localStorage.removeItem("studioLogoPositionX");
     localStorage.removeItem("studioLogoPositionY");
 
-    window.dispatchEvent(new Event("studio-logo-changed"));
+    window.dispatchEvent(
+      new Event("studio-logo-changed")
+    );
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -690,25 +764,159 @@ useEffect(() => {
   };
 
   /* -----------------------------
-     Save
+     Save Studio + Admin Settings To DB
   ----------------------------- */
 
-  const handleSave = () => {
-    /*
-     * This currently saves the values only in the
-     * React state for this page.
-     *
-     * Database persistence will be connected later.
-     */
-
-    setSaved(true);
-
-    setTimeout(() => {
+  const handleSave = async () => {
+    try {
+      setSavingSettings(true);
+      setSettingsError("");
       setSaved(false);
-    }, 3000);
+
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studioName,
+          email,
+          phone,
+          website,
+          address,
+          city,
+          state,
+          country,
+          description,
+
+          adminName,
+          adminEmail,
+          adminPhone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Failed to save settings."
+        );
+      }
+
+      /* -----------------------------
+         Update Studio values
+      ----------------------------- */
+
+      setStudioName(data.studio?.name ?? "");
+      setEmail(data.studio?.email ?? "");
+      setPhone(data.studio?.phone ?? "");
+      setWebsite(data.studio?.website ?? "");
+      setAddress(data.studio?.address ?? "");
+      setCity(data.studio?.city ?? "");
+      setState(data.studio?.state ?? "");
+      setCountry(data.studio?.country ?? "India");
+      setDescription(data.studio?.description ?? "");
+
+      /* -----------------------------
+         Update Admin values
+      ----------------------------- */
+
+      setAdminName(data.admin?.name ?? "");
+      setAdminEmail(data.admin?.email ?? "");
+      setAdminPhone(data.admin?.phone ?? "");
+
+      setSaved(true);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+
+      setSettingsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save settings."
+      );
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
-  /* Reference-space offsets -> pixels at the current circle size */
+  /* -----------------------------
+     Change Password
+  ----------------------------- */
+
+  const handlePasswordChange = async () => {
+    try {
+      setChangingPassword(true);
+      setPasswordError("");
+      setPasswordSuccess("");
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setPasswordError(
+          "Please fill in all password fields."
+        );
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setPasswordError(
+          "New password must be at least 6 characters."
+        );
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setPasswordError(
+          "New password and confirmation password do not match."
+        );
+        return;
+      }
+
+      const response = await fetch(
+        "/api/admin/settings/password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+            confirmPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Failed to change password."
+        );
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      setPasswordSuccess(
+        "Password changed successfully."
+      );
+    } catch (error) {
+      console.error("Failed to change password:", error);
+
+      setPasswordError(
+        error instanceof Error
+          ? error.message
+          : "Failed to change password."
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const cropScale = cropSize / REF_SIZE;
 
   return (
@@ -728,7 +936,7 @@ useEffect(() => {
           </h1>
 
           <p className="mt-2 text-sm text-zinc-400">
-            Manage your studio, branding, gallery and notification
+            Manage your studio, admin account and branding
             preferences.
           </p>
         </div>
@@ -736,22 +944,47 @@ useEffect(() => {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+          disabled={loadingSettings || savingSettings}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saved ? <Check size={18} /> : <Save size={18} />}
 
-          {saved ? "Saved" : "Save Changes"}
+          {savingSettings
+            ? "Saving..."
+            : saved
+              ? "Saved"
+              : "Save Changes"}
         </button>
       </div>
 
       {/* --------------------------------
-          1. Studio Profile
+          Settings error
+      -------------------------------- */}
+
+      {settingsError && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {settingsError}
+        </div>
+      )}
+
+      {/* --------------------------------
+          Loading message
+      -------------------------------- */}
+
+      {loadingSettings && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">
+          Loading studio settings...
+        </div>
+      )}
+
+      {/* --------------------------------
+          1. Studio Information
       -------------------------------- */}
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">
-            Studio Profile
+            Studio Information
           </h2>
 
           <p className="mt-1 text-sm text-zinc-500">
@@ -760,6 +993,8 @@ useEffect(() => {
         </div>
 
         <div className="space-y-5">
+          {/* Studio Name */}
+
           <div>
             <label
               htmlFor="studioName"
@@ -781,6 +1016,8 @@ useEffect(() => {
             />
           </div>
 
+          {/* Email + Phone */}
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <label
@@ -788,7 +1025,7 @@ useEffect(() => {
                 className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
               >
                 <Mail size={15} />
-                Email
+                Studio Email
               </label>
 
               <input
@@ -810,7 +1047,7 @@ useEffect(() => {
                 className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
               >
                 <Phone size={15} />
-                Phone
+                Studio Phone
               </label>
 
               <input
@@ -826,6 +1063,8 @@ useEffect(() => {
               />
             </div>
           </div>
+
+          {/* Website */}
 
           <div>
             <label
@@ -849,51 +1088,7 @@ useEffect(() => {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="instagram"
-                className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
-              >
-                <Globe size={15} />
-                Instagram
-              </label>
-
-              <input
-                id="instagram"
-                type="url"
-                value={instagram}
-                onChange={(e) => {
-                  setInstagram(e.target.value);
-                  setSaved(false);
-                }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-                placeholder="https://instagram.com/yourstudio"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="whatsapp"
-                className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
-              >
-                <MessageCircle size={15} />
-                WhatsApp
-              </label>
-
-              <input
-                id="whatsapp"
-                type="tel"
-                value={whatsapp}
-                onChange={(e) => {
-                  setWhatsapp(e.target.value);
-                  setSaved(false);
-                }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-                placeholder="+91 98765 43210"
-              />
-            </div>
-          </div>
+          {/* Address */}
 
           <div>
             <label
@@ -915,14 +1110,331 @@ useEffect(() => {
               placeholder="Enter your studio address"
             />
           </div>
+
+          {/* City + State */}
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="city"
+                className="mb-2 block text-sm font-medium text-zinc-300"
+              >
+                City
+              </label>
+
+              <input
+                id="city"
+                type="text"
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  setSaved(false);
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="Enter city"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="state"
+                className="mb-2 block text-sm font-medium text-zinc-300"
+              >
+                State
+              </label>
+
+              <input
+                id="state"
+                type="text"
+                value={state}
+                onChange={(e) => {
+                  setState(e.target.value);
+                  setSaved(false);
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="Enter state"
+              />
+            </div>
+          </div>
+
+          {/* Country */}
+
+          <div>
+            <label
+              htmlFor="country"
+              className="mb-2 block text-sm font-medium text-zinc-300"
+            >
+              Country
+            </label>
+
+            <input
+              id="country"
+              type="text"
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value);
+                setSaved(false);
+              }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              placeholder="Enter country"
+            />
+          </div>
+
+          {/* Description */}
+
+          <div>
+            <label
+              htmlFor="description"
+              className="mb-2 block text-sm font-medium text-zinc-300"
+            >
+              Description
+            </label>
+
+            <textarea
+              id="description"
+              rows={4}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setSaved(false);
+              }}
+              className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              placeholder="Short description about the studio..."
+            />
+          </div>
         </div>
       </section>
 
       {/* --------------------------------
-          2. Branding
+          2. Admin Information
       -------------------------------- */}
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6" id="branding">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-white">
+            Admin Information
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Manage the contact information associated with this
+            admin account.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {/* Admin Name */}
+
+          <div>
+            <label
+              htmlFor="adminName"
+              className="mb-2 block text-sm font-medium text-zinc-300"
+            >
+              Admin Name
+            </label>
+
+            <input
+              id="adminName"
+              type="text"
+              value={adminName}
+              onChange={(e) => {
+                setAdminName(e.target.value);
+                setSaved(false);
+              }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              placeholder="Enter admin name"
+            />
+          </div>
+
+          {/* Admin Email + Phone */}
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="adminEmail"
+                className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
+              >
+                <Mail size={15} />
+                Admin Email
+              </label>
+
+              <input
+                id="adminEmail"
+                type="email"
+                value={adminEmail}
+                onChange={(e) => {
+                  setAdminEmail(e.target.value);
+                  setSaved(false);
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="admin@example.com"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="adminPhone"
+                className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
+              >
+                <Phone size={15} />
+                Admin Phone
+              </label>
+
+              <input
+                id="adminPhone"
+                type="tel"
+                value={adminPhone}
+                onChange={(e) => {
+                  setAdminPhone(e.target.value);
+                  setSaved(false);
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="+91 98765 43210"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --------------------------------
+          3. Change Password
+      -------------------------------- */}
+
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-zinc-800 p-2.5">
+              <KeyRound
+                size={18}
+                className="text-zinc-300"
+              />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Change Password
+              </h2>
+
+              <p className="mt-1 text-sm text-zinc-500">
+                Change the password used to sign in to this
+                admin account.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {/* Current Password */}
+
+          <div>
+            <label
+              htmlFor="currentPassword"
+              className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300"
+            >
+              <LockKeyhole size={15} />
+              Current Password
+            </label>
+
+            <input
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => {
+                setCurrentPassword(e.target.value);
+                setPasswordError("");
+                setPasswordSuccess("");
+              }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              placeholder="Enter current password"
+            />
+          </div>
+
+          {/* New Password */}
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="newPassword"
+                className="mb-2 block text-sm font-medium text-zinc-300"
+              >
+                New Password
+              </label>
+
+              <input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPasswordError("");
+                  setPasswordSuccess("");
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="Minimum 6 characters"
+              />
+            </div>
+
+            {/* Confirm Password */}
+
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="mb-2 block text-sm font-medium text-zinc-300"
+              >
+                Confirm New Password
+              </label>
+
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPasswordError("");
+                  setPasswordSuccess("");
+                }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                placeholder="Re-enter new password"
+              />
+            </div>
+          </div>
+
+          {passwordError && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              {passwordError}
+            </div>
+          )}
+
+          {passwordSuccess && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+              {passwordSuccess}
+            </div>
+          )}
+
+          <div>
+            <button
+              type="button"
+              onClick={handlePasswordChange}
+              disabled={changingPassword}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <KeyRound size={17} />
+
+              {changingPassword
+                ? "Changing..."
+                : "Change Password"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* --------------------------------
+          4. Branding
+      -------------------------------- */}
+
+      <section
+        className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6"
+        id="branding"
+      >
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white">
             Branding
@@ -949,12 +1461,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* --------------------------------
-                Circular crop area.
-                The circle is fixed; the image moves
-                inside it and is clipped by it.
-            -------------------------------- */}
-
             <div className="flex w-full justify-center lg:justify-start">
               <div
                 ref={cropRef}
@@ -974,7 +1480,9 @@ useEffect(() => {
                 className={`relative flex aspect-square h-56 w-56 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border bg-zinc-950 shadow-lg sm:h-60 sm:w-60 2xl:h-72 2xl:w-72 ${
                   isEditingLogo
                     ? `touch-none border-amber-500/60 ${
-                        isDragging ? "cursor-grabbing" : "cursor-grab"
+                        isDragging
+                          ? "cursor-grabbing"
+                          : "cursor-grab"
                       }`
                     : "border-zinc-700"
                 }`}
@@ -1013,11 +1521,12 @@ useEffect(() => {
                   </div>
                 )}
 
-                {/* Thirds grid, visible only while dragging */}
                 {isEditingLogo && (
                   <div
                     className={`pointer-events-none absolute inset-0 transition-opacity duration-150 ${
-                      isDragging ? "opacity-100" : "opacity-0"
+                      isDragging
+                        ? "opacity-100"
+                        : "opacity-0"
                     }`}
                   >
                     <div className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
@@ -1029,8 +1538,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Hidden input */}
-
             <input
               ref={fileInputRef}
               type="file"
@@ -1039,12 +1546,12 @@ useEffect(() => {
               className="hidden"
             />
 
-            {/* Upload / Remove */}
-
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
                 disabled={uploadingLogo}
                 className="inline-flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -1057,7 +1564,6 @@ useEffect(() => {
                     : "Upload Logo"}
               </button>
 
-              {/* Remove applies to the applied logo, outside editing mode */}
               {!isEditingLogo && appliedLogo && (
                 <button
                   type="button"
@@ -1076,12 +1582,6 @@ useEffect(() => {
               </p>
             )}
 
-            {/* --------------------------------
-                Editing mode panel.
-                No sliders or numeric values:
-                the image itself is the control.
-            -------------------------------- */}
-
             {isEditingLogo && (
               <div className="mt-6 rounded-2xl border border-amber-500/30 bg-zinc-950/70 p-4">
                 <div className="mb-4">
@@ -1090,9 +1590,9 @@ useEffect(() => {
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-500">
-                    Drag the image to move it. Scroll or pinch to
-                    zoom. Your current logo stays active until you
-                    click Apply Logo.
+                    Drag the image to move it. Scroll or pinch
+                    to zoom. Your current logo stays active until
+                    you click Apply Logo.
                   </p>
                 </div>
 
@@ -1127,141 +1627,6 @@ useEffect(() => {
               Maximum 5MB.
             </p>
           </div>
-
-          {/* Welcome message */}
-
-          <div>
-            <label
-              htmlFor="welcomeMessage"
-              className="mb-2 block text-sm font-medium text-zinc-300"
-            >
-              Gallery Welcome Message
-            </label>
-
-            <textarea
-              id="welcomeMessage"
-              rows={6}
-              value={welcomeMessage}
-              onChange={(e) => {
-                setWelcomeMessage(e.target.value);
-                setSaved(false);
-              }}
-              className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-              placeholder="Write a welcome message for your clients..."
-            />
-
-            <p className="mt-2 text-xs text-zinc-500">
-              This message can be displayed when clients open
-              their gallery.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* --------------------------------
-          3. Gallery Preferences
-      -------------------------------- */}
-
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white">
-            Gallery Preferences
-          </h2>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            Control the client photo-selection experience.
-          </p>
-        </div>
-
-        <div className="divide-y divide-zinc-800">
-          <SettingRow
-            title="Allow Client Comments"
-            description="Allow clients to leave comments on photos."
-            enabled={allowComments}
-            onChange={() => {
-              setAllowComments((value) => !value);
-              setSaved(false);
-            }}
-          />
-
-          <SettingRow
-            title="Allow Photo Downloads"
-            description="Allow clients to download photos from their gallery."
-            enabled={allowDownloads}
-            onChange={() => {
-              setAllowDownloads((value) => !value);
-              setSaved(false);
-            }}
-          />
-
-          <SettingRow
-            title="Show Selection Count"
-            description="Show clients how many photos they have selected."
-            enabled={showSelectionCount}
-            onChange={() => {
-              setShowSelectionCount((value) => !value);
-              setSaved(false);
-            }}
-          />
-
-          <SettingRow
-            title="Allow Reselection"
-            description="Allow clients to change their selected photos before completing the gallery."
-            enabled={allowReselection}
-            onChange={() => {
-              setAllowReselection((value) => !value);
-              setSaved(false);
-            }}
-          />
-
-          <SettingRow
-            title="Show File Names"
-            description="Display the original photo filename to clients."
-            enabled={showFilenames}
-            onChange={() => {
-              setShowFilenames((value) => !value);
-              setSaved(false);
-            }}
-          />
-        </div>
-      </section>
-
-      {/* --------------------------------
-          4. Notifications
-      -------------------------------- */}
-
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-white">
-            Notifications
-          </h2>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            Choose which client activities should notify your
-            studio.
-          </p>
-        </div>
-
-        <div className="divide-y divide-zinc-800">
-          <SettingRow
-            title="Selection Completed"
-            description="Notify the studio when a client completes their photo selection."
-            enabled={selectionNotification}
-            onChange={() => {
-              setSelectionNotification((value) => !value);
-              setSaved(false);
-            }}
-          />
-
-          <SettingRow
-            title="New Photo Comment"
-            description="Notify the studio when a client comments on a photo."
-            enabled={commentNotification}
-            onChange={() => {
-              setCommentNotification((value) => !value);
-              setSaved(false);
-            }}
-          />
         </div>
       </section>
 
@@ -1283,62 +1648,18 @@ useEffect(() => {
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+          disabled={loadingSettings || savingSettings}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saved ? <Check size={18} /> : <Save size={18} />}
 
-          {saved ? "Saved" : "Save Changes"}
+          {savingSettings
+            ? "Saving..."
+            : saved
+              ? "Saved"
+              : "Save Changes"}
         </button>
       </div>
-    </div>
-  );
-}
-
-/* =========================================
-   Reusable Toggle
-========================================= */
-
-type SettingRowProps = {
-  title: string;
-  description: string;
-  enabled: boolean;
-  onChange: () => void;
-};
-
-function SettingRow({
-  title,
-  description,
-  enabled,
-  onChange,
-}: SettingRowProps) {
-  return (
-    <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="pr-4">
-        <h3 className="text-sm font-medium text-white">
-          {title}
-        </h3>
-
-        <p className="mt-1 text-sm text-zinc-500">
-          {description}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onChange}
-        aria-pressed={enabled}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          enabled ? "bg-white" : "bg-zinc-700"
-        }`}
-      >
-        <span
-          className={`absolute top-1 h-4 w-4 rounded-full transition ${
-            enabled
-              ? "left-6 bg-black"
-              : "left-1 bg-zinc-400"
-          }`}
-        />
-      </button>
     </div>
   );
 }

@@ -9,8 +9,6 @@ datasource db {
 
 model Event {
   id                 String          @id @default(cuid())
-  studioId           String?
-  studio             Studio?         @relation(fields: [studioId], references: [id], onDelete: Cascade)
   name               String
   clientName         String
   eventType          String
@@ -27,6 +25,9 @@ model Event {
   galleryMode        String          @default("single")
   maxSelections      Int?
   accessCodeVersion  Int             @default(1)
+  studioId           String?
+  deletedAt          DateTime?
+  studio             Studio?         @relation(fields: [studioId], references: [id], onDelete: Cascade)
   folders            Folder[]
   galleryAccesses    GalleryAccess[]
 }
@@ -86,13 +87,23 @@ model playing_with_neon {
 }
 
 model Studio {
-  id        String   @id @default(cuid())
-  name      String
-  logoUrl   String?
-  createdAt DateTime @default(now())
-
-  admins Admin[]
-  events Event[]
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  logoUrl       String?
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  country       String         @default("India")
+  website       String?
+  description   String?
+  internalNotes String?
+  isActive      Boolean        @default(true)
+  admins        Admin[]
+  events        Event[]
+  Subscription  Subscription[]
 }
 
 model Admin {
@@ -100,9 +111,11 @@ model Admin {
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
-
-  studioId String
-  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId     String
+  name         String?
+  email        String?
+  phone        String?
+  studio       Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
 }
 
 model SuperAdmin {
@@ -110,6 +123,22 @@ model SuperAdmin {
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+}
+
+model Subscription {
+  id             String    @id
+  plan           String    @default("Basic")
+  status         String    @default("Active")
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  storageLimitGb Int       @default(100)
+  maxEvents      Int       @default(50)
+  maxCustomers   Int       @default(500)
+  maxImages      Int       @default(100000)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  studioId       String
+  Studio         Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
 }
 
 enum FolderSelectionStatus {

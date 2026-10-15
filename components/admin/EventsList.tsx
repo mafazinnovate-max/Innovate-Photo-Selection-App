@@ -34,19 +34,28 @@ export default function EventsList({
     const filteredEvents = useMemo(() => {
         let result = [...events];
 
-        // Tab Filter
-        if (activeTab !== "All") {
-            if (activeTab === "Others") {
-                result = result.filter(
-                    (event) =>
-                        !MAIN_EVENT_TYPES.includes(event.eventType)
-                );
-            } else {
-                result = result.filter(
-                    (event) => event.eventType === activeTab
-                );
-            }
-        }
+        
+      // Tab Filter
+if (activeTab !== "All") {
+    if (activeTab === "Completed") {
+        result = result.filter(
+            (event) => event.selectionStatus === "COMPLETED"
+        );
+    } else if (activeTab === "Selecting") {
+        result = result.filter(
+            (event) => event.selectionStatus === "SELECTING"
+        );
+    } else if (activeTab === "Others") {
+        result = result.filter(
+            (event) =>
+                !MAIN_EVENT_TYPES.includes(event.eventType)
+        );
+    } else {
+        result = result.filter(
+            (event) => event.eventType === activeTab
+        );
+    }
+}
 
         // Search Filter
         const searchText = search.toLowerCase().trim();
@@ -73,7 +82,13 @@ export default function EventsList({
         return result;
     }, [events, search, activeTab]);
 
-    const tabs = ["All", ...MAIN_EVENT_TYPES, "Others"];
+    const tabs = [
+    "All",
+    ...MAIN_EVENT_TYPES,
+    "Others",
+    "Completed",
+    "Selecting",
+];
 
     return (
         <>
