@@ -231,46 +231,60 @@ export default function StudioForm({
         return Object.keys(newErrors).length === 0;
     };
 
-   const handleSubmit = async () => {
-    if (!validate()) {
-        return;
-    }
 
-    setIsSaving(true);
+    const handleSubmit = async () => {
+        if (!validate()) return;
 
-    try {
-        const response = await fetch("/api/super-admin/studios", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                ...formData,
-                plan,
-                status,
-            }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert(data.message || "Failed to create studio.");
+        if (isEdit && !studioId) {
+            alert("Studio ID is missing. Cannot update this studio.");
             return;
         }
 
-        console.log("Studio created successfully:", data);
+        setIsSaving(true);
 
-        setSuccess(true);
-    } catch (error) {
-        console.error("Create studio error:", error);
+        try {
+            const response = await fetch(
+                isEdit
+                    ? `/api/super-admin/studios/${studioId}`
+                    : "/api/super-admin/studios",
+                {
+                    method: isEdit ? "PATCH" : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        ...formData,
+                        plan,
+                        status,
+                    }),
+                }
+            );
+            console.log('formdata---->', formData)
 
-        alert(
-            "Something went wrong while creating the studio."
-        );
-    } finally {
-        setIsSaving(false);
-    }
-};
+            const data = await response.json();
+            console.log('response----->', response)
+            console.log('data----->', data)
+
+            if (!response.ok) {
+                alert(
+                    data.message ||
+                    `Failed to ${isEdit ? "update" : "create"} studio.`
+                );
+                return;
+            }
+
+            setSuccess(true);
+        } catch (error) {
+            console.error("Studio save error:", error);
+
+            alert(
+                `Something went wrong while ${isEdit ? "updating" : "creating"
+                } the studio.`
+            );
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     if (success) {
         return (
@@ -349,14 +363,14 @@ export default function StudioForm({
                 {isEdit && (
                     <div
                         className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${status === "Active"
-                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                                : "border-red-500/20 bg-red-500/10 text-red-400"
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                            : "border-red-500/20 bg-red-500/10 text-red-400"
                             }`}
                     >
                         <span
                             className={`h-2 w-2 rounded-full ${status === "Active"
-                                    ? "bg-emerald-400"
-                                    : "bg-red-400"
+                                ? "bg-emerald-400"
+                                : "bg-red-400"
                                 }`}
                         />
                         {status}
@@ -605,8 +619,8 @@ export default function StudioForm({
                                         type="button"
                                         onClick={() => setPlan(item)}
                                         className={`rounded-xl border p-4 text-left transition ${plan === item
-                                                ? "border-white bg-white text-black"
-                                                : "border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-500"
+                                            ? "border-white bg-white text-black"
+                                            : "border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-500"
                                             }`}
                                     >
                                         <div className="flex items-center justify-between">
@@ -621,8 +635,8 @@ export default function StudioForm({
 
                                         <p
                                             className={`mt-1 text-xs ${plan === item
-                                                    ? "text-zinc-600"
-                                                    : "text-zinc-500"
+                                                ? "text-zinc-600"
+                                                : "text-zinc-500"
                                                 }`}
                                         >
                                             {item === "Basic" &&
@@ -679,10 +693,10 @@ export default function StudioForm({
                                                 type="button"
                                                 onClick={() => setStatus(item)}
                                                 className={`rounded-xl border px-5 py-3 text-sm font-medium transition ${status === item
-                                                        ? item === "Active"
-                                                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                                                            : "border-red-500/40 bg-red-500/10 text-red-400"
-                                                        : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-white"
+                                                    ? item === "Active"
+                                                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                                        : "border-red-500/40 bg-red-500/10 text-red-400"
+                                                    : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:text-white"
                                                     }`}
                                             >
                                                 {item}
@@ -853,7 +867,6 @@ function InputField({
         <div>
             <label className="mb-2 block text-sm font-medium text-zinc-300">
                 {label}
-
                 {required && (
                     <span className="ml-1 text-red-400">*</span>
                 )}
@@ -861,7 +874,10 @@ function InputField({
 
             <div className="relative">
                 {icon && (
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                    <div
+                        className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 ${type === "date" ? "hidden" : ""
+                            }`}
+                    >
                         {icon}
                     </div>
                 )}
@@ -871,7 +887,23 @@ function InputField({
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full rounded-xl border bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500 ${icon ? "pl-10" : ""
+                    onClick={(e) => {
+                        if (type === "date") {
+                            const input = e.currentTarget;
+                            if ("showPicker" in input) {
+                                try {
+                                    input.showPicker();
+                                } catch {
+                                    // Browser can open its native picker normally.
+                                }
+                            }
+                        }
+                    }}
+                    className={`w-full rounded-xl border bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500 ${type === "date"
+                            ? "[color-scheme:dark] cursor-pointer"
+                            : icon
+                                ? "pl-10"
+                                : ""
                         } ${error
                             ? "border-red-500/60"
                             : "border-zinc-700"
@@ -979,8 +1011,8 @@ function PasswordField({
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
                     className={`w-full rounded-xl border bg-zinc-950 py-3 pl-10 pr-11 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500 ${error
-                            ? "border-red-500/60"
-                            : "border-zinc-700"
+                        ? "border-red-500/60"
+                        : "border-zinc-700"
                         }`}
                 />
 
