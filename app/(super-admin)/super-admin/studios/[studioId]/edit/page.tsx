@@ -1,8 +1,12 @@
+import { notFound } from "next/navigation";
+
 import StudioForm, {
     StudioFormData,
     StudioPlan,
     StudioStatus,
 } from "@/components/super-admin/studio-form";
+
+import { prisma } from "@/lib/prisma";
 
 interface EditStudioPageProps {
     params: Promise<{
@@ -10,60 +14,83 @@ interface EditStudioPageProps {
     }>;
 }
 
-const studioData: StudioFormData = {
-    studioName: "Innovate Wedding Studio",
-    studioEmail: "hello@innovatewedding.com",
-    phone: "+91 98765 43210",
-    address: "Main Road, Nagercoil",
-    city: "Nagercoil",
-    state: "Tamil Nadu",
-    country: "India",
-    website: "https://innovatewedding.com",
-    description:
-        "Professional wedding photography and videography studio managing wedding events, customer galleries and photo selections.",
+function formatDate(date: Date | null | undefined): string {
+    if (!date) return "";
 
-    adminName: "Mafaz Malik",
-    adminUsername: "",
-    adminEmail: "admin@innovatewedding.com",
-    adminPhone: "+91 98765 43210",
-
-    // Password intentionally empty while editing.
-    password: "",
-    confirmPassword: "",
-
-    startDate: "2026-06-01",
-    endDate: "2027-05-31",
-
-    storageLimit: "100",
-    maxEvents: "50",
-    maxCustomers: "500",
-    maxImages: "100000",
-
-    notes:
-        "Primary demo studio. Currently using the Professional plan.",
-};
+    return date.toISOString().slice(0, 10);
+}
 
 export default async function EditStudioPage({
     params,
 }: EditStudioPageProps) {
     const { studioId } = await params;
 
-    /*
-     * UI ONLY FOR NOW.
-     *
-     * Later:
-     * const studio = await getStudioById(studioId)
-     *
-     * Then pass the DB values into StudioForm.
-     */
+    const studio = await prisma.studio.findUnique({
+        where: {
+            id: studioId,
+        },
+        include: {
+            admins: true,
+            subscriptions: {
+                orderBy: {
+                    createdAt: "desc",
+                },
+                take: 1,
+            },
+        },
+    });
 
-    const plan: StudioPlan = "Professional";
-    const status: StudioStatus = "Active";
+    // Studio database-la illana 404 page kaattum.
+    if (!studio) {
+        notFound();
+    }
+
+    const admin = studio.admins[0] ?? null;
+    const subscription = studio.subscriptions[0] ?? null;
+
+    const studioData: StudioFormData = {
+        // Studio details
+        studioName: studio.name ?? "",
+        studioEmail: studio.email ?? "",
+        phone: studio.phone ?? "",
+        address: studio.address ?? "",
+        city: studio.city ?? "",
+        state: studio.state ?? "",
+        country: studio.country ?? "India",
+        website: studio.website ?? "",
+        description: studio.description ?? "",
+
+        // Admin details
+        adminName: admin?.name ?? "",
+        adminUsername: admin?.username ?? "",
+        adminEmail: admin?.email ?? "",
+        adminPhone: admin?.phone ?? "",
+
+        // Password edit pannumbothu empty-ah irukkattum.
+        password: "",
+        confirmPassword: "",
+
+        // Subscription dates
+        startDate: formatDate(subscription?.startDate),
+        endDate: formatDate(subscription?.endDate),
+
+        // Subscription limits
+        storageLimit: String(subscription?.storageLimitGb ?? 100),
+        maxEvents: String(subscription?.maxEvents ?? 50),
+        maxCustomers: String(subscription?.maxCustomers ?? 500),
+        maxImages: String(subscription?.maxImages ?? 100000),
+
+        // Internal notes
+        notes: studio.internalNotes ?? "",
+    };
+
+    const plan = (subscription?.plan ?? "Basic") as StudioPlan;
+    const status = (subscription?.status ?? "Active") as StudioStatus;
 
     return (
         <StudioForm
             mode="edit"
-            studioId={studioId}
+            studioId={studio.id}
             initialData={studioData}
             initialPlan={plan}
             initialStatus={status}
