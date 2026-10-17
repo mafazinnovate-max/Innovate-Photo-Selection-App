@@ -85,12 +85,93 @@ export async function GET(
             );
         }
 
+
+        const [totalEvents, customerRecords, totalImages, events] =
+            await Promise.all([
+                prisma.event.count({
+                    where: {
+                        studioId,
+                        deletedAt: null,
+                    },
+                }),
+
+                prisma.event.findMany({
+                    where: {
+                        studioId,
+                        deletedAt: null,
+                    },
+                    distinct: ["clientName"],
+                    select: {
+                        clientName: true,
+                    },
+                }),
+
+                prisma.image.count({
+                    where: {
+                        folder: {
+                            is: {
+                                event: {
+                                    is: {
+                                        studioId,
+                                        deletedAt: null,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+
+                prisma.event.findMany({
+                    where: {
+                        studioId,
+                        deletedAt: null,
+                    },
+                    orderBy: {
+                        createdAt: "desc",
+                    },
+                    take: 4,
+                    select: {
+                        id: true,
+                        name: true,
+                        createdAt: true,
+                        eventDate: true,
+                        folders: {
+                            select: {
+                                _count: {
+                                    select: {
+                                        images: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+            ]);
+
+        const recentEvents = events.map((event) => ({
+            id: event.id,
+            name: event.name,
+            date: (event.eventDate ?? event.createdAt).toISOString(),
+            photos: event.folders.reduce(
+                (total, folder) => total + folder._count.images,
+                0
+            ),
+            status: "Active",
+        }));
+
         const admin = studio.admins[0];
         const subscription = studio.subscriptions[0];
 
         return NextResponse.json({
             success: true,
             studio,
+            metrics: {
+                events: totalEvents,
+                customers: customerRecords.length,
+                images: totalImages,
+            },
+
+            recentEvents,
             formData: {
                 studioName: studio.name ?? "",
                 studioEmail: studio.email ?? "",
@@ -145,6 +226,44 @@ export async function PATCH(
 
         const { studioId } = await params;
         const data = await request.json();
+
+
+        if (data.action === "set-status") {
+            if (typeof data.isActive !== "boolean") {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "A valid account status is required.",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            const existingStudio = await prisma.studio.findUnique({
+                where: { id: studioId },
+                select: { id: true },
+            });
+
+            if (!existingStudio) {
+                return NextResponse.json(
+                    { success: false, message: "Studio not found." },
+                    { status: 404 }
+                );
+            }
+
+            await prisma.studio.update({
+                where: { id: studioId },
+                data: {
+                    isActive: data.isActive,
+                },
+            });
+
+            return NextResponse.json({
+                success: true,
+                message: "Studio status updated successfully.",
+                status: data.isActive ? "Active" : "Inactive",
+            });
+        }
 
         const studioName = cleanString(data.studioName);
         const adminName = cleanString(data.adminName);
