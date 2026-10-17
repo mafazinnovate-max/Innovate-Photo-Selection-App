@@ -92,23 +92,26 @@ if (activeTab !== "All") {
 
     return (
         <>
-            {/* Header Actions */}
-            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <input
-                    type="text"
-                    placeholder="Search events..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none focus:border-white md:max-w-md"
-                />
+{/* Sticky Search */}
+<div className="sticky top-16 z-30 -mx-4 mb-6 bg-zinc-950/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
+    <input
+        type="text"
+        placeholder="Search events..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none focus:border-white md:max-w-md"
+    />
+</div>
 
-                <Link
-                    href="/events/create"
-                    className="rounded-xl bg-white px-5 py-3 font-medium text-black transition hover:opacity-90"
-                >
-                    Create Event
-                </Link>
-            </div>
+{/* Create Event */}
+<div className="mb-6 flex justify-end">
+    <Link
+        href="/events/create"
+        className="rounded-xl bg-white px-5 py-3 font-medium text-black transition hover:opacity-90"
+    >
+        Create Event
+    </Link>
+</div>
 
             {/* Tabs */}
             <div className="mb-8 flex gap-3 overflow-x-auto pb-2">

@@ -38,6 +38,17 @@ interface ClientFolderPageProps {
   parentId?: string | null;
   selectionSummary: SelectionCategory[];
   selectionStatus: "SELECTING" | "COMPLETED";
+  studio: {
+    name: string;
+    logoUrl: string | null;
+    logoZoom: number;
+    logoPositionX: number;
+    logoPositionY: number;
+    phone: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  } | null;
 }
 
 const AUTO_SAVE_DELAY = 3000;
@@ -49,6 +60,7 @@ export default function ClientFolderPage({
   shareId,
   maxSelections,
   parentId,
+   studio,
   selectionSummary,
   selectionStatus,
 }: ClientFolderPageProps) {
@@ -1061,61 +1073,111 @@ export default function ClientFolderPage({
   return (
     <div className="min-h-screen bg-black text-white">
       {/* =====================================================
-          HEADER
-          ===================================================== */}
+    HEADER
+    ===================================================== */}
 
-      <div className="mx-auto max-w-7xl border-b border-zinc-800 px-4 py-5 sm:px-5 sm:py-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          {/* Logo */}
-          <div
-            className="flex cursor-pointer justify-start gap-3"
-            onClick={handleLogoClick}
-          >
-            <ArrowLeft
-              size={18}
-            />
+<div className="mx-auto max-w-7xl border-b border-zinc-800 bg-black px-4 py-6 sm:px-5 sm:py-8">
+  <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+    {/* Studio Branding */}
+    <div
+      className="flex cursor-pointer items-center gap-4"
+      onClick={handleLogoClick}
+    >
+      <ArrowLeft
+        size={18}
+        className="shrink-0 text-zinc-400 transition-colors hover:text-white"
+      />
 
-            <Image
-              src="/innovate-logo.png"
-              alt="logo"
-              className="h-auto w-[180px] object-contain sm:w-[220px] md:w-[250px]"
-              width={250}
-              height={150}
-              priority
-            />
-          </div>
-
-          {/* Contact */}
-          <div className="w-full max-w-lg space-y-4 text-sm text-zinc-300">
-            <div className="flex items-start gap-3">
-              <PhoneCall
-                size={18}
-                className="mt-0.5 shrink-0 text-zinc-400"
+      <div className="flex min-w-0 items-center gap-4">
+        {/* Studio Logo */}
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] shadow-2xl sm:h-24 sm:w-24">
+          {studio?.logoUrl ? (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                transform: `
+                  translate(
+                    ${studio.logoPositionX * (80 / 176)}px,
+                    ${studio.logoPositionY * (80 / 176)}px
+                  )
+                  scale(${studio.logoZoom * (80 / 176)})
+                `,
+              }}
+            >
+              <Image
+                src={studio.logoUrl}
+                alt={studio.name}
+                width={176}
+                height={176}
+                priority
+                className="h-[176px] w-[176px] max-w-none object-contain"
               />
-
-              <a href="tel:+919876543210">
-                +91 98765 43210
-              </a>
             </div>
-
-            <div className="flex items-start gap-3">
-              <LocateFixedIcon
-                size={18}
-                className="mt-0.5 shrink-0 text-zinc-400"
-              />
-
-              <p>
-                Innovate Wedding Company,
-                Pattakasalianvilai Rd,
-                Vattakarai,
-                Maravankudieruppu,
-                Nagercoil,
-                Tamil Nadu 629002
-              </p>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center px-2 text-center">
+              <span className="text-xs font-medium text-zinc-500">
+                {studio?.name || "Studio"}
+              </span>
             </div>
+          )}
+        </div>
+
+        {/* Studio Name */}
+        <div className="min-w-0">
+          <h2 className="break-words bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-xl font-semibold tracking-[0.06em] text-transparent sm:text-2xl">
+            {studio?.name || "Studio"}
+          </h2>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className="h-px w-8 bg-gradient-to-r from-transparent to-zinc-600" />
+            <span className="h-1 w-1 animate-pulse rounded-full bg-zinc-400" />
+            <span className="h-px w-8 bg-gradient-to-l from-transparent to-zinc-600" />
           </div>
         </div>
       </div>
+    </div>
+
+    {/* Contact */}
+    {studio && (
+      <div className="w-full max-w-lg space-y-4 text-sm text-zinc-300 lg:w-auto">
+        {studio.phone && (
+          <div className="flex items-start gap-3">
+            <PhoneCall
+              size={18}
+              className="mt-0.5 shrink-0 text-zinc-400"
+            />
+
+            <a
+              href={`tel:${studio.phone}`}
+              className="break-words transition-colors hover:text-white"
+            >
+              {studio.phone}
+            </a>
+          </div>
+        )}
+
+        {(studio.address || studio.city || studio.state) && (
+          <div className="flex items-start gap-3">
+            <LocateFixedIcon
+              size={18}
+              className="mt-0.5 shrink-0 text-zinc-400"
+            />
+
+            <p className="break-words leading-6">
+              {[
+                studio.address,
+                studio.city,
+                studio.state,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</div>
 
       {/* =====================================================
           MAIN CATEGORY SECTION
@@ -1345,73 +1407,64 @@ export default function ClientFolderPage({
       </div>
 
       {/* =====================================================
-          MOBILE COMPACT ACTION BAR
+    MOBILE COMPACT ACTION BAR
+    ONLY THIS SMALL BAR IS FIXED.
+    ===================================================== */}
 
-          ONLY THIS SMALL BAR IS FIXED.
-          ===================================================== */}
+{showMobileActionBar && (
+  <div className="fixed inset-x-0 top-0 z-[80] border-b border-zinc-800 bg-black px-3 py-3 shadow-2xl md:hidden">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-2.5">
+      {/* Folder + Status */}
+      <div className="min-w-0">
+        <p className="truncate text-[11px] leading-4 text-zinc-500">
+          {folderName}
+        </p>
 
-      {showMobileActionBar && (
-        <div className="fixed inset-x-0 top-0 z-[80] border-b border-zinc-800 bg-black px-3 py-3 shadow-2xl md:hidden">
-          <div className="mx-auto flex max-w-md items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-zinc-500">
-                {folderName}
-              </p>
+        <p
+          className={`text-sm font-semibold leading-5 ${
+            isCompleted
+              ? "text-green-300"
+              : "text-amber-300"
+          }`}
+        >
+          {isCompleted
+            ? "Client Selected Photos"
+            : "Client Selecting Photos"}
+        </p>
+      </div>
 
-              <p
-                className={`truncate text-sm font-semibold ${
-                  isCompleted
-                    ? "text-green-300"
-                    : "text-amber-300"
-                }`}
-              >
-                {isCompleted
-                  ? "Client Selected Photos"
-                  : "Client Selecting Photos"}
-              </p>
-            </div>
+      {/* Category Action */}
+      {isCompleted ? (
+        <button
+          onClick={handleReopenCategory}
+          disabled={isReopening}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Unlock size={15} />
 
-            {isCompleted ? (
-              <button
-                onClick={
-                  handleReopenCategory
-                }
-                disabled={
-                  isReopening
-                }
-                className="flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg disabled:opacity-50"
-              >
-                <Unlock
-                  size={15}
-                />
+          {isReopening
+            ? "Opening..."
+            : "Select Photos Again"}
+        </button>
+      ) : (
+        <button
+          onClick={handleCompleteCategory}
+          disabled={
+            isCompleting ||
+            isSaving
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Check size={15} />
 
-                {isReopening
-                  ? "Opening..."
-                  : "Select Photos Again"}
-              </button>
-            ) : (
-              <button
-                onClick={
-                  handleCompleteCategory
-                }
-                disabled={
-                  isCompleting ||
-                  isSaving
-                }
-                className="flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg disabled:opacity-50"
-              >
-                <Check
-                  size={15}
-                />
-
-                {isCompleting
-                  ? "Completing..."
-                  : "Complete Category"}
-              </button>
-            )}
-          </div>
-        </div>
+          {isCompleting
+            ? "Completing..."
+            : "Complete Category"}
+        </button>
       )}
+    </div>
+  </div>
+)}
 
       {/* =====================================================
           GALLERY
@@ -2001,6 +2054,21 @@ export default function ClientFolderPage({
           </div>
         </div>
       </div>
+      {/* =====================================================
+    PICKNOVATE FOOTER
+    ===================================================== */}
+
+<div className="border-t border-zinc-900 bg-black py-10">
+  <div className="flex justify-center">
+    <Image
+      src="/picknovate-logo.jpg"
+      alt="Picknovate"
+      width={96}
+      height={96}
+      className="h-20 w-20 object-contain opacity-90 sm:h-24 sm:w-24"
+    />
+  </div>
+</div>
     </div>
   );
 }

@@ -644,26 +644,28 @@ export default function PastEvents({
 
   return (
     <>
-      {/* Download Summary Header */}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={() => setShowViewFilter(true)}
-          className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
-        >
-          Filter
-        </button>
+      {/* Sticky Past Events Actions */}
+      <div className="sticky top-16 z-30 -mx-4 mb-5 border-b border-zinc-800 bg-zinc-950/95 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setShowViewFilter(true)}
+            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+          >
+            Filter
+          </button>
 
-        <button
-          type="button"
-          onClick={() =>
-            setShowDownloadModal(true)
-          }
-          className="flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black transition hover:opacity-90"
-        >
-          <Download className="h-4 w-4" />
-          Download Summary
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              setShowDownloadModal(true)
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black transition hover:opacity-90"
+          >
+            <Download className="h-4 w-4" />
+            Download Summary
+          </button>
+        </div>
       </div>
 
       {/* Past Events */}

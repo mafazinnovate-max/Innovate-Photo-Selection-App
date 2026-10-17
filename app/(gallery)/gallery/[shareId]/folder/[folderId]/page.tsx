@@ -40,12 +40,28 @@ export default async function FolderPage({
       eventId: true,
       parentId: true,
       selectionStatus: true,
+
       event: {
         select: {
           galleryMode: true,
           maxSelections: true,
+
+          studio: {
+            select: {
+              name: true,
+              logoUrl: true,
+              logoZoom: true,
+              logoPositionX: true,
+              logoPositionY: true,
+              phone: true,
+              address: true,
+              city: true,
+              state: true,
+            },
+          },
         },
       },
+
       images: {
         select: {
           id: true,
@@ -149,6 +165,7 @@ export default async function FolderPage({
       parentId={folder.parentId}
       selectionSummary={selectionSummary}
       selectionStatus={folder.selectionStatus}
+      studio={folder.event.studio}
     />
   );
 }

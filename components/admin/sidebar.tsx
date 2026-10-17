@@ -37,14 +37,11 @@ export default function Sidebar() {
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
+  const [studioName, setStudioName] = useState("Your Studio");
 
   const [logoZoom, setLogoZoom] = useState(1);
   const [logoPositionX, setLogoPositionX] = useState(0);
   const [logoPositionY, setLogoPositionY] = useState(0);
-
-  /* -----------------------------
-     Studio Logo
-  ----------------------------- */
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -61,15 +58,24 @@ export default function Sidebar() {
 
         const data = await response.json();
 
+        setStudioName(data.studioName ?? "Your Studio");
         setLogoUrl(data.logoUrl ?? null);
 
-        const savedZoom = localStorage.getItem("studioLogoZoom");
-        const savedX = localStorage.getItem("studioLogoPositionX");
-        const savedY = localStorage.getItem("studioLogoPositionY");
+        setLogoZoom(
+          typeof data.logoZoom === "number" ? data.logoZoom : 1
+        );
 
-        setLogoZoom(savedZoom ? Number(savedZoom) : 1);
-        setLogoPositionX(savedX ? Number(savedX) : 0);
-        setLogoPositionY(savedY ? Number(savedY) : 0);
+        setLogoPositionX(
+          typeof data.logoPositionX === "number"
+            ? data.logoPositionX
+            : 0
+        );
+
+        setLogoPositionY(
+          typeof data.logoPositionY === "number"
+            ? data.logoPositionY
+            : 0
+        );
 
         setLogoLoaded(true);
       } catch (error) {
@@ -89,21 +95,15 @@ export default function Sidebar() {
     };
   }, []);
 
-  /* -----------------------------
-     Match Settings crop geometry
+  /*
+   * Logo display size
+   * Medium-large on desktop, compact on mobile.
+   */
+  const desktopLogoSize = 96;
+  const mobileLogoSize = 44;
 
-     Settings crop:
-     176px x 176px
-
-     Desktop sidebar:
-     80px x 80px
-
-     Mobile:
-     40px x 40px
-  ----------------------------- */
-
-  const desktopScale = 80 / 176;
-  const mobileScale = 40 / 176;
+  const desktopScale = desktopLogoSize / 176;
+  const mobileScale = mobileLogoSize / 176;
 
   const desktopPositionX = logoPositionX * desktopScale;
   const desktopPositionY = logoPositionY * desktopScale;
@@ -111,86 +111,74 @@ export default function Sidebar() {
   const mobilePositionX = logoPositionX * mobileScale;
   const mobilePositionY = logoPositionY * mobileScale;
 
-  /*
-   * Settings uses p-4 on a 176px image.
-   *
-   * 16 / 176 = 9.09%
-   *
-   * We use the same proportional padding
-   * on the smaller sidebar images.
-   */
+  const desktopPadding = desktopLogoSize * (16 / 176);
+  const mobilePadding = mobileLogoSize * (16 / 176);
 
-  const desktopPadding = 80 * (16 / 176);
-  const mobilePadding = 40 * (16 / 176);
+  const logout = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+      });
 
-  /* -----------------------------
-     Logout
-  ----------------------------- */
+      localStorage.removeItem("studioLogo");
+      localStorage.removeItem("studioLogoZoom");
+      localStorage.removeItem("studioLogoPositionX");
+      localStorage.removeItem("studioLogoPositionY");
 
- const logout = async () => {
-  try {
-    await fetch("/api/logout", {
-      method: "POST",
-    });
-
-    // Clear studio-specific browser data
-    localStorage.removeItem("studioLogo");
-    localStorage.removeItem("studioLogoZoom");
-    localStorage.removeItem("studioLogoPositionX");
-    localStorage.removeItem("studioLogoPositionY");
-
-    window.location.href = "/login";
-  } catch (error) {
-    console.error("Logout failed:", error);
-    alert("Unable to log out. Please try again.");
-  }
-};
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Unable to log out. Please try again.");
+    }
+  };
 
   return (
     <>
-      {/* Mobile top bar */}
+      {/* Mobile Header */}
       <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Open navigation menu"
           aria-expanded={isOpen}
-          className="rounded-lg p-2 text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+          className="shrink-0 rounded-lg p-2 text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
         >
           <Menu size={24} />
         </button>
 
-        {logoLoaded && logoUrl ? (
-          <Link
-            href="/settings#branding"
-            aria-label="Manage studio logo"
-            className="relative h-10 w-10 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900"
-          >
-            <Image
-              src={logoUrl}
-              alt="Studio logo"
-              width={40}
-              height={40}
-              priority
-              className="h-full w-full object-contain"
-              style={{
-                padding: `${mobilePadding}px`,
-                transform: `translate(${mobilePositionX}px, ${mobilePositionY}px) scale(${logoZoom})`,
-              }}
-            />
-          </Link>
-        ) : (
-          <Link
-            href="/settings#branding"
-            aria-label="Add studio logo"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-zinc-700 bg-zinc-900 text-xl text-zinc-500 transition hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"
-          >
-            +
-          </Link>
-        )}
+        <Link
+          href="/settings#branding"
+          aria-label="Manage studio branding"
+          className="flex min-w-0 max-w-[220px] items-center gap-3"
+        >
+          {logoLoaded && logoUrl ? (
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 shadow-md">
+              <Image
+                src={logoUrl}
+                alt="Studio logo"
+                width={44}
+                height={44}
+                priority
+                className="h-full w-full object-contain"
+                style={{
+                  padding: `${mobilePadding}px`,
+                  transform: `translate(${mobilePositionX}px, ${mobilePositionY}px) scale(${logoZoom})`,
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-dashed border-zinc-700 bg-zinc-900 text-xl text-zinc-500">
+              +
+            </div>
+          )}
+
+          <span className="min-w-0 max-w-[165px] break-words text-center text-[11px] font-semibold uppercase leading-[15px] tracking-[0.13em] text-zinc-200 sm:max-w-[210px] sm:text-[12px] sm:leading-4">
+            {studioName}
+          </span>
+        </Link>
       </header>
 
-      {/* Mobile overlay */}
+      {/* Mobile Overlay */}
       {isOpen && (
         <button
           type="button"
@@ -206,55 +194,62 @@ export default function Sidebar() {
           isOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        {/* Logo */}
-        <div className="flex min-h-[120px] items-center justify-center px-6 py-5">
-          {logoLoaded && logoUrl ? (
-            <Link
-              href="/settings#branding"
-              aria-label="Manage studio logo"
-              className="relative h-20 w-20 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 shadow-lg"
-            >
-              <Image
-                src={logoUrl}
-                alt="Studio logo"
-                width={80}
-                height={80}
-                priority
-                className="h-full w-full object-contain"
-                style={{
-                  padding: `${desktopPadding}px`,
-                  transform: `translate(${desktopPositionX}px, ${desktopPositionY}px) scale(${logoZoom})`,
-                }}
-              />
-            </Link>
-          ) : (
-            <Link
-              href="/settings#branding"
-              aria-label="Add studio logo"
-              className="group flex flex-col items-center gap-2"
-            >
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-zinc-700 bg-zinc-900 text-2xl text-zinc-500 transition group-hover:border-zinc-500 group-hover:bg-zinc-800 group-hover:text-white">
+        {/* Branding */}
+        <div className="relative flex min-h-[190px] flex-col items-center justify-center px-6 py-7">
+          <Link
+            href="/settings#branding"
+            aria-label="Manage studio branding"
+            className="group flex flex-col items-center"
+          >
+            {logoLoaded && logoUrl ? (
+              <div className="relative h-24 w-24 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 shadow-xl transition duration-300 group-hover:border-zinc-500 group-hover:shadow-2xl">
+                <Image
+                  src={logoUrl}
+                  alt="Studio logo"
+                  width={96}
+                  height={96}
+                  priority
+                  className="h-full w-full object-contain"
+                  style={{
+                    padding: `${desktopPadding}px`,
+                    transform: `translate(${desktopPositionX}px, ${desktopPositionY}px) scale(${logoZoom})`,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-zinc-700 bg-zinc-900 text-3xl text-zinc-500 transition group-hover:border-zinc-500 group-hover:bg-zinc-800 group-hover:text-white">
                 +
               </div>
+            )}
 
-              <span className="text-xs font-medium text-zinc-500 transition group-hover:text-white">
+            {/* Studio Name */}
+            <div className="mt-4 w-full max-w-[220px] text-center">
+              <h2 className="w-full break-words text-center text-[15px] font-semibold uppercase leading-6 tracking-[0.18em] text-white">
+                {studioName}
+              </h2>
+
+              <div className="mx-auto mt-3 h-px w-10 bg-zinc-700 transition-all duration-300 group-hover:w-16 group-hover:bg-zinc-500" />
+            </div>
+
+            {!logoUrl && logoLoaded && (
+              <span className="mt-2 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500 transition group-hover:text-zinc-300">
                 Add Logo
               </span>
-            </Link>
-          )}
+            )}
+          </Link>
 
-          {/* Close button on mobile */}
+          {/* Mobile Close */}
           <button
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Close navigation menu"
-            className="absolute right-4 rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white lg:hidden"
+            className="absolute right-4 top-4 rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white lg:hidden"
           >
             <X size={22} />
           </button>
         </div>
 
-        {/* Menu */}
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-2">
             {menuItems.map((item) => {
@@ -283,7 +278,7 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Footer */}
+        {/* Logout */}
         <div className="border-t border-zinc-800 p-4">
           <button
             type="button"

@@ -90,6 +90,9 @@ model Studio {
   name          String
   createdAt     DateTime @default(now())
   logoUrl       String?
+  logoZoom      Float    @default(1)
+  logoPositionX Float    @default(0)
+  logoPositionY Float    @default(0)
   email         String?
   phone         String?
   address       String?

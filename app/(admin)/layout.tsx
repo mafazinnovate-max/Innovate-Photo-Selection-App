@@ -43,7 +43,7 @@ export default async function AdminLayout({
         <div className="min-h-screen bg-zinc-950 text-white">
             <Sidebar />
 
-            <main className="min-h-screen min-w-0 overflow-x-hidden p-4 pt-20 sm:p-6 sm:pt-20 lg:ml-72 lg:p-8">
+            <main className="min-h-screen min-w-0 overflow-x-clip p-4 pt-20 sm:p-6 sm:pt-20 lg:ml-72 lg:p-8">
                 <div className="mx-auto w-full max-w-[1800px]">
                     {children}
                 </div>

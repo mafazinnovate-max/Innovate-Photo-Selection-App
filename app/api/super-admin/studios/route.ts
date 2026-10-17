@@ -183,6 +183,7 @@ export async function POST(request: Request) {
             const subscription = await tx.subscription.create({
                 data: {
                     plan,
+                    id: crypto.randomUUID(),
                     status,
                     startDate,
                     endDate,
@@ -245,7 +246,7 @@ export async function GET() {
                         createdAt: true,
                     },
                 },
-                subscriptions: {
+                Subscription: {
                     orderBy: { createdAt: "desc" },
                     take: 1,
                 },

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
+  Eye,
+  EyeOff,
   Globe,
   KeyRound,
   LockKeyhole,
@@ -75,6 +77,8 @@ export default function SettingsPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [country, setCountry] = useState("India");
+
+  /* Super Admin controlled description */
   const [description, setDescription] = useState("");
 
   /* -----------------------------
@@ -94,12 +98,28 @@ export default function SettingsPage() {
   const [settingsError, setSettingsError] = useState("");
 
   /* -----------------------------
+     Settings Edit Lock
+  ----------------------------- */
+
+  const [isEditingSettings, setIsEditingSettings] =
+    useState(false);
+
+  /* -----------------------------
      Change Password
   ----------------------------- */
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] =
+    useState(false);
+
+  const [showNewPassword, setShowNewPassword] =
+    useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
 
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
@@ -135,6 +155,7 @@ export default function SettingsPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState("");
   const [logoSuccess, setLogoSuccess] = useState("");
+  const [savingLogo, setSavingLogo] = useState(false);
 
   const isEditingLogo = pendingLogo !== null;
 
@@ -220,6 +241,8 @@ export default function SettingsPage() {
         setCity(data.studio?.city ?? "");
         setState(data.studio?.state ?? "");
         setCountry(data.studio?.country ?? "India");
+
+        /* Super Admin controlled description */
         setDescription(data.studio?.description ?? "");
 
         /* -----------------------------
@@ -247,7 +270,7 @@ export default function SettingsPage() {
 
   /* -----------------------------
      Load Existing Applied Logo
-     (loaded as APPLIED only, never as pending)
+     Including persisted DB transform
   ----------------------------- */
 
   useEffect(() => {
@@ -260,26 +283,81 @@ export default function SettingsPage() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          setAppliedLogo(data.logoUrl);
+          setAppliedLogo(data.logoUrl ?? null);
+
+          const dbZoom =
+            typeof data.logoZoom === "number"
+              ? data.logoZoom
+              : 1;
+
+          const dbPositionX =
+            typeof data.logoPositionX === "number"
+              ? data.logoPositionX
+              : 0;
+
+          const dbPositionY =
+            typeof data.logoPositionY === "number"
+              ? data.logoPositionY
+              : 0;
+
+          setAppliedZoom(dbZoom);
+          setAppliedPositionX(dbPositionX);
+          setAppliedPositionY(dbPositionY);
+
+          /*
+           * Keep localStorage synchronized with the
+           * database so the existing UI behavior remains intact.
+           */
+          localStorage.setItem(
+            "studioLogoZoom",
+            String(dbZoom)
+          );
+
+          localStorage.setItem(
+            "studioLogoPositionX",
+            String(dbPositionX)
+          );
+
+          localStorage.setItem(
+            "studioLogoPositionY",
+            String(dbPositionY)
+          );
+
+          if (data.logoUrl) {
+            localStorage.setItem(
+              "studioLogo",
+              data.logoUrl
+            );
+          }
         }
       } catch (error) {
         console.error("Failed to load studio logo:", error);
+
+        /*
+         * Fallback to existing localStorage behavior
+         * if the logo API cannot be reached.
+         */
+        const savedZoom = localStorage.getItem(
+          "studioLogoZoom"
+        );
+
+        const savedPositionX = localStorage.getItem(
+          "studioLogoPositionX"
+        );
+
+        const savedPositionY = localStorage.getItem(
+          "studioLogoPositionY"
+        );
+
+        if (savedZoom) setAppliedZoom(Number(savedZoom));
+        if (savedPositionX)
+          setAppliedPositionX(Number(savedPositionX));
+        if (savedPositionY)
+          setAppliedPositionY(Number(savedPositionY));
       }
     };
 
     loadLogo();
-
-    const savedZoom = localStorage.getItem("studioLogoZoom");
-    const savedPositionX = localStorage.getItem(
-      "studioLogoPositionX"
-    );
-    const savedPositionY = localStorage.getItem(
-      "studioLogoPositionY"
-    );
-
-    if (savedZoom) setAppliedZoom(Number(savedZoom));
-    if (savedPositionX) setAppliedPositionX(Number(savedPositionX));
-    if (savedPositionY) setAppliedPositionY(Number(savedPositionY));
   }, []);
 
   /* -----------------------------
@@ -677,43 +755,78 @@ export default function SettingsPage() {
      Pending -> Applied
   ----------------------------- */
 
-  const applyLogo = () => {
-    if (!pendingLogo) return;
+  const applyLogo = async () => {
+    if (!pendingLogo || savingLogo) return;
 
-    localStorage.setItem("studioLogo", pendingLogo);
+    try {
+      setSavingLogo(true);
+      setLogoError("");
+      setLogoSuccess("");
 
-    localStorage.setItem(
-      "studioLogoZoom",
-      String(pendingZoom)
-    );
+      const response = await fetch("/api/upload-logo", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+  zoom: pendingZoom,
+  positionX: pendingPositionX,
+  positionY: pendingPositionY,
+}),
+      });
 
-    localStorage.setItem(
-      "studioLogoPositionX",
-      String(pendingPositionX)
-    );
+      const data = await response.json();
 
-    localStorage.setItem(
-      "studioLogoPositionY",
-      String(pendingPositionY)
-    );
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Failed to save logo adjustment."
+        );
+      }
 
-    setAppliedLogo(pendingLogo);
-    setAppliedZoom(pendingZoom);
-    setAppliedPositionX(pendingPositionX);
-    setAppliedPositionY(pendingPositionY);
+      localStorage.setItem("studioLogo", pendingLogo);
 
-    setPendingLogo(null);
-    setPendingPublicId(null);
+      localStorage.setItem(
+        "studioLogoZoom",
+        String(pendingZoom)
+      );
 
-    commitPendingTransform(1, 0, 0);
+      localStorage.setItem(
+        "studioLogoPositionX",
+        String(pendingPositionX)
+      );
 
-    window.dispatchEvent(
-      new Event("studio-logo-changed")
-    );
+      localStorage.setItem(
+        "studioLogoPositionY",
+        String(pendingPositionY)
+      );
 
-    setLogoError("");
-    setLogoSuccess("Logo applied successfully.");
-    setSaved(false);
+      setAppliedLogo(pendingLogo);
+      setAppliedZoom(pendingZoom);
+      setAppliedPositionX(pendingPositionX);
+      setAppliedPositionY(pendingPositionY);
+
+      setPendingLogo(null);
+      setPendingPublicId(null);
+
+      commitPendingTransform(1, 0, 0);
+
+      window.dispatchEvent(
+        new Event("studio-logo-changed")
+      );
+
+      setLogoSuccess("Logo applied successfully.");
+      setSaved(false);
+    } catch (error) {
+      console.error("Failed to save logo adjustment:", error);
+
+      setLogoError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save logo adjustment."
+      );
+    } finally {
+      setSavingLogo(false);
+    }
   };
 
   /* -----------------------------
@@ -764,10 +877,22 @@ export default function SettingsPage() {
   };
 
   /* -----------------------------
+     Enable Settings Editing
+  ----------------------------- */
+
+  const handleChangeSettings = () => {
+    setIsEditingSettings(true);
+    setSaved(false);
+    setSettingsError("");
+  };
+
+  /* -----------------------------
      Save Studio + Admin Settings To DB
   ----------------------------- */
 
   const handleSave = async () => {
+    if (!isEditingSettings) return;
+
     try {
       setSavingSettings(true);
       setSettingsError("");
@@ -787,8 +912,6 @@ export default function SettingsPage() {
           city,
           state,
           country,
-          description,
-
           adminName,
           adminEmail,
           adminPhone,
@@ -815,6 +938,8 @@ export default function SettingsPage() {
       setCity(data.studio?.city ?? "");
       setState(data.studio?.state ?? "");
       setCountry(data.studio?.country ?? "India");
+
+      /* Super Admin controlled description */
       setDescription(data.studio?.description ?? "");
 
       /* -----------------------------
@@ -826,6 +951,9 @@ export default function SettingsPage() {
       setAdminPhone(data.admin?.phone ?? "");
 
       setSaved(true);
+
+      /* Lock the settings again after saving */
+      setIsEditingSettings(false);
 
       setTimeout(() => {
         setSaved(false);
@@ -860,9 +988,23 @@ export default function SettingsPage() {
         return;
       }
 
-      if (newPassword.length < 6) {
+      if (newPassword.length < 8) {
         setPasswordError(
-          "New password must be at least 6 characters."
+          "New password must be at least 8 characters."
+        );
+        return;
+      }
+
+      if (!/[A-Z]/.test(newPassword)) {
+        setPasswordError(
+          "New password must contain at least one uppercase letter."
+        );
+        return;
+      }
+
+      if (!/[^A-Za-z0-9]/.test(newPassword)) {
+        setPasswordError(
+          "New password must contain at least one special character."
         );
         return;
       }
@@ -901,6 +1043,10 @@ export default function SettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
 
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
       setPasswordSuccess(
         "Password changed successfully."
       );
@@ -918,6 +1064,12 @@ export default function SettingsPage() {
   };
 
   const cropScale = cropSize / REF_SIZE;
+
+  const lockedFieldClass =
+    "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 disabled:cursor-not-allowed disabled:opacity-70";
+
+  const passwordFieldClass =
+    "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600";
 
   return (
     <div className="space-y-8">
@@ -941,20 +1093,32 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={loadingSettings || savingSettings}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saved ? <Check size={18} /> : <Save size={18} />}
+        {!isEditingSettings ? (
+          <button
+            type="button"
+            onClick={handleChangeSettings}
+            disabled={loadingSettings}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <LockKeyhole size={18} />
+            Change Settings
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loadingSettings || savingSettings}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saved ? <Check size={18} /> : <Save size={18} />}
 
-          {savingSettings
-            ? "Saving..."
-            : saved
-              ? "Saved"
-              : "Save Changes"}
-        </button>
+            {savingSettings
+              ? "Saving..."
+              : saved
+                ? "Saved"
+                : "Save Changes"}
+          </button>
+        )}
       </div>
 
       {/* --------------------------------
@@ -988,13 +1152,13 @@ export default function SettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Manage the information associated with your studio.
+            {isEditingSettings
+              ? "You can now edit your studio information."
+              : "Studio information is locked. Click Change Settings to edit."}
           </p>
         </div>
 
         <div className="space-y-5">
-          {/* Studio Name */}
-
           <div>
             <label
               htmlFor="studioName"
@@ -1007,16 +1171,15 @@ export default function SettingsPage() {
               id="studioName"
               type="text"
               value={studioName}
+              disabled={!isEditingSettings}
               onChange={(e) => {
                 setStudioName(e.target.value);
                 setSaved(false);
               }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              className={lockedFieldClass}
               placeholder="Enter studio name"
             />
           </div>
-
-          {/* Email + Phone */}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
@@ -1032,11 +1195,12 @@ export default function SettingsPage() {
                 id="email"
                 type="email"
                 value={email}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="studio@example.com"
               />
             </div>
@@ -1054,17 +1218,16 @@ export default function SettingsPage() {
                 id="phone"
                 type="tel"
                 value={phone}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setPhone(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="+91 98765 43210"
               />
             </div>
           </div>
-
-          {/* Website */}
 
           <div>
             <label
@@ -1079,16 +1242,15 @@ export default function SettingsPage() {
               id="website"
               type="url"
               value={website}
+              disabled={!isEditingSettings}
               onChange={(e) => {
                 setWebsite(e.target.value);
                 setSaved(false);
               }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              className={lockedFieldClass}
               placeholder="https://yourstudio.com"
             />
           </div>
-
-          {/* Address */}
 
           <div>
             <label
@@ -1102,16 +1264,15 @@ export default function SettingsPage() {
               id="address"
               rows={3}
               value={address}
+              disabled={!isEditingSettings}
               onChange={(e) => {
                 setAddress(e.target.value);
                 setSaved(false);
               }}
-              className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              className={`${lockedFieldClass} resize-none`}
               placeholder="Enter your studio address"
             />
           </div>
-
-          {/* City + State */}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
@@ -1126,11 +1287,12 @@ export default function SettingsPage() {
                 id="city"
                 type="text"
                 value={city}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setCity(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="Enter city"
               />
             </div>
@@ -1147,17 +1309,16 @@ export default function SettingsPage() {
                 id="state"
                 type="text"
                 value={state}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setState(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="Enter state"
               />
             </div>
           </div>
-
-          {/* Country */}
 
           <div>
             <label
@@ -1171,36 +1332,38 @@ export default function SettingsPage() {
               id="country"
               type="text"
               value={country}
+              disabled={!isEditingSettings}
               onChange={(e) => {
                 setCountry(e.target.value);
                 setSaved(false);
               }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              className={lockedFieldClass}
               placeholder="Enter country"
             />
           </div>
 
-          {/* Description */}
-
           <div>
-            <label
-              htmlFor="description"
-              className="mb-2 block text-sm font-medium text-zinc-300"
-            >
-              Description
+            <label className="mb-2 block text-sm font-medium text-zinc-300">
+              About the Studio
             </label>
 
-            <textarea
-              id="description"
-              rows={4}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setSaved(false);
-              }}
-              className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-              placeholder="Short description about the studio..."
-            />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4">
+              {description ? (
+                <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">
+                  {description}
+                </p>
+              ) : (
+                <p className="text-sm text-zinc-600">
+                  No studio description has been added by the Super
+                  Admin yet.
+                </p>
+              )}
+            </div>
+
+            <p className="mt-2 text-xs text-zinc-500">
+              This information is managed by the Super Admin and
+              cannot be changed here.
+            </p>
           </div>
         </div>
       </section>
@@ -1216,14 +1379,13 @@ export default function SettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Manage the contact information associated with this
-            admin account.
+            {isEditingSettings
+              ? "You can now edit the contact information associated with this admin account."
+              : "Admin information is locked. Click Change Settings to edit."}
           </p>
         </div>
 
         <div className="space-y-5">
-          {/* Admin Name */}
-
           <div>
             <label
               htmlFor="adminName"
@@ -1236,16 +1398,15 @@ export default function SettingsPage() {
               id="adminName"
               type="text"
               value={adminName}
+              disabled={!isEditingSettings}
               onChange={(e) => {
                 setAdminName(e.target.value);
                 setSaved(false);
               }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+              className={lockedFieldClass}
               placeholder="Enter admin name"
             />
           </div>
-
-          {/* Admin Email + Phone */}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
@@ -1261,11 +1422,12 @@ export default function SettingsPage() {
                 id="adminEmail"
                 type="email"
                 value={adminEmail}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setAdminEmail(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="admin@example.com"
               />
             </div>
@@ -1283,11 +1445,12 @@ export default function SettingsPage() {
                 id="adminPhone"
                 type="tel"
                 value={adminPhone}
+                disabled={!isEditingSettings}
                 onChange={(e) => {
                   setAdminPhone(e.target.value);
                   setSaved(false);
                 }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+                className={lockedFieldClass}
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -1323,8 +1486,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-5">
-          {/* Current Password */}
-
           <div>
             <label
               htmlFor="currentPassword"
@@ -1334,21 +1495,46 @@ export default function SettingsPage() {
               Current Password
             </label>
 
-            <input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                setPasswordError("");
-                setPasswordSuccess("");
-              }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-              placeholder="Enter current password"
-            />
-          </div>
+            <div className="relative">
+              <input
+                id="currentPassword"
+                type={
+                  showCurrentPassword
+                    ? "text"
+                    : "password"
+                }
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  setPasswordError("");
+                  setPasswordSuccess("");
+                }}
+                className={passwordFieldClass}
+                placeholder="Enter current password"
+              />
 
-          {/* New Password */}
+              <button
+                type="button"
+                onClick={() =>
+                  setShowCurrentPassword(
+                    (value) => !value
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                aria-label={
+                  showCurrentPassword
+                    ? "Hide current password"
+                    : "Show current password"
+                }
+              >
+                {showCurrentPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
+              </button>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
@@ -1359,21 +1545,51 @@ export default function SettingsPage() {
                 New Password
               </label>
 
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setPasswordError("");
-                  setPasswordSuccess("");
-                }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-                placeholder="Minimum 6 characters"
-              />
-            </div>
+              <div className="relative">
+                <input
+                  id="newPassword"
+                  type={
+                    showNewPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                  }}
+                  className={passwordFieldClass}
+                  placeholder="Minimum 8 characters"
+                />
 
-            {/* Confirm Password */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowNewPassword(
+                      (value) => !value
+                    )
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                  aria-label={
+                    showNewPassword
+                      ? "Hide new password"
+                      : "Show new password"
+                  }
+                >
+                  {showNewPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs text-zinc-500">
+                Minimum 8 characters, 1 uppercase letter and
+                1 special character.
+              </p>
+            </div>
 
             <div>
               <label
@@ -1383,18 +1599,45 @@ export default function SettingsPage() {
                 Confirm New Password
               </label>
 
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setPasswordError("");
-                  setPasswordSuccess("");
-                }}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-                placeholder="Re-enter new password"
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={
+                    showConfirmPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                  }}
+                  className={passwordFieldClass}
+                  placeholder="Re-enter new password"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowConfirmPassword(
+                      (value) => !value
+                    )
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirmation password"
+                      : "Show confirmation password"
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1446,8 +1689,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr] 2xl:grid-cols-[320px_1fr]">
-          {/* Logo editor */}
-
           <div className="w-full">
             <div className="mb-3 flex items-center justify-between gap-2">
               <label className="block text-sm font-medium text-zinc-300">
@@ -1600,7 +1841,8 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={cancelLogoEditing}
-                    className="rounded-lg border border-zinc-800 px-4 py-2 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+                    disabled={savingLogo}
+                    className="rounded-lg border border-zinc-800 px-4 py-2 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1608,10 +1850,13 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={applyLogo}
-                    className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200"
+                    disabled={savingLogo}
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Check size={14} />
-                    Apply Logo
+                    {savingLogo
+                      ? "Applying..."
+                      : "Apply Logo"}
                   </button>
                 </div>
               </div>
@@ -1634,32 +1879,34 @@ export default function SettingsPage() {
           Bottom Save
       -------------------------------- */}
 
-      <div className="flex flex-col gap-3 border-t border-zinc-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-white">
-            Settings
-          </p>
+      {isEditingSettings && (
+        <div className="flex flex-col gap-3 border-t border-zinc-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-white">
+              Settings
+            </p>
 
-          <p className="mt-1 text-xs text-zinc-500">
-            Save your changes before leaving this page.
-          </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Save your changes before leaving this page.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loadingSettings || savingSettings}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saved ? <Check size={18} /> : <Save size={18} />}
+
+            {savingSettings
+              ? "Saving..."
+              : saved
+                ? "Saved"
+                : "Save Changes"}
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={loadingSettings || savingSettings}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saved ? <Check size={18} /> : <Save size={18} />}
-
-          {savingSettings
-            ? "Saving..."
-            : saved
-              ? "Saved"
-              : "Save Changes"}
-        </button>
-      </div>
+      )}
     </div>
   );
 }
