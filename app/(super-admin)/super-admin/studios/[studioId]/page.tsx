@@ -23,7 +23,7 @@ import {
     MoreVertical,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type StudioStatus = "Active" | "Inactive" | "Expiring";
 type Plan = "Basic" | "Professional" | "Enterprise";
@@ -54,7 +54,7 @@ interface Studio {
     customers: number;
     images: number;
 
-    storageUsed: number;
+    storageUsed: number | null;
     storageLimit: number;
 
     subscriptionStart: string;
@@ -66,111 +66,306 @@ interface Studio {
     maxImages: number;
 }
 
-const studio: Studio = {
-    id: "studio-001",
-    name: "Innovate Wedding Studio",
-    shortName: "Innovate",
-    description:
-        "Professional wedding photography and videography studio managing wedding events, customer galleries and photo selections.",
+interface RecentEvent {
+    id: string;
+    name: string;
+    date: string;
+    photos: number;
+    status: string;
+}
 
-    adminName: "Mafaz Malik",
-    adminEmail: "admin@innovatewedding.com",
-    adminPhone: "+91 98765 43210",
-
-    email: "hello@innovatewedding.com",
-    phone: "+91 98765 43210",
-    website: "https://innovatewedding.com",
-
-    address: "Main Road, Nagercoil",
-    city: "Nagercoil",
-    state: "Tamil Nadu",
-    country: "India",
-
-    plan: "Professional",
-    status: "Active",
-
-    events: 28,
-    customers: 46,
-    images: 48260,
-
-    storageUsed: 67.4,
-    storageLimit: 100,
-
-    subscriptionStart: "2026-06-01",
-    subscriptionEnd: "2027-05-31",
-    createdAt: "2026-06-01",
-
-    maxEvents: 50,
-    maxCustomers: 500,
-    maxImages: 100000,
-};
-
-const recentEvents = [
-    {
-        id: "EVT-001",
-        name: "Rahul & Priya Wedding",
-        date: "Sep 28, 2026",
-        photos: 6240,
-        status: "Active",
-    },
-    {
-        id: "EVT-002",
-        name: "Arun & Meena Reception",
-        date: "Sep 21, 2026",
-        photos: 4380,
-        status: "Completed",
-    },
-    {
-        id: "EVT-003",
-        name: "Karthik & Anu Engagement",
-        date: "Sep 14, 2026",
-        photos: 2860,
-        status: "Completed",
-    },
-    {
-        id: "EVT-004",
-        name: "David & Maria Wedding",
-        date: "Sep 08, 2026",
-        photos: 7120,
-        status: "Completed",
-    },
-];
 
 export default function ViewStudioPage() {
     const router = useRouter();
-    const params = useParams();
+    const params = useParams<{ studioId: string }>();
 
-    const [status, setStatus] = useState<StudioStatus>(studio.status);
+    const studioId =
+        typeof params.studioId === "string" ? params.studioId : "";
+
+    const [studio, setStudio] = useState<Studio | null>(null);
+    const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+    const [status, setStatus] = useState<StudioStatus>("Active");
     const [showActions, setShowActions] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (!studioId) {
+            setError("Invalid studio ID.");
+            setLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadStudio() {
+            try {
+                setLoading(true);
+                setError("");
+
+                const response = await fetch(
+                    `/api/super-admin/studios/${encodeURIComponent(studioId)}`,
+                    {
+                        method: "GET",
+                        cache: "no-store",
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success || !result.studio) {
+                    throw new Error(
+                        result.message || "Failed to load studio details."
+                    );
+                }
+
+                if (cancelled) return;
+
+                const raw = result.studio;
+                const admin = raw.admins?.[0];
+                const subscription = raw.subscriptions?.[0];
+                const metrics = result.metrics ?? {};
+
+                const allowedPlans = [
+                    "Basic",
+                    "Professional",
+                    "Enterprise",
+                ];
+
+                const plan: Plan = allowedPlans.includes(result.plan)
+                    ? result.plan
+                    : "Basic";
+
+                const studioStatus: StudioStatus =
+                    result.status === "Inactive" ? "Inactive" : "Active";
+
+                const normalizedStudio: Studio = {
+                    id: raw.id,
+                    name: raw.name ?? "",
+                    shortName: (raw.name ?? "").trim().split(/\s+/)[0] || "",
+                    description: raw.description ?? "",
+
+                    adminName: admin?.name ?? "",
+                    adminEmail: admin?.email ?? "",
+                    adminPhone: admin?.phone ?? "",
+
+                    email: raw.email ?? "",
+                    phone: raw.phone ?? "",
+                    website: raw.website ?? "",
+
+                    address: raw.address ?? "",
+                    city: raw.city ?? "",
+                    state: raw.state ?? "",
+                    country: raw.country ?? "India",
+
+                    plan,
+                    status: studioStatus,
+
+                    events: Number(metrics.events ?? 0),
+                    customers: Number(metrics.customers ?? 0),
+                    images: Number(metrics.images ?? 0),
+
+                    // Image model doesn't currently store file sizes.
+                    storageUsed: null,
+                    storageLimit: Number(
+                        subscription?.storageLimitGb ?? 100
+                    ),
+
+                    subscriptionStart: subscription?.startDate ?? "",
+                    subscriptionEnd: subscription?.endDate ?? "",
+                    createdAt: raw.createdAt ?? "",
+
+                    maxEvents: Number(subscription?.maxEvents ?? 50),
+                    maxCustomers: Number(subscription?.maxCustomers ?? 500),
+                    maxImages: Number(subscription?.maxImages ?? 100000),
+                };
+
+                setStudio(normalizedStudio);
+                setStatus(studioStatus);
+                setRecentEvents(
+                    Array.isArray(result.recentEvents)
+                        ? result.recentEvents
+                        : []
+                );
+            } catch (err) {
+                if (!cancelled) {
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "Something went wrong while loading the studio."
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        void loadStudio();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [studioId]);
+
+    const handleToggleStatus = async () => {
+        if (!studio) return;
+
+        const nextStatus: StudioStatus =
+            status === "Active" ? "Inactive" : "Active";
+
+        try {
+            const response = await fetch(
+                `/api/super-admin/studios/${encodeURIComponent(studio.id)}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        action: "set-status",
+                        isActive: nextStatus === "Active",
+                    }),
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                    result.message || "Failed to update studio status."
+                );
+            }
+
+            setStatus(nextStatus);
+            setStudio((current) =>
+                current ? { ...current, status: nextStatus } : current
+            );
+            setShowActions(false);
+        } catch (err) {
+            window.alert(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to update studio status."
+            );
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-[50vh] items-center justify-center text-sm text-zinc-400">
+                Loading studio details...
+            </div>
+        );
+    }
+
+    if (error || !studio) {
+        return (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8">
+                <h2 className="text-lg font-semibold text-white">
+                    Unable to load studio
+                </h2>
+                <p className="mt-2 text-sm text-red-400">
+                    {error || "Studio not found."}
+                </p>
+                <button
+                    type="button"
+                    onClick={() => router.push("/super-admin/studios")}
+                    className="mt-5 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-800"
+                >
+                    Back to Studios
+                </button>
+            </div>
+        );
+    }
 
     const storagePercentage =
-        (studio.storageUsed / studio.storageLimit) * 100;
+        studio.storageUsed === null
+            ? null
+            : studio.storageLimit > 0
+                ? (studio.storageUsed / studio.storageLimit) * 100
+                : 0;
 
     const eventPercentage =
-        (studio.events / studio.maxEvents) * 100;
+        studio.maxEvents > 0
+            ? (studio.events / studio.maxEvents) * 100
+            : 0;
 
     const customerPercentage =
-        (studio.customers / studio.maxCustomers) * 100;
+        studio.maxCustomers > 0
+            ? (studio.customers / studio.maxCustomers) * 100
+            : 0;
 
     const imagePercentage =
-        (studio.images / studio.maxImages) * 100;
+        studio.maxImages > 0
+            ? (studio.images / studio.maxImages) * 100
+            : 0;
 
-    const subscriptionEnd = new Date(studio.subscriptionEnd);
-    const today = new Date("2026-10-02");
+    const subscriptionEnd = studio.subscriptionEnd
+        ? new Date(studio.subscriptionEnd)
+        : null;
 
-    const remainingDays = Math.max(
-        0,
-        Math.ceil(
-            (subscriptionEnd.getTime() - today.getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
+    const today = new Date();
+    const todayUtc = Date.UTC(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
     );
 
-    const handleToggleStatus = () => {
-        setStatus((current) =>
-            current === "Active" ? "Inactive" : "Active"
+    const endUtc =
+        subscriptionEnd && !Number.isNaN(subscriptionEnd.getTime())
+            ? Date.UTC(
+                subscriptionEnd.getUTCFullYear(),
+                subscriptionEnd.getUTCMonth(),
+                subscriptionEnd.getUTCDate()
+            )
+            : null;
+
+    const remainingDays =
+        endUtc === null
+            ? null
+            : Math.max(
+                0,
+                Math.ceil((endUtc - todayUtc) / (1000 * 60 * 60 * 24))
+            );
+
+
+    const totalSubscriptionDays = (() => {
+        if (
+            !studio.subscriptionStart ||
+            !studio.subscriptionEnd ||
+            studio.subscriptionStart === "—" ||
+            studio.subscriptionEnd === "—"
+        ) {
+            return null;
+        }
+
+        const startDate = new Date(studio.subscriptionStart);
+        const endDate = new Date(studio.subscriptionEnd);
+
+        if (
+            Number.isNaN(startDate.getTime()) ||
+            Number.isNaN(endDate.getTime()) ||
+            endDate < startDate
+        ) {
+            return null;
+        }
+
+        const start = Date.UTC(
+            startDate.getUTCFullYear(),
+            startDate.getUTCMonth(),
+            startDate.getUTCDate()
         );
-    };
+
+        const end = Date.UTC(
+            endDate.getUTCFullYear(),
+            endDate.getUTCMonth(),
+            endDate.getUTCDate()
+        );
+
+        return Math.round((end - start) / (1000 * 60 * 60 * 24));
+    })();
 
     return (
         <div className="pb-10">
@@ -230,43 +425,21 @@ export default function ViewStudioPage() {
                             Edit Studio
                         </button>
 
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setShowActions((prev) => !prev)}
-                                className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800 hover:text-white"
-                            >
-                                <MoreVertical size={18} />
-                            </button>
-
-                            {showActions && (
-                                <div className="absolute right-0 top-12 z-30 w-48 rounded-xl border border-zinc-800 bg-zinc-900 p-1.5 shadow-2xl">
-                                    <button
-                                        type="button"
-                                        onClick={handleToggleStatus}
-                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
-                                    >
-                                        {status === "Active" ? (
-                                            <Ban size={16} />
-                                        ) : (
-                                            <CheckCircle2 size={16} />
-                                        )}
-
-                                        {status === "Active"
-                                            ? "Deactivate Studio"
-                                            : "Activate Studio"}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-400 transition hover:bg-red-500/10"
-                                    >
-                                        <Trash2 size={16} />
-                                        Delete Studio
-                                    </button>
-                                </div>
+                        <button
+                            type="button"
+                            onClick={handleToggleStatus}
+                            className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-800 hover:text-white"
+                        >
+                            {status === "Active" ? (
+                                <Ban size={16} />
+                            ) : (
+                                <CheckCircle2 size={16} />
                             )}
-                        </div>
+
+                            {status === "Active"
+                                ? "Deactivate Studio"
+                                : "Activate Studio"}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -283,12 +456,22 @@ export default function ViewStudioPage() {
                     description={`of ${studio.maxEvents.toLocaleString()} allowed`}
                 />
 
+
                 <OverviewCard
-                    icon={<Users size={19} />}
-                    label="Customers"
-                    value={studio.customers.toLocaleString()}
-                    description={`of ${studio.maxCustomers.toLocaleString()} allowed`}
+                    icon={<CalendarDays size={19} />}
+                    label="Remaining Days"
+                    value={
+                        remainingDays === null
+                            ? "Not set"
+                            : remainingDays.toLocaleString()
+                    }
+                    description={
+                        totalSubscriptionDays === null
+                            ? "Total duration not set"
+                            : `of ${totalSubscriptionDays.toLocaleString()} days`
+                    }
                 />
+
 
                 <OverviewCard
                     icon={<ImageIcon size={19} />}
@@ -300,8 +483,12 @@ export default function ViewStudioPage() {
                 <OverviewCard
                     icon={<HardDrive size={19} />}
                     label="Storage Used"
-                    value={`${studio.storageUsed} GB`}
-                    description={`of ${studio.storageLimit} GB`}
+                    value={
+                        studio.storageUsed === null
+                            ? "Not tracked"
+                            : `${studio.storageUsed} GB`
+                    }
+                    description={`Limit: ${studio.storageLimit} GB`}
                 />
             </div>
 
@@ -422,7 +609,11 @@ export default function ViewStudioPage() {
                             <UsageBar
                                 icon={<HardDrive size={17} />}
                                 label="Storage"
-                                used={`${studio.storageUsed} GB`}
+                                used={
+                                    studio.storageUsed === null
+                                        ? "Not tracked"
+                                        : `${studio.storageUsed} GB`
+                                }
                                 limit={`${studio.storageLimit} GB`}
                                 percentage={storagePercentage}
                             />
@@ -435,13 +626,13 @@ export default function ViewStudioPage() {
                                 percentage={eventPercentage}
                             />
 
-                            <UsageBar
+                            {/* <UsageBar
                                 icon={<Users size={17} />}
                                 label="Customers"
                                 used={studio.customers.toLocaleString()}
                                 limit={studio.maxCustomers.toLocaleString()}
                                 percentage={customerPercentage}
-                            />
+                            /> */}
 
                             <UsageBar
                                 icon={<ImageIcon size={17} />}
@@ -509,7 +700,7 @@ export default function ViewStudioPage() {
                                             </td>
 
                                             <td className="py-4 text-sm text-zinc-400">
-                                                {event.date}
+                                                {formatDate(event.date)}
                                             </td>
 
                                             <td className="py-4 text-sm text-zinc-400">
@@ -570,7 +761,11 @@ export default function ViewStudioPage() {
 
                                     <DateRow
                                         label="Remaining"
-                                        value={`${remainingDays} days`}
+                                        value={
+                                            remainingDays === null
+                                                ? "Not set"
+                                                : `${remainingDays} days`
+                                        }
                                     />
                                 </div>
                             </div>
@@ -598,11 +793,11 @@ export default function ViewStudioPage() {
                                 value={studio.maxEvents.toLocaleString()}
                             />
 
-                            <LimitRow
+                            {/* <LimitRow
                                 icon={<Users size={16} />}
                                 label="Customers"
                                 value={studio.maxCustomers.toLocaleString()}
-                            />
+                            /> */}
 
                             <LimitRow
                                 icon={<ImageIcon size={16} />}
@@ -685,13 +880,13 @@ export default function ViewStudioPage() {
                                 Edit Studio
                             </button>
 
-                            <button
+                            {/* <button
                                 type="button"
                                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
                             >
                                 <Trash2 size={16} />
                                 Delete Studio
-                            </button>
+                            </button> */}
                         </div>
                     </section>
                 </div>
@@ -810,9 +1005,12 @@ function UsageBar({
     label: string;
     used: string;
     limit: string;
-    percentage: number;
+    percentage: number | null;
 }) {
-    const safePercentage = Math.min(100, Math.max(0, percentage));
+    const safePercentage =
+        percentage === null
+            ? 0
+            : Math.min(100, Math.max(0, percentage));
 
     return (
         <div>
@@ -842,7 +1040,9 @@ function UsageBar({
             </div>
 
             <p className="mt-2 text-right text-xs text-zinc-600">
-                {safePercentage.toFixed(1)}% used
+                {percentage === null
+                    ? "Usage not tracked"
+                    : `${safePercentage.toFixed(1)}% used`}
             </p>
         </div>
     );
@@ -943,7 +1143,15 @@ function EventStatus({
 }
 
 function formatDate(date: string) {
-    return new Date(date).toLocaleDateString("en-IN", {
+    if (!date) return "Not set";
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return "Not set";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
         year: "numeric",
