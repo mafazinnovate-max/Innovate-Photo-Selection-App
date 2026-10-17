@@ -228,7 +228,10 @@ export async function GET() {
     try {
         if (!(await verifySuperAdmin())) {
             return NextResponse.json(
-                { success: false, message: "Super Admin access required." },
+                {
+                    success: false,
+                    message: "Super Admin access required.",
+                },
                 { status: 403 }
             );
         }
@@ -245,23 +248,37 @@ export async function GET() {
                         phone: true,
                         createdAt: true,
                     },
+                    orderBy: { createdAt: "asc" },
                 },
-                Subscription: {
-                    orderBy: { createdAt: "desc" },
-                    take: 1,
-                },
+subscriptions: {
+    orderBy: { createdAt: "desc" },
+    take: 1,
+},
+
                 _count: {
-                    select: { events: true },
+                    select: {
+                        events: {
+                            where: {
+                                deletedAt: null,
+                            },
+                        },
+                    },
                 },
             },
         });
 
-        return NextResponse.json({ success: true, studios });
+        return NextResponse.json({
+            success: true,
+            studios,
+        });
     } catch (error) {
         console.error("Super Admin studio fetch error:", error);
 
         return NextResponse.json(
-            { success: false, message: "Failed to fetch studios." },
+            {
+                success: false,
+                message: "Failed to fetch studios.",
+            },
             { status: 500 }
         );
     }

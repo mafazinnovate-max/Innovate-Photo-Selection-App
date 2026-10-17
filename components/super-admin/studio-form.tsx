@@ -259,11 +259,8 @@ export default function StudioForm({
                     }),
                 }
             );
-            console.log('formdata---->', formData)
 
             const data = await response.json();
-            console.log('response----->', response)
-            console.log('data----->', data)
 
             if (!response.ok) {
                 alert(
@@ -717,7 +714,7 @@ export default function StudioForm({
                         description="Set usage limits for this studio."
                     />
 
-                    <div className="grid gap-5 p-6 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-5 p-6 md:grid-cols-3">
                         <NumberField
                             label="Storage Limit"
                             suffix="GB"
@@ -740,7 +737,7 @@ export default function StudioForm({
                             error={errors.maxEvents}
                         />
 
-                        <NumberField
+                        {/* <NumberField
                             label="Maximum Customers"
                             suffix="customers"
                             value={formData.maxCustomers}
@@ -749,7 +746,7 @@ export default function StudioForm({
                             }
                             icon={<Users size={17} />}
                             error={errors.maxCustomers}
-                        />
+                        /> */}
 
                         <NumberField
                             label="Maximum Images"
@@ -900,10 +897,10 @@ function InputField({
                         }
                     }}
                     className={`w-full rounded-xl border bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500 ${type === "date"
-                            ? "[color-scheme:dark] cursor-pointer"
-                            : icon
-                                ? "pl-10"
-                                : ""
+                        ? "[color-scheme:dark] cursor-pointer"
+                        : icon
+                            ? "pl-10"
+                            : ""
                         } ${error
                             ? "border-red-500/60"
                             : "border-zinc-700"

@@ -2,6 +2,7 @@
 
 import {
     AlertCircle,
+    Ban,
     Building2,
     CalendarDays,
     CheckCircle2,
@@ -25,8 +26,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-type StudioStatus = "Active" | "Inactive" | "Expiring";
 
+type StudioStatus = "Active" | "Inactive" | "Expiring";
 type Plan = "Basic" | "Professional" | "Enterprise";
 
 interface Studio {
@@ -42,7 +43,7 @@ interface Studio {
     events: number;
     customers: number;
     images: number;
-    storageUsed: number;
+    storageUsed: number | null;
     storageLimit: number;
     subscriptionStart: string;
     subscriptionEnd: string;
@@ -53,13 +54,32 @@ interface ApiStudio {
     id: string;
     name: string;
     createdAt: string;
-    admins: {
+    isActive: boolean;
+    email?: string | null;
+    phone?: string | null;
+    city?: string | null;
+    state?: string | null;
+    admins?: {
         id: string;
         username: string;
+        name?: string | null;
+        email?: string | null;
+        phone?: string | null;
         createdAt: string;
     }[];
-    _count: {
+    subscriptions?: {
+        plan: string;
+        status: string;
+        startDate: string;
+        endDate: string | null;
+        storageLimitGb: number;
+    }[];
+    _count?: {
         events: number;
+    };
+    metrics?: {
+        customers?: number;
+        images?: number;
     };
 }
 
@@ -106,6 +126,51 @@ function formatDate(value: string) {
         month: "short",
         year: "numeric",
     });
+}
+
+
+function getStudioStatus(
+    isActive: boolean,
+    subscription?: ApiStudio["subscriptions"] extends (infer T)[] | undefined
+        ? T
+        : never
+): StudioStatus {
+    if (!isActive) return "Inactive";
+    if (!subscription) return "Active";
+
+    if (subscription.status.toLowerCase() !== "active") {
+        return "Inactive";
+    }
+
+    if (!subscription.endDate) return "Active";
+
+    const end = new Date(subscription.endDate);
+
+    if (Number.isNaN(end.getTime())) return "Active";
+
+    const now = new Date();
+
+    const today = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const endDay = new Date(
+        end.getFullYear(),
+        end.getMonth(),
+        end.getDate()
+    );
+
+    const remainingDays = Math.ceil(
+        (endDay.getTime() - today.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    if (remainingDays < 0) return "Inactive";
+    if (remainingDays <= 10) return "Expiring";
+
+    return "Active";
 }
 
 function StatusBadge({ status }: { status: StudioStatus }) {
@@ -177,7 +242,7 @@ export default function StudiosPage() {
                 if (!response.ok) {
                     throw new Error(
                         data.message ||
-                            "Failed to fetch studios."
+                        "Failed to fetch studios."
                     );
                 }
 
@@ -187,85 +252,72 @@ export default function StudiosPage() {
                     );
                 }
 
-                const mappedStudios: Studio[] =
-                    (data.studios as ApiStudio[]).map(
-                        (studio) => {
-                            const firstAdmin =
-                                studio.admins?.[0];
 
-                            return {
-                                id: studio.id,
-                                name: studio.name,
-                                shortName: getInitials(
-                                    studio.name
-                                ),
+                const mappedStudios: Studio[] = (
+                    data.studios as ApiStudio[]
+                ).map((studio) => {
+                    const firstAdmin = studio.admins?.[0];
+                    const subscription = studio.subscriptions?.[0];
 
-                                /*
-                                 * The database currently stores
-                                 * the admin username, not the full
-                                 * admin profile information.
-                                 */
-                                adminName:
-                                    firstAdmin?.username ||
-                                    "—",
+                    const validPlans: Plan[] = [
+                        "Basic",
+                        "Professional",
+                        "Enterprise",
+                    ];
 
-                                adminEmail: "—",
-                                adminPhone: "—",
+                    const plan: Plan = validPlans.includes(
+                        subscription?.plan as Plan
+                    )
+                        ? (subscription?.plan as Plan)
+                        : "Basic";
 
-                                /*
-                                 * These studio profile fields are
-                                 * not stored in the current Studio
-                                 * table yet.
-                                 */
-                                location: "—",
+                    const location = [
+                        studio.city,
+                        studio.state,
+                    ]
+                        .filter(Boolean)
+                        .join(", ");
 
-                                /*
-                                 * Subscription/plan fields are
-                                 * not stored in the current
-                                 * database yet.
-                                 *
-                                 * Keep the existing UI working
-                                 * until those fields are added
-                                 * safely later.
-                                 */
-                                plan: "Basic",
+                    return {
+                        id: studio.id,
+                        name: studio.name,
+                        shortName: getInitials(studio.name),
 
-                                /*
-                                 * Current studios are treated as
-                                 * active because the current
-                                 * database has no status column yet.
-                                 */
-                                status: "Active",
+                        adminName:
+                            firstAdmin?.name ||
+                            firstAdmin?.username ||
+                            "—",
 
-                                /*
-                                 * Event count comes directly
-                                 * from Neon.
-                                 */
-                                events:
-                                    studio._count?.events ?? 0,
+                        adminEmail: firstAdmin?.email || "—",
+                        adminPhone: firstAdmin?.phone || "—",
 
-                                /*
-                                 * These values are not available
-                                 * from the current database.
-                                 */
-                                customers: 0,
-                                images: 0,
-                                storageUsed: 0,
-                                storageLimit: 0,
+                        location: location || "—",
 
-                                subscriptionStart:
-                                    formatDate(
-                                        studio.createdAt
-                                    ),
+                        plan,
 
-                                subscriptionEnd: "—",
+                        status: getStudioStatus(
+                            studio.isActive,
+                            subscription
+                        ),
 
-                                createdAt: formatDate(
-                                    studio.createdAt
-                                ),
-                            };
-                        }
-                    );
+                        events: studio._count?.events ?? 0,
+
+                        // No Customer model exists in the current Prisma schema.
+                        customers: studio.metrics?.customers ?? 0,
+
+                        images: studio.metrics?.images ?? 0,
+
+                        // Storage usage is not currently tracked in the schema.
+                        storageUsed: null,
+
+                        storageLimit: subscription?.storageLimitGb ?? 100,
+
+                        subscriptionStart: subscription?.startDate ?? "",
+                        subscriptionEnd: subscription?.endDate ?? "",
+
+                        createdAt: studio.createdAt,
+                    };
+                });
 
                 if (!cancelled) {
                     setStudios(mappedStudios);
@@ -296,6 +348,62 @@ export default function StudiosPage() {
             cancelled = true;
         };
     }, []);
+
+
+    const handleToggleStatus = async (
+        studioId: string,
+        currentStatus: StudioStatus,
+        subscriptionEnd: string
+    ) => {
+        const nextStatus: StudioStatus =
+            currentStatus === "Inactive" ? "Active" : "Inactive";
+
+        try {
+            const response = await fetch(
+                `/api/super-admin/studios/${encodeURIComponent(studioId)}`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "set-status",
+                        isActive: nextStatus !== "Inactive",
+                    }),
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Failed to update studio status.");
+            }
+
+            let updatedStatus: StudioStatus = nextStatus;
+
+            if (nextStatus === "Active" && subscriptionEnd !== "—") {
+                const expiryDate = new Date(subscriptionEnd);
+                const today = new Date();
+                const daysLeft = Math.ceil(
+                    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                );
+
+                if (daysLeft >= 0 && daysLeft <= 10) {
+                    updatedStatus = "Expiring";
+                }
+            }
+
+            setStudios((current) =>
+                current.map((item) =>
+                    item.id === studioId
+                        ? { ...item, status: updatedStatus }
+                        : item
+                )
+            );
+        } catch (err) {
+            window.alert(
+                err instanceof Error ? err.message : "Failed to update studio status."
+            );
+        }
+    };
 
     const filteredStudios = useMemo(() => {
         return studios.filter((studio) => {
@@ -351,12 +459,6 @@ export default function StudiosPage() {
     const inactiveStudios = studios.filter(
         (studio) => studio.status === "Inactive"
     ).length;
-
-    const totalStorage = studios.reduce(
-        (total, studio) =>
-            total + studio.storageUsed,
-        0
-    );
 
     return (
         <div
@@ -515,7 +617,15 @@ export default function StudiosPage() {
                             </p>
 
                             <p className="mt-2 text-2xl font-semibold text-white">
-                                {totalStorage.toFixed(1)} GB
+                                {studios.some((studio) => studio.storageUsed !== null)
+                                    ? `${studios
+                                        .reduce(
+                                            (total, studio) =>
+                                                total + (studio.storageUsed ?? 0),
+                                            0
+                                        )
+                                        .toFixed(1)} GB`
+                                    : "Not tracked"}
                             </p>
                         </div>
 
@@ -679,12 +789,10 @@ export default function StudiosPage() {
                             {filteredStudios.map(
                                 (studio) => {
                                     const storagePercentage =
-                                        studio.storageLimit >
-                                        0
-                                            ? (studio.storageUsed /
-                                                  studio.storageLimit) *
-                                              100
-                                            : 0;
+                                        studio.storageUsed !== null &&
+                                            studio.storageLimit > 0
+                                            ? (studio.storageUsed / studio.storageLimit) * 100
+                                            : null;
 
                                     return (
                                         <tr
@@ -741,7 +849,7 @@ export default function StudiosPage() {
 
                                             {/* Activity */}
                                             <td className="px-6 py-5">
-                                                <div className="space-y-1.5 text-xs">
+                                                <div className="space-y-1.5 text-xs w-20">
                                                     <div className="flex items-center gap-2 text-zinc-400">
                                                         <CalendarDays
                                                             size={
@@ -755,7 +863,7 @@ export default function StudiosPage() {
                                                         events
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 text-zinc-500">
+                                                    {/* <div className="flex items-center gap-2 text-zinc-500">
                                                         <Users
                                                             size={
                                                                 13
@@ -766,7 +874,7 @@ export default function StudiosPage() {
                                                             studio.customers
                                                         }{" "}
                                                         customers
-                                                    </div>
+                                                    </div> */}
                                                 </div>
                                             </td>
 
@@ -776,38 +884,34 @@ export default function StudiosPage() {
                                                     <div className="mb-2 flex items-center justify-between text-xs">
                                                         <span className="text-zinc-300">
                                                             {studio.storageLimit >
-                                                            0
+                                                                0
                                                                 ? `${studio.storageUsed} GB`
                                                                 : "—"}
                                                         </span>
 
                                                         <span className="text-zinc-600">
                                                             {studio.storageLimit >
-                                                            0
+                                                                0
                                                                 ? `${studio.storageLimit} GB`
                                                                 : "—"}
                                                         </span>
                                                     </div>
 
-                                                    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                                                        <div
-                                                            className={`h-full rounded-full ${
-                                                                storagePercentage >=
-                                                                90
+                                                    {storagePercentage !== null && (
+                                                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                                            <div
+                                                                className={`h-full rounded-full ${storagePercentage >= 90
                                                                     ? "bg-red-400"
-                                                                    : storagePercentage >=
-                                                                        75
-                                                                      ? "bg-amber-400"
-                                                                      : "bg-white"
-                                                            }`}
-                                                            style={{
-                                                                width: `${Math.min(
-                                                                    storagePercentage,
-                                                                    100
-                                                                )}%`,
-                                                            }}
-                                                        />
-                                                    </div>
+                                                                    : storagePercentage >= 75
+                                                                        ? "bg-amber-400"
+                                                                        : "bg-white"
+                                                                    }`}
+                                                                style={{
+                                                                    width: `${Math.min(storagePercentage, 100)}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
 
@@ -827,9 +931,14 @@ export default function StudiosPage() {
                                                     />
 
                                                     Until{" "}
-                                                    {
-                                                        studio.subscriptionEnd
-                                                    }
+                                                    {studio.subscriptionEnd &&
+                                                        studio.subscriptionEnd !== "—"
+                                                        ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })
+                                                        : "—"}
                                                 </div>
                                             </td>
 
@@ -868,81 +977,74 @@ export default function StudiosPage() {
 
                                                 {openMenu ===
                                                     studio.id && (
-                                                    <div
-                                                        onClick={(
-                                                            event
-                                                        ) =>
-                                                            event.stopPropagation()
-                                                        }
-                                                        className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
-                                                    >
-                                                        <button
-                                                            onClick={() => {
-                                                                router.push(
-                                                                    `/super-admin/studios/${studio.id}`
+                                                        <div
+                                                            onClick={(
+                                                                event
+                                                            ) => {
+                                                                event.stopPropagation()
+                                                                setOpenMenu(
+                                                                    openMenu ===
+                                                                        studio.id
+                                                                        ? null
+                                                                        : studio.id
                                                                 );
                                                             }}
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
                                                         >
-                                                            <Eye
-                                                                size={
-                                                                    15
-                                                                }
-                                                            />
-                                                            View Studio
-                                                        </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push(
+                                                                        `/super-admin/studios/${studio.id}`
+                                                                    );
+                                                                }}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                <Eye
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                View Studio
+                                                            </button>
 
-                                                        <button
-                                                            onClick={() => {
-                                                                router.push(
-                                                                    `/super-admin/studios/${studio.id}/edit`
-                                                                );
-                                                            }}
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
-                                                        >
-                                                            <Pencil
-                                                                size={
-                                                                    15
-                                                                }
-                                                            />
-                                                            Edit Studio
-                                                        </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push(
+                                                                        `/super-admin/studios/${studio.id}/edit`
+                                                                    );
+                                                                }}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                <Pencil
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                Edit Studio
+                                                            </button>
 
-                                                        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                                                            {studio.status ===
-                                                            "Inactive" ? (
-                                                                <>
-                                                                    <CheckCircle2
-                                                                        size={
-                                                                            15
-                                                                        }
-                                                                    />
-                                                                    Activate
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <XCircle
-                                                                        size={
-                                                                            15
-                                                                        }
-                                                                    />
-                                                                    Deactivate
-                                                                </>
-                                                            )}
-                                                        </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleStatus(studio.id, studio.status, studio.subscriptionEnd)}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                {studio.status === "Inactive" ? (
+                                                                    <>
+                                                                        <CheckCircle2 size={15} />
+                                                                        Activate
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <XCircle size={15} />
+                                                                        Deactivate
+                                                                    </>
+                                                                )}
+                                                            </button>
 
-                                                        <div className="my-1 border-t border-zinc-800" />
 
-                                                        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10">
-                                                            <Trash2
-                                                                size={
-                                                                    15
-                                                                }
-                                                            />
-                                                            Delete Studio
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                            {/* <div className="my-1 border-t border-zinc-800" /> */}
+                                                        </div>
+                                                    )}
                                             </td>
                                         </tr>
                                     );
@@ -957,12 +1059,10 @@ export default function StudiosPage() {
                     {filteredStudios.map(
                         (studio) => {
                             const storagePercentage =
-                                studio.storageLimit >
-                                0
-                                    ? (studio.storageUsed /
-                                          studio.storageLimit) *
-                                      100
-                                    : 0;
+                                studio.storageUsed !== null &&
+                                    studio.storageLimit > 0
+                                    ? (studio.storageUsed / studio.storageLimit) * 100
+                                    : null;
 
                             return (
                                 <div
@@ -1033,9 +1133,14 @@ export default function StudiosPage() {
 
                                             <p className="mt-1 text-xs text-zinc-500">
                                                 Until{" "}
-                                                {
-                                                    studio.subscriptionEnd
-                                                }
+                                                {studio.subscriptionEnd &&
+                                                    studio.subscriptionEnd !== "—"
+                                                    ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    })
+                                                    : "—"}
                                             </p>
                                         </div>
 
@@ -1066,30 +1171,26 @@ export default function StudiosPage() {
 
                                             <p className="mt-1 text-sm text-zinc-300">
                                                 {studio.storageLimit >
-                                                0
+                                                    0
                                                     ? `${studio.storageUsed} GB / ${studio.storageLimit} GB`
                                                     : "—"}
                                             </p>
 
-                                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                                                <div
-                                                    className={`h-full rounded-full ${
-                                                        storagePercentage >=
-                                                        90
+                                            {storagePercentage !== null && (
+                                                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                                    <div
+                                                        className={`h-full rounded-full ${storagePercentage >= 90
                                                             ? "bg-red-400"
-                                                            : storagePercentage >=
-                                                                75
-                                                              ? "bg-amber-400"
-                                                              : "bg-white"
-                                                    }`}
-                                                    style={{
-                                                        width: `${Math.min(
-                                                            storagePercentage,
-                                                            100
-                                                        )}%`,
-                                                    }}
-                                                />
-                                            </div>
+                                                            : storagePercentage >= 75
+                                                                ? "bg-amber-400"
+                                                                : "bg-white"
+                                                            }`}
+                                                        style={{
+                                                            width: `${Math.min(storagePercentage, 100)}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1128,7 +1229,7 @@ export default function StudiosPage() {
 
                                         <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
                                             {studio.status ===
-                                            "Inactive" ? (
+                                                "Inactive" ? (
                                                 <>
                                                     <CheckCircle2
                                                         size={
