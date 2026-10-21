@@ -121,13 +121,34 @@ model Admin {
   studioId String
 
   studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  authSecret AuthSecret?
 }
 
 model SuperAdmin {
   id           String   @id @default(cuid())
   username     String   @unique
   passwordHash String
-  createdAt    DateTime @default(now())
+  name               String?
+  email              String?   @unique
+  logoUrl            String?
+  passwordUpdatedAt  DateTime?
+  passwordResetToken String?   @unique
+  passwordResetExpiry DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  authSecret AuthSecret?
+}
+
+model AuthSecret {
+  id           String      @id @default(cuid())
+  secret       String      @unique
+  createdAt    DateTime    @default(now())
+
+  adminId      String?     @unique
+  superAdminId String?     @unique
+
+  admin        Admin?      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {

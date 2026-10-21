@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { randomBytes } from "crypto";
 
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
@@ -180,6 +181,13 @@ export async function POST(request: Request) {
                 },
             });
 
+            const authSecret = await tx.authSecret.create({
+    data: {
+        secret: randomBytes(32).toString("hex"),
+        adminId: admin.id,
+    },
+});
+
             const subscription = await tx.subscription.create({
                 data: {
                     plan,
@@ -250,7 +258,7 @@ export async function GET() {
                     },
                     orderBy: { createdAt: "asc" },
                 },
-subscriptions: {
+Subscription: {
     orderBy: { createdAt: "desc" },
     take: 1,
 },

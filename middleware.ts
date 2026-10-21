@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
 
-const secret = process.env.AUTH_SECRET;
 
-if (!secret) {
-    throw new Error("AUTH_SECRET is not configured.");
-}
 
-const secretKey = new TextEncoder().encode(secret);
 
 async function getSession(req: NextRequest) {
     const token = req.cookies.get("auth-token")?.value;
@@ -18,9 +12,14 @@ async function getSession(req: NextRequest) {
     }
 
     try {
-        const { payload } = await jwtVerify(
-            token,
-            secretKey
+        const parts = token.split(".");
+
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        const payload = JSON.parse(
+            Buffer.from(parts[1], "base64url").toString()
         );
 
         if (
@@ -44,10 +43,12 @@ export async function middleware(req: NextRequest) {
     /*
      * Public pages
      */
-    const publicRoutes = [
-        "/login",
-        "/gallery",
-    ];
+   const publicRoutes = [
+    "/",
+    "/login",
+    "/signup",
+    "/gallery",
+];
 
     const isPublicPage = publicRoutes.some((route) =>
         pathname.startsWith(route)
@@ -60,9 +61,10 @@ export async function middleware(req: NextRequest) {
     /*
      * Public API routes
      */
-    const publicApiRoutes = [
-        "/api/login",
-    ];
+   const publicApiRoutes = [
+    "/api/login",
+    "/api/signup",
+];
 
     const isPublicApi = publicApiRoutes.some((route) =>
         pathname.startsWith(route)

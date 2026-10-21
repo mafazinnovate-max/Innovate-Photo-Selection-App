@@ -11,7 +11,14 @@ import {
   LogOut,
   Menu,
   X,
+  AlertTriangle,
 } from "lucide-react";
+
+interface SubscriptionInfo {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+}
 
 const menuItems = [
   {
@@ -31,7 +38,11 @@ const menuItems = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  subscription,
+}: {
+  subscription?: SubscriptionInfo | null;
+}) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -42,6 +53,8 @@ export default function Sidebar() {
   const [logoZoom, setLogoZoom] = useState(1);
   const [logoPositionX, setLogoPositionX] = useState(0);
   const [logoPositionY, setLogoPositionY] = useState(0);
+
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -62,7 +75,9 @@ export default function Sidebar() {
         setLogoUrl(data.logoUrl ?? null);
 
         setLogoZoom(
-          typeof data.logoZoom === "number" ? data.logoZoom : 1
+          typeof data.logoZoom === "number"
+            ? data.logoZoom
+            : 1
         );
 
         setLogoPositionX(
@@ -79,7 +94,10 @@ export default function Sidebar() {
 
         setLogoLoaded(true);
       } catch (error) {
-        console.error("Failed to load studio logo:", error);
+        console.error(
+          "Failed to load studio logo:",
+          error
+        );
 
         setLogoUrl(null);
         setLogoLoaded(true);
@@ -88,12 +106,90 @@ export default function Sidebar() {
 
     loadLogo();
 
-    window.addEventListener("studio-logo-changed", loadLogo);
+    window.addEventListener(
+      "studio-logo-changed",
+      loadLogo
+    );
 
     return () => {
-      window.removeEventListener("studio-logo-changed", loadLogo);
+      window.removeEventListener(
+        "studio-logo-changed",
+        loadLogo
+      );
     };
   }, []);
+
+  /*
+   * Keep the subscription countdown updated while
+   * the sidebar remains open.
+   */
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(Date.now());
+    };
+
+    updateTime();
+
+    const interval = window.setInterval(
+      updateTime,
+      60 * 1000
+    );
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  /*
+   * Calculate the subscription countdown.
+   *
+   * Only show the sidebar warning when:
+   * - 4 days remain
+   * - 3 days remain
+   * - 2 days remain
+   * - 1 day remains
+   * - Subscription has ended
+   */
+  const getSubscriptionMessage = () => {
+    if (
+      !subscription?.endDate ||
+      currentTime === null
+    ) {
+      return null;
+    }
+
+    const endDate = new Date(
+      subscription.endDate
+    );
+
+    const now = new Date(currentTime);
+
+    const remainingDays = Math.ceil(
+      (endDate.getTime() - now.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    if (now.getTime() >= endDate.getTime()) {
+      return {
+        type: "ended" as const,
+        text: "Subscription ended",
+      };
+    }
+
+    if (remainingDays >= 1 && remainingDays <= 4) {
+      return {
+        type: "warning" as const,
+        text: `Subscription ends in ${remainingDays} ${
+          remainingDays === 1 ? "day" : "days"
+        }`,
+      };
+    }
+
+    return null;
+  };
+
+  const subscriptionMessage =
+    getSubscriptionMessage();
 
   /*
    * Logo display size
@@ -102,17 +198,29 @@ export default function Sidebar() {
   const desktopLogoSize = 96;
   const mobileLogoSize = 44;
 
-  const desktopScale = desktopLogoSize / 176;
-  const mobileScale = mobileLogoSize / 176;
+  const desktopScale =
+    desktopLogoSize / 176;
 
-  const desktopPositionX = logoPositionX * desktopScale;
-  const desktopPositionY = logoPositionY * desktopScale;
+  const mobileScale =
+    mobileLogoSize / 176;
 
-  const mobilePositionX = logoPositionX * mobileScale;
-  const mobilePositionY = logoPositionY * mobileScale;
+  const desktopPositionX =
+    logoPositionX * desktopScale;
 
-  const desktopPadding = desktopLogoSize * (16 / 176);
-  const mobilePadding = mobileLogoSize * (16 / 176);
+  const desktopPositionY =
+    logoPositionY * desktopScale;
+
+  const mobilePositionX =
+    logoPositionX * mobileScale;
+
+  const mobilePositionY =
+    logoPositionY * mobileScale;
+
+  const desktopPadding =
+    desktopLogoSize * (16 / 176);
+
+  const mobilePadding =
+    mobileLogoSize * (16 / 176);
 
   const logout = async () => {
     try {
@@ -122,13 +230,19 @@ export default function Sidebar() {
 
       localStorage.removeItem("studioLogo");
       localStorage.removeItem("studioLogoZoom");
-      localStorage.removeItem("studioLogoPositionX");
-      localStorage.removeItem("studioLogoPositionY");
+      localStorage.removeItem(
+        "studioLogoPositionX"
+      );
+      localStorage.removeItem(
+        "studioLogoPositionY"
+      );
 
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Unable to log out. Please try again.");
+      alert(
+        "Unable to log out. Please try again."
+      );
     }
   };
 
@@ -191,7 +305,9 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col border-r border-zinc-800 bg-zinc-950 transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
         } lg:translate-x-0`}
       >
         {/* Branding */}
@@ -257,7 +373,9 @@ export default function Sidebar() {
 
               const isActive =
                 pathname === item.href ||
-                pathname.startsWith(`${item.href}/`);
+                pathname.startsWith(
+                  `${item.href}/`
+                );
 
               return (
                 <Link
@@ -276,6 +394,48 @@ export default function Sidebar() {
               );
             })}
           </nav>
+
+          {/* Subscription Countdown */}
+          {subscriptionMessage && (
+            <div
+              className={`mt-6 rounded-xl border p-3 ${
+                subscriptionMessage.type ===
+                "ended"
+                  ? "border-red-500/30 bg-red-500/10"
+                  : "border-amber-500/30 bg-amber-500/10"
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle
+                  size={17}
+                  className={`mt-0.5 shrink-0 ${
+                    subscriptionMessage.type ===
+                    "ended"
+                      ? "text-red-400"
+                      : "text-amber-400"
+                  }`}
+                />
+
+                <div className="min-w-0">
+                  <p
+                    className={`text-xs font-semibold ${
+                      subscriptionMessage.type ===
+                      "ended"
+                        ? "text-red-400"
+                        : "text-amber-400"
+                    }`}
+                  >
+                    {subscriptionMessage.text}
+                  </p>
+
+                  <p className="mt-1 text-[10px] leading-4 text-zinc-500">
+                    Please contact the administrator
+                    to renew your subscription.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Logout */}

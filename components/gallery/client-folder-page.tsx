@@ -93,6 +93,7 @@ export default function ClientFolderPage({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
+  const [savedScrollY, setSavedScrollY] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -138,6 +139,7 @@ export default function ClientFolderPage({
   const swipeStartTime = useRef(0);
 
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const scrollRestoredRef = useRef(false);
 
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -532,6 +534,31 @@ export default function ClientFolderPage({
     };
   }, []);
 
+  useEffect(() => {
+  const savedScroll = sessionStorage.getItem(
+    `gallery-scroll-${shareId}-${folderId}`,
+  );
+
+  if (!savedScroll || scrollRestoredRef.current) {
+    return;
+  }
+
+  const scrollY = Number(savedScroll);
+
+  if (!Number.isFinite(scrollY)) {
+    return;
+  }
+
+  scrollRestoredRef.current = true;
+
+  requestAnimationFrame(() => {
+    window.scrollTo({
+      top: scrollY,
+      behavior: "auto",
+    });
+  });
+}, [shareId, folderId]);
+
   /*
    * Cleanup
    */
@@ -727,6 +754,12 @@ export default function ClientFolderPage({
     : `/gallery/${shareId}`;
 
   const handleLogoClick = () => {
+
+     setSavedScrollY(window.scrollY);
+     sessionStorage.setItem(
+  `gallery-scroll-${shareId}-${folderId}`,
+  String(window.scrollY),
+);
     if (
       hasUnsavedChanges ||
       isDirty()
@@ -735,7 +768,7 @@ export default function ClientFolderPage({
 
       setIsBrowserBack(false);
 
-      setPendingNavigation(backUrl);
+      setPendingNavigation(null);
 
       setShowLeaveModal(true);
 
@@ -795,7 +828,8 @@ export default function ClientFolderPage({
         return;
       }
 
-      navigateTo(backUrl);
+      leavingRef.current = true;
+window.history.back();
     };
 
   /*
@@ -2061,7 +2095,7 @@ export default function ClientFolderPage({
 <div className="border-t border-zinc-900 bg-black py-10">
   <div className="flex justify-center">
     <Image
-      src="/picknovate-logo.jpg"
+      src="/picknovate-logo.png"
       alt="Picknovate"
       width={96}
       height={96}

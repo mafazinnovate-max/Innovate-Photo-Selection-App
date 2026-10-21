@@ -187,13 +187,17 @@ export default function FoldersPage({
    *   Child folders are the actual selectable categories.
    */
 
-  const selectableFolders = isNested
-    ? folders.filter((folder) => folder.parentId)
-    : folders.filter((folder) => !folder.parentId);
+ const selectableFolders = isNested
+  ? selectedParent
+    ? folders.filter(
+        (folder) => folder.parentId === selectedParent,
+      )
+    : []
+  : folders.filter((folder) => !folder.parentId);
 
-  const completedSelectableFolders = selectableFolders.filter(
-    (folder) => folder.selectionStatus === "COMPLETED",
-  );
+const completedSelectableFolders = selectableFolders.filter(
+  (folder) => folder.selectionStatus === "COMPLETED",
+);
 
   const allCategoriesCompleted =
     selectableFolders.length > 0 &&

@@ -51,10 +51,10 @@ export default async function GalleryPage({
   }
 
   const folders = await prisma.folder.findMany({
-    where: {
-      eventId: event.id,
-      ...(parentId ? { parentId } : {}),
-    },
+   where: {
+    eventId: event.id,
+    parentId: parentId ?? null,
+},
     select: {
       id: true,
       name: true,
@@ -243,7 +243,7 @@ export default async function GalleryPage({
         {folders.map((folder) => (
           <FolderLink
             key={folder.id}
-            href={`/gallery/${shareId}/folder/${folder.id}`}
+           href={`/gallery/${shareId}/folder/${folder.id}`}
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               <img
@@ -291,7 +291,7 @@ export default async function GalleryPage({
           </p>
 
           <Image
-            src="/picknovate-logo.jpg"
+            src="/picknovate-logo.png"
             alt="Picknovate"
              width={64}
   height={64}

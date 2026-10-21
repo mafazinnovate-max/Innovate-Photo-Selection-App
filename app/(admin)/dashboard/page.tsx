@@ -11,6 +11,7 @@ import { cookies } from "next/headers";
 import { verifyAuthToken } from "@/lib/auth";
 import RecentEvents from "@/components/admin/recent-events";
 import PastEvents from "@/components/admin/past-events";
+import SubscriptionCard from "@/components/admin/subscription-card";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     totalEvents,
     totalPhotos,
     selectedPhotos,
+    subscription,
     recentEventsData,
     pastEventsData,
   ] = await Promise.all([
@@ -73,6 +75,27 @@ export default async function DashboardPage() {
         },
       },
     }),
+
+    // Latest subscription for this admin's studio
+prisma.subscription.findFirst({
+  where: {
+    studioId,
+  },
+  orderBy: {
+    createdAt: "desc",
+  },
+  select: {
+    id: true,
+    plan: true,
+    status: true,
+    startDate: true,
+    endDate: true,
+    storageLimitGb: true,
+    maxEvents: true,
+    maxCustomers: true,
+    maxImages: true,
+  },
+}),
 
     // Recent active events only
     prisma.event.findMany({
@@ -145,6 +168,21 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+
+
+    const subscriptionInfo = subscription
+    ? {
+        id: subscription.id,
+        plan: subscription.plan,
+        status: subscription.status,
+        startDate: subscription.startDate.toISOString(),
+        endDate: subscription.endDate?.toISOString() ?? null,
+        storageLimitGb: subscription.storageLimitGb,
+        maxEvents: subscription.maxEvents,
+        maxCustomers: subscription.maxCustomers,
+        maxImages: subscription.maxImages,
+      }
+    : null;
 
   const recentEvents = recentEventsData.map((event) => {
     const isNested = event.galleryMode === "bride_groom";
@@ -352,6 +390,11 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Subscription */}
+<div>
+  <SubscriptionCard subscription={subscriptionInfo} />
+</div>
 
       {/* Recent Events */}
       <div>
