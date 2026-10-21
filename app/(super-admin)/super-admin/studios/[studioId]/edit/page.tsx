@@ -31,7 +31,7 @@ export default async function EditStudioPage({
         },
         include: {
             admins: true,
-            subscriptions: {
+            Subscription: {
                 orderBy: {
                     createdAt: "desc",
                 },
@@ -46,7 +46,9 @@ export default async function EditStudioPage({
     }
 
     const admin = studio.admins[0] ?? null;
-    const subscription = studio.subscriptions[0] ?? null;
+    const subscription = studio.Subscription
+    
+    [0] ?? null;
 
     const studioData: StudioFormData = {
         // Studio details
