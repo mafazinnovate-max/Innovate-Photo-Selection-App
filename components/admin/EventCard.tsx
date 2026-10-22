@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+    ArrowRight,
+    CheckCircle2,
+    Clock3,
+    Loader2,
+    MoreVertical,
+    Pencil,
+    Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteEvent } from "@/actions/delete-event";
@@ -11,6 +19,7 @@ export default function EventCard({ event }: any) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isNavigating, setIsNavigating] = useState(false);
+
     const router = useRouter();
 
     useEffect(() => {
@@ -39,19 +48,20 @@ export default function EventCard({ event }: any) {
             }
         } catch (error) {
             console.log(error);
-
             alert("Something went wrong");
         } finally {
             setIsDeleting(false);
             setShowDeleteModal(false);
         }
     };
+
     return (
         <div
-            className={`group relative min-h-[240px] overflow-hidden rounded-2xl border border-zinc-800 transition-all duration-300 ${!showDeleteModal
-                ? "hover:-translate-y-1 hover:border-zinc-600 hover:shadow-2xl"
-                : ""
-                }`}
+            className={`group relative min-h-[240px] overflow-hidden rounded-2xl border border-zinc-800 transition-all duration-300 ${
+                !showDeleteModal
+                    ? "hover:-translate-y-1 hover:border-zinc-600 hover:shadow-2xl"
+                    : ""
+            }`}
         >
             <Link
                 href={`/events/${event.id}`}
@@ -61,10 +71,15 @@ export default function EventCard({ event }: any) {
                     <img
                         src={event.coverImageUrl}
                         alt={event.name}
-                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ${!showDeleteModal ? "group-hover:scale-105" : ""
-                            }`}
+                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ${
+                            !showDeleteModal
+                                ? "group-hover:scale-105"
+                                : ""
+                        }`}
                         style={{
-                            objectPosition: `center ${50 + event.coverPosition}%`,
+                            objectPosition: `center ${
+                                50 + event.coverPosition
+                            }%`,
                         }}
                     />
                 ) : (
@@ -75,41 +90,107 @@ export default function EventCard({ event }: any) {
 
                 <div className="relative flex h-full min-h-[220px] flex-col justify-between p-5">
                     <div className="flex items-start justify-between">
-                        <span className="rounded-full bg-black/40 px-3 py-1 text-xs backdrop-blur-sm transition-all duration-300 group-hover:bg-white/20">
-                            {event.eventType}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs">
+                                {event.eventType}
+                            </span>
+                        </div>
 
                         <ArrowRight
                             size={18}
-                            className={`translate-x-0 opacity-0 transition-all duration-300 ${!showDeleteModal
-                                ? "group-hover:translate-x-2 group-hover:opacity-100"
-                                : ""
-                                }`} />
+                            className={`translate-x-0 opacity-0 transition-all duration-300 ${
+                                !showDeleteModal
+                                    ? "group-hover:translate-x-2 group-hover:opacity-100"
+                                    : ""
+                            }`}
+                        />
                     </div>
 
-                    <div>
-                        <h2 className="text-xl font-semibold">{event.name}</h2>
+                    {/* Bottom content area */}
+                    <div className="pb-14 sm:pb-12">
+                        <h2 className="text-xl font-semibold">
+                            {event.name}
+                        </h2>
 
                         <p className="mt-2 text-sm text-zinc-300">
                             Client: {event.clientName}
                         </p>
+
                         <p className="mt-2 text-sm text-zinc-300">
-                            Date: {event.eventDate
-                                ? new Date(event.eventDate).toLocaleDateString("en-GB", {
-                                    day: "2-digit",
-                                    month: "long",
-                                    year: "numeric",
-                                })
+                            Date:{" "}
+                            {event.eventDate
+                                ? new Date(
+                                      event.eventDate
+                                  ).toLocaleDateString("en-GB", {
+                                      day: "2-digit",
+                                      month: "long",
+                                      year: "numeric",
+                                  })
                                 : "No Date"}
                         </p>
 
-  
+                        {/* Separate parent statuses for Bride & Groom mode */}
+                        {event.galleryMode === "bride_groom" &&
+                            event.parentStatuses?.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {event.parentStatuses.map(
+                                        (parent: any) => (
+                                            <span
+                                                key={parent.id}
+                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                    parent.status ===
+                                                    "COMPLETED"
+                                                        ? "bg-emerald-500/15 text-emerald-400"
+                                                        : "bg-amber-500/10 text-amber-300"
+                                                }`}
+                                            >
+                                                {parent.status ===
+                                                "COMPLETED" ? (
+                                                    <CheckCircle2 size={12} />
+                                                ) : (
+                                                    <Clock3 size={12} />
+                                                )}
+
+                                                <span>
+                                                    {parent.name}:{" "}
+                                                    {parent.status ===
+                                                    "COMPLETED"
+                                                        ? "Completed"
+                                                        : "Selecting"}
+                                                </span>
+                                            </span>
+                                        )
+                                    )}
+                                </div>
+                            )}
                     </div>
                 </div>
             </Link>
 
-            {/* 3 Dots */}
-            <div className="absolute bottom-4 right-4 z-20">
+            {/* Bottom actions */}
+            <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
+                {/* Overall Event Status */}
+                {event.selectionStatus && (
+                    <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                            event.selectionStatus === "COMPLETED"
+                                ? "bg-emerald-500/15 text-emerald-400"
+                                : "bg-amber-500/10 text-amber-300"
+                        }`}
+                    >
+                        {event.selectionStatus === "COMPLETED" ? (
+                            <CheckCircle2 size={13} />
+                        ) : (
+                            <Clock3 size={13} />
+                        )}
+
+                        {event.selectionStatus === "COMPLETED"
+                            ? "Completed"
+                            : "Selecting"}
+                    </span>
+                )}
+
+                {/* 3 Dots */}
                 <button
                     onClick={(e) => {
                         e.preventDefault();
@@ -129,8 +210,11 @@ export default function EventCard({ event }: any) {
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+
                                 setIsNavigating(true);
-                                router.push(`/events/${event.id}/edit`);
+                                router.push(
+                                    `/events/${event.id}/edit`
+                                );
                             }}
                             className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 transition hover:bg-zinc-700"
                         >
@@ -161,10 +245,13 @@ export default function EventCard({ event }: any) {
                 )}
             </div>
 
+            {/* Delete Modal */}
             {showDeleteModal && (
                 <div
                     className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-5 backdrop-blur-sm"
-                    onClick={() => !isDeleting && setShowDeleteModal(false)}
+                    onClick={() =>
+                        !isDeleting && setShowDeleteModal(false)
+                    }
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
@@ -199,7 +286,9 @@ export default function EventCard({ event }: any) {
 
                         <div className="mt-6 flex gap-3">
                             <button
-                                onClick={() => setShowDeleteModal(false)}
+                                onClick={() =>
+                                    setShowDeleteModal(false)
+                                }
                                 disabled={isDeleting}
                                 className="flex-1 rounded-2xl border border-zinc-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
                             >
@@ -230,6 +319,8 @@ export default function EventCard({ event }: any) {
                     </div>
                 </div>
             )}
+
+            {/* Navigation Loading */}
             {isNavigating && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                     <Loader2 className="h-8 w-8 animate-spin text-white" />

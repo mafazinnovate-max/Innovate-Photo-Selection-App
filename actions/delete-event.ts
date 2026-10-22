@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { verifyAuthToken } from "@/lib/auth";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,9 +14,35 @@ cloudinary.config({
 
 export const deleteEvent = async (eventId: string) => {
     try {
-        const event = await prisma.event.findUnique({
+        // Get logged-in admin session
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth-token")?.value;
+
+        if (!token) {
+            return {
+                success: false,
+            };
+        }
+
+        const session = await verifyAuthToken(token);
+
+        // Only normal admins with a studio can archive events
+        if (
+            !session ||
+            session.role !== "admin" ||
+            !session.studioId
+        ) {
+            return {
+                success: false,
+            };
+        }
+
+        // Make sure the event belongs to this admin's studio
+        const event = await prisma.event.findFirst({
             where: {
                 id: eventId,
+                studioId: session.studioId,
+                deletedAt: null,
             },
             include: {
                 folders: {
@@ -31,7 +59,7 @@ export const deleteEvent = async (eventId: string) => {
             };
         }
 
-        // Delete cover image
+        // Delete cover image from Cloudinary
         if (event.coverImagePublicId) {
             try {
                 await cloudinary.uploader.destroy(
@@ -42,22 +70,35 @@ export const deleteEvent = async (eventId: string) => {
             }
         }
 
-        // Delete all folder images
-        const images = event.folders.flatMap((folder) => folder.images);
+        // Delete all folder images from Cloudinary
+        const images = event.folders.flatMap(
+            (folder) => folder.images,
+        );
 
         for (const image of images) {
             if (image.publicId) {
                 try {
-                    await cloudinary.uploader.destroy(image.publicId);
+                    await cloudinary.uploader.destroy(
+                        image.publicId,
+                    );
                 } catch (error) {
-                    console.log("Image delete failed", error);
+                    console.log(
+                        "Image delete failed",
+                        error,
+                    );
                 }
             }
         }
 
-        await prisma.event.delete({
+        // Soft delete the event in Neon.
+        // The Event, folders, images, selections and other
+        // database records remain in Neon for the Past Events summary.
+        await prisma.event.update({
             where: {
-                id: eventId,
+                id: event.id,
+            },
+            data: {
+                deletedAt: new Date(),
             },
         });
 

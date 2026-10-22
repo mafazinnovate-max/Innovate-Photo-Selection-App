@@ -1,4 +1,10 @@
-import { SignJWT, jwtVerify } from "jose";
+import {
+    SignJWT,
+    jwtVerify,
+    decodeJwt,
+} from "jose";
+
+import { prisma } from "@/lib/prisma";
 
 export type AuthSession = {
     role: "superadmin" | "admin";
@@ -6,18 +12,25 @@ export type AuthSession = {
     studioId?: string;
 };
 
-const secret = process.env.AUTH_SECRET;
-
-if (!secret) {
-    throw new Error("AUTH_SECRET is not configured.");
-}
-
-const secretKey = new TextEncoder().encode(secret);
+type TokenPayload = AuthSession & {
+    authSecretId: string;
+};
 
 export async function createAuthToken(
-    session: AuthSession
+    session: AuthSession,
+    authSecretId: string,
+    secret: string
 ) {
-    return await new SignJWT(session)
+    const payload: TokenPayload = {
+        ...session,
+        authSecretId,
+    };
+
+    const secretKey = new TextEncoder().encode(
+        secret
+    );
+
+    return await new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("7d")
@@ -28,6 +41,40 @@ export async function verifyAuthToken(
     token: string
 ): Promise<AuthSession | null> {
     try {
+        /*
+         * Read only the AuthSecret ID from the token.
+         *
+         * This value is NOT trusted yet. It is only used
+         * to find the secret that will verify the JWT.
+         */
+        const unverifiedPayload = decodeJwt(token);
+
+        if (
+            typeof unverifiedPayload.authSecretId !==
+            "string"
+        ) {
+            return null;
+        }
+
+        const authSecret =
+            await prisma.authSecret.findUnique({
+                where: {
+                    id: unverifiedPayload.authSecretId,
+                },
+            });
+
+        if (!authSecret) {
+            return null;
+        }
+
+        const secretKey = new TextEncoder().encode(
+            authSecret.secret
+        );
+
+        /*
+         * Now verify the JWT using the secret belonging
+         * to that specific Admin/SuperAdmin.
+         */
         const { payload } = await jwtVerify(
             token,
             secretKey
@@ -38,6 +85,39 @@ export async function verifyAuthToken(
             payload.role !== "admin"
         ) {
             return null;
+        }
+
+        /*
+         * Make sure the verified token still refers to
+         * the same AuthSecret record.
+         */
+        if (
+            payload.authSecretId !==
+            authSecret.id
+        ) {
+            return null;
+        }
+
+        /*
+         * Make sure the AuthSecret belongs to the same
+         * account represented by the verified token.
+         */
+        if (payload.role === "admin") {
+            if (
+                typeof payload.adminId !== "string" ||
+                authSecret.adminId !==
+                    payload.adminId
+            ) {
+                return null;
+            }
+        }
+
+        if (payload.role === "superadmin") {
+            if (
+                authSecret.superAdminId === null
+            ) {
+                return null;
+            }
         }
 
         return {

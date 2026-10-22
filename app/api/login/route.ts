@@ -30,6 +30,8 @@ export async function POST(req: Request) {
          * SUPER ADMIN LOGIN
          *
          * Super Admin credentials are stored in the database.
+         *
+         * Subscription restrictions do not apply to Super Admin.
          */
         const superAdmin = await prisma.superAdmin.findUnique({
             where: {
@@ -44,9 +46,33 @@ export async function POST(req: Request) {
             );
 
             if (passwordMatches) {
-                const token = await createAuthToken({
-                    role: "superadmin",
-                });
+               const authSecret =
+    await prisma.authSecret.findUnique({
+        where: {
+            superAdminId: superAdmin.id,
+        },
+    });
+
+if (!authSecret) {
+    return NextResponse.json(
+        {
+            success: false,
+            message:
+                "Authentication configuration is missing. Please contact the administrator.",
+        },
+        {
+            status: 500,
+        }
+    );
+}
+
+const token = await createAuthToken(
+    {
+        role: "superadmin",
+    },
+    authSecret.id,
+    authSecret.secret
+);
 
                 const cookieStore = await cookies();
 
@@ -78,6 +104,7 @@ export async function POST(req: Request) {
             return NextResponse.json(
                 {
                     success: false,
+                    message: "Invalid username or password.",
                 },
                 {
                     status: 401,
@@ -94,6 +121,7 @@ export async function POST(req: Request) {
             return NextResponse.json(
                 {
                     success: false,
+                    message: "Invalid username or password.",
                 },
                 {
                     status: 401,
@@ -101,11 +129,118 @@ export async function POST(req: Request) {
             );
         }
 
-        const token = await createAuthToken({
-            role: "admin",
+
+        const studio = await prisma.studio.findUnique({
+    where: {
+        id: admin.studioId,
+    },
+    select: {
+        isActive: true,
+    },
+});
+
+if (!studio || !studio.isActive) {
+    return NextResponse.json(
+        {
+            success: false,
+            message:
+                "Your account is inactive. Please contact the administrator.",
+        },
+        {
+            status: 403,
+        }
+    );
+}
+
+
+        /*
+         * Check the latest subscription for this admin's studio
+         * before creating an authentication token.
+         *
+         * Subscription dates are stored in PostgreSQL as
+         * timestamp without time zone and are intended to
+         * represent IST (Asia/Kolkata) wall-clock time.
+         */
+        const subscription =
+            await prisma.subscription.findFirst({
+                where: {
+                    studioId: admin.studioId,
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                select: {
+                    endDate: true,
+                },
+            });
+
+        /*
+         * Subscription expired.
+         *
+         * Convert the stored subscription wall-clock value
+         * to an explicit IST timestamp before comparing it
+         * with the current instant.
+         */
+
+        // console.log("LOGIN SUBSCRIPTION END DATE:", subscription?.endDate);
+        // console.log("LOGIN CURRENT TIME:", new Date());
+
+        if (subscription?.endDate) {
+            const endDateText = subscription.endDate
+                .toISOString()
+                .replace("Z", "");
+
+            const endDateIST = new Date(
+                `${endDateText}+05:30`
+            );
+
+            if (Date.now() >= endDateIST.getTime()) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "Your subscription has expired. Please contact the administrator to renew your subscription.",
+                    },
+                    {
+                        status: 403,
+                    }
+                );
+            }
+        }
+
+        /*
+         * Active subscription.
+         * Create the normal admin session.
+         */
+      const authSecret =
+    await prisma.authSecret.findUnique({
+        where: {
             adminId: admin.id,
-            studioId: admin.studioId,
-        });
+        },
+    });
+
+if (!authSecret) {
+    return NextResponse.json(
+        {
+            success: false,
+            message:
+                "Authentication configuration is missing. Please contact the administrator.",
+        },
+        {
+            status: 500,
+        }
+    );
+}
+
+const token = await createAuthToken(
+    {
+        role: "admin",
+        adminId: admin.id,
+        studioId: admin.studioId,
+    },
+    authSecret.id,
+    authSecret.secret
+);
 
         const cookieStore = await cookies();
 
