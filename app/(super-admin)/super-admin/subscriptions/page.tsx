@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     AlertCircle,
@@ -14,19 +14,19 @@ import {
     CreditCard,
     Eye,
     MoreHorizontal,
+    Pencil,
     Search,
     ShieldCheck,
     TrendingUp,
     XCircle,
 } from "lucide-react";
 
-type Plan = "Basic" | "Professional" | "Enterprise";
+type Plan = "Basic" | "Professional" | "Enterprise" | "Not configured";
 
 type SubscriptionStatus =
     | "Active"
     | "Expiring Soon"
-    | "Expired"
-    | "Cancelled";
+    | "Inactive";
 
 interface Subscription {
     id: string;
@@ -38,238 +38,128 @@ interface Subscription {
     status: SubscriptionStatus;
     startDate: string;
     endDate: string;
-    storageUsed: number;
+    storageUsed: number | null;
     storageLimit: number;
     events: number;
     maxEvents: number;
-    customers: number;
+    customers: number | null;
     maxCustomers: number;
-    monthlyPrice: number;
+    monthlyPrice: number | null;
 }
 
-const subscriptions: Subscription[] = [
-    {
-        id: "sub-001",
-        studioId: "studio-001",
-        studioName: "Innovate Wedding Studio",
-        adminName: "Mafaz Malik",
-        adminEmail: "admin@innovatewedding.com",
-        plan: "Professional",
-        status: "Active",
-        startDate: "2026-06-01",
-        endDate: "2027-05-31",
-        storageUsed: 67.4,
-        storageLimit: 100,
-        events: 28,
-        maxEvents: 50,
-        customers: 46,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-002",
-        studioId: "studio-002",
-        studioName: "Dream Lens Studio",
-        adminName: "Arun Kumar",
-        adminEmail: "admin@dreamlens.com",
-        plan: "Basic",
-        status: "Active",
-        startDate: "2026-08-15",
-        endDate: "2027-08-14",
-        storageUsed: 32.8,
-        storageLimit: 50,
-        events: 14,
-        maxEvents: 25,
-        customers: 22,
-        maxCustomers: 200,
-        monthlyPrice: 2499,
-    },
-    {
-        id: "sub-003",
-        studioId: "studio-003",
-        studioName: "Moments Photography",
-        adminName: "Meena Joseph",
-        adminEmail: "admin@momentsphoto.com",
-        plan: "Professional",
-        status: "Expiring Soon",
-        startDate: "2025-11-10",
-        endDate: "2026-11-08",
-        storageUsed: 81.2,
-        storageLimit: 100,
-        events: 41,
-        maxEvents: 50,
-        customers: 89,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-004",
-        studioId: "studio-004",
-        studioName: "Royal Frames",
-        adminName: "Karthik Raj",
-        adminEmail: "admin@royalframes.com",
-        plan: "Enterprise",
-        status: "Active",
-        startDate: "2026-01-01",
-        endDate: "2027-12-31",
-        storageUsed: 286.5,
-        storageLimit: 500,
-        events: 92,
-        maxEvents: 150,
-        customers: 318,
-        maxCustomers: 2000,
-        monthlyPrice: 9999,
-    },
-    {
-        id: "sub-005",
-        studioId: "studio-005",
-        studioName: "Golden Moments",
-        adminName: "David Thomas",
-        adminEmail: "admin@goldenmoments.com",
-        plan: "Basic",
-        status: "Expired",
-        startDate: "2025-05-01",
-        endDate: "2026-04-30",
-        storageUsed: 18.4,
-        storageLimit: 50,
-        events: 19,
-        maxEvents: 25,
-        customers: 31,
-        maxCustomers: 200,
-        monthlyPrice: 2499,
-    },
-    {
-        id: "sub-006",
-        studioId: "studio-006",
-        studioName: "Pixel Stories",
-        adminName: "Priya Menon",
-        adminEmail: "admin@pixelstories.com",
-        plan: "Professional",
-        status: "Expiring Soon",
-        startDate: "2025-12-15",
-        endDate: "2026-10-20",
-        storageUsed: 94.6,
-        storageLimit: 100,
-        events: 47,
-        maxEvents: 50,
-        customers: 112,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-007",
-        studioId: "studio-007",
-        studioName: "White Rose Weddings",
-        adminName: "Maria George",
-        adminEmail: "admin@whiterose.com",
-        plan: "Professional",
-        status: "Cancelled",
-        startDate: "2026-02-01",
-        endDate: "2027-01-31",
-        storageUsed: 43.7,
-        storageLimit: 100,
-        events: 17,
-        maxEvents: 50,
-        customers: 28,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-008",
-        studioId: "studio-008",
-        studioName: "Lens Craft",
-        adminName: "Sanjay Kumar",
-        adminEmail: "admin@lenscraft.com",
-        plan: "Basic",
-        status: "Active",
-        startDate: "2026-07-01",
-        endDate: "2027-06-30",
-        storageUsed: 21.5,
-        storageLimit: 50,
-        events: 9,
-        maxEvents: 25,
-        customers: 18,
-        maxCustomers: 200,
-        monthlyPrice: 2499,
-    },
-    {
-        id: "sub-009",
-        studioId: "studio-009",
-        studioName: "Elegant Clicks",
-        adminName: "Anu Krishnan",
-        adminEmail: "admin@elegantclicks.com",
-        plan: "Enterprise",
-        status: "Active",
-        startDate: "2026-03-01",
-        endDate: "2027-02-28",
-        storageUsed: 352.2,
-        storageLimit: 500,
-        events: 106,
-        maxEvents: 150,
-        customers: 462,
-        maxCustomers: 2000,
-        monthlyPrice: 9999,
-    },
-    {
-        id: "sub-010",
-        studioId: "studio-010",
-        studioName: "Forever Frames",
-        adminName: "John Mathew",
-        adminEmail: "admin@foreverframes.com",
-        plan: "Professional",
-        status: "Active",
-        startDate: "2026-05-15",
-        endDate: "2027-05-14",
-        storageUsed: 58.1,
-        storageLimit: 100,
-        events: 23,
-        maxEvents: 50,
-        customers: 51,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-011",
-        studioId: "studio-011",
-        studioName: "Dream Wedding Films",
-        adminName: "Rahul Nair",
-        adminEmail: "admin@dreamweddingfilms.com",
-        plan: "Professional",
-        status: "Active",
-        startDate: "2026-04-01",
-        endDate: "2027-03-31",
-        storageUsed: 72.9,
-        storageLimit: 100,
-        events: 35,
-        maxEvents: 50,
-        customers: 74,
-        maxCustomers: 500,
-        monthlyPrice: 4999,
-    },
-    {
-        id: "sub-012",
-        studioId: "studio-012",
-        studioName: "Classic Moments",
-        adminName: "Nithin Jose",
-        adminEmail: "admin@classicmoments.com",
-        plan: "Basic",
-        status: "Expired",
-        startDate: "2025-08-01",
-        endDate: "2026-07-31",
-        storageUsed: 27.3,
-        storageLimit: 50,
-        events: 12,
-        maxEvents: 25,
-        customers: 26,
-        maxCustomers: 200,
-        monthlyPrice: 2499,
-    },
-];
+interface StudioApiRecord {
+    id: string;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    admins?: Array<{
+        id: string;
+        name: string | null;
+        username: string;
+        email: string | null;
+        phone?: string | null;
+        createdAt: string;
+    }>;
+    subscriptions?: Array<{
+        id: string;
+        plan: string;
+        status: string;
+        startDate: string;
+        endDate: string | null;
+        storageLimitGb: number;
+        maxEvents: number;
+        maxCustomers: number;
+        maxImages: number;
+    }>;
+    _count?: { events: number };
+}
+
+function toPlan(value?: string): Plan {
+    if (value === "Professional" || value === "Enterprise") return value;
+    return "Basic";
+}
+
+function getDisplayStatus(studioIsActive: boolean, endDate: string | null, subscriptionStatus?: string): SubscriptionStatus {
+    const normalizedStatus = subscriptionStatus?.trim().toLowerCase();
+    if (!studioIsActive || normalizedStatus === "inactive" || normalizedStatus === "cancelled" || normalizedStatus === "canceled" || normalizedStatus === "expired") return "Inactive";
+    if (!endDate) return "Active";
+
+    const end = new Date(endDate);
+    const today = new Date();
+    end.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const daysRemaining = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+    if (daysRemaining < 0) return "Inactive";
+    if (daysRemaining <= 30) return "Expiring Soon";
+    return "Active";
+}
+
+function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
+    const latestSubscription = studio.subscriptions?.[0];
+    const admin = studio.admins?.[0];
+
+    return {
+        id: latestSubscription?.id ?? `studio-${studio.id}`,
+        studioId: studio.id,
+        studioName: studio.name,
+        adminName: admin?.name || admin?.username || "No admin assigned",
+        adminEmail: admin?.email || "No email",
+        plan: latestSubscription ? toPlan(latestSubscription.plan) : "Not configured",
+        status: getDisplayStatus(studio.isActive, latestSubscription?.endDate ?? null, latestSubscription?.status),
+        startDate: latestSubscription?.startDate ?? "",
+        endDate: latestSubscription?.endDate ?? "",
+        storageUsed: null,
+        storageLimit: latestSubscription?.storageLimitGb ?? 0,
+        events: studio._count?.events ?? 0,
+        maxEvents: latestSubscription?.maxEvents ?? 0,
+        customers: null,
+        maxCustomers: latestSubscription?.maxCustomers ?? 0,
+        monthlyPrice: null,
+    };
+}
 
 const ITEMS_PER_PAGE = 8;
 
 export default function SubscriptionsPage() {
     const router = useRouter();
+
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadSubscriptions() {
+            try {
+                setIsLoading(true);
+                setLoadError("");
+                const response = await fetch("/api/super-admin/studios", {
+                    method: "GET",
+                    cache: "no-store",
+                });
+                const result = await response.json();
+
+                if (!response.ok || result.success !== true || !Array.isArray(result.studios)) {
+                    throw new Error(result.message || "Failed to load subscriptions.");
+                }
+
+                if (!cancelled) {
+                    setSubscriptions((result.studios as StudioApiRecord[]).map(mapStudioToSubscription));
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setLoadError(error instanceof Error ? error.message : "Failed to load subscriptions.");
+                }
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }
+
+        loadSubscriptions();
+        return () => { cancelled = true; };
+    }, []);
 
     const [search, setSearch] = useState("");
     const [planFilter, setPlanFilter] = useState<"All" | Plan>("All");
@@ -300,7 +190,7 @@ export default function SubscriptionsPage() {
 
             return matchesSearch && matchesPlan && matchesStatus;
         });
-    }, [search, planFilter, statusFilter]);
+    }, [subscriptions, search, planFilter, statusFilter]);
 
     const totalPages = Math.max(
         1,
@@ -315,26 +205,14 @@ export default function SubscriptionsPage() {
     );
 
     const totalSubscriptions = subscriptions.length;
-
-    const activeSubscriptions = subscriptions.filter(
-        (item) => item.status === "Active"
-    ).length;
-
-    const expiringSubscriptions = subscriptions.filter(
-        (item) => item.status === "Expiring Soon"
-    ).length;
-
-    const expiredSubscriptions = subscriptions.filter(
-        (item) => item.status === "Expired"
-    ).length;
-
-    const monthlyRevenue = subscriptions
-        .filter(
-            (item) =>
-                item.status === "Active" ||
-                item.status === "Expiring Soon"
-        )
-        .reduce((total, item) => total + item.monthlyPrice, 0);
+    const activeSubscriptions = subscriptions.filter((item) => item.status === "Active").length;
+    const expiringSubscriptions = subscriptions.filter((item) => item.status === "Expiring Soon").length;
+    const inactiveSubscriptions = subscriptions.filter((item) => item.status === "Inactive").length;
+    const configuredMonthlyRevenue = subscriptions.some((item) => item.monthlyPrice !== null)
+        ? subscriptions
+            .filter((item) => item.status === "Active" || item.status === "Expiring Soon")
+            .reduce((total, item) => total + (item.monthlyPrice ?? 0), 0)
+        : null;
 
     const resetPage = () => {
         setCurrentPage(1);
@@ -420,17 +298,17 @@ export default function SubscriptionsPage() {
                 />
 
                 <SummaryCard
-                    title="Expired"
-                    value={expiredSubscriptions.toString()}
-                    description="Require renewal"
+                    title="Inactive"
+                    value={inactiveSubscriptions.toString()}
+                    description="Inactive studios or ended plans"
                     icon={<XCircle size={19} />}
-                    iconClassName="text-red-400"
+                    iconClassName="text-zinc-400"
                 />
 
                 <SummaryCard
                     title="Monthly Revenue"
-                    value={formatCurrency(monthlyRevenue)}
-                    description="Active + expiring plans"
+                    value={configuredMonthlyRevenue === null ? "Not set" : formatCurrency(configuredMonthlyRevenue)}
+                    description={configuredMonthlyRevenue === null ? "Pricing is not stored in the database" : "Active + expiring plans"}
                     icon={<TrendingUp size={19} />}
                     iconClassName="text-blue-400"
                 />
@@ -469,6 +347,7 @@ export default function SubscriptionsPage() {
                                 "Basic",
                                 "Professional",
                                 "Enterprise",
+                                "Not configured",
                             ]}
                             label="Plan"
                         />
@@ -485,14 +364,19 @@ export default function SubscriptionsPage() {
                                 "All",
                                 "Active",
                                 "Expiring Soon",
-                                "Expired",
-                                "Cancelled",
+                                "Inactive",
                             ]}
                             label="Status"
                         />
                     </div>
                 </div>
             </div>
+
+            {loadError && (
+                <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                    {loadError} <button type="button" onClick={() => window.location.reload()} className="ml-2 underline">Retry</button>
+                </div>
+            )}
 
             {/* Results Info */}
             <div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
@@ -608,10 +492,7 @@ export default function SubscriptionsPage() {
                                             <PlanBadge plan={subscription.plan} />
 
                                             <p className="mt-2 text-xs text-zinc-600">
-                                                {formatCurrency(
-                                                    subscription.monthlyPrice
-                                                )}
-                                                /month
+                                                {subscription.monthlyPrice === null ? "Price not configured" : `${formatCurrency(subscription.monthlyPrice)}/month`}
                                             </p>
                                         </td>
 
@@ -657,19 +538,13 @@ export default function SubscriptionsPage() {
                                                     </span>
 
                                                     <span className="text-zinc-300">
-                                                        {subscription.storageUsed} /{" "}
-                                                        {subscription.storageLimit} GB
+                                                        {subscription.storageUsed === null ? "Not tracked" : `${subscription.storageUsed} / ${subscription.storageLimit} GB`}
                                                     </span>
                                                 </div>
 
-                                                <UsageBar
-                                                    value={
-                                                        subscription.storageUsed
-                                                    }
-                                                    max={
-                                                        subscription.storageLimit
-                                                    }
-                                                />
+                                                {subscription.storageUsed !== null && (
+                                                    <UsageBar value={subscription.storageUsed} max={subscription.storageLimit} />
+                                                )}
 
                                                 <div className="mt-2 flex items-center gap-3 text-xs text-zinc-600">
                                                     <span>
@@ -678,8 +553,7 @@ export default function SubscriptionsPage() {
                                                     </span>
 
                                                     <span>
-                                                        {subscription.customers}/
-                                                        {subscription.maxCustomers} customers
+                                                        {subscription.customers === null ? "Customers: Not tracked" : `${subscription.customers}/${subscription.maxCustomers} customers`}
                                                     </span>
                                                 </div>
                                             </div>
@@ -688,9 +562,7 @@ export default function SubscriptionsPage() {
                                         {/* Billing */}
                                         <td className="px-5 py-5">
                                             <p className="text-sm font-medium text-white">
-                                                {formatCurrency(
-                                                    subscription.monthlyPrice
-                                                )}
+                                                {subscription.monthlyPrice === null ? "Not configured" : formatCurrency(subscription.monthlyPrice)}
                                             </p>
 
                                             <p className="mt-1 text-xs text-zinc-600">
@@ -723,12 +595,15 @@ export default function SubscriptionsPage() {
 
                                             {openMenu === subscription.id && (
                                                 <ActionMenu
-                                                    onClose={() =>
-                                                        setOpenMenu(null)
-                                                    }
+                                                    onClose={() => setOpenMenu(null)}
                                                     onView={() =>
                                                         router.push(
                                                             `/super-admin/studios/${subscription.studioId}`
+                                                        )
+                                                    }
+                                                    onEdit={() =>
+                                                        router.push(
+                                                            `/super-admin/studios/${subscription.studioId}/edit`
                                                         )
                                                     }
                                                 />
@@ -741,9 +616,11 @@ export default function SubscriptionsPage() {
                     </table>
                 </div>
 
-                {paginatedSubscriptions.length === 0 && (
+                {isLoading ? (
+                    <div className="px-6 py-16 text-center text-sm text-zinc-500">Loading subscriptions...</div>
+                ) : paginatedSubscriptions.length === 0 ? (
                     <EmptyState />
-                )}
+                ) : null}
             </div>
 
             {/* Mobile / Tablet Cards */}
@@ -786,10 +663,7 @@ export default function SubscriptionsPage() {
                                 <PlanBadge plan={subscription.plan} />
 
                                 <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-500">
-                                    {formatCurrency(
-                                        subscription.monthlyPrice
-                                    )}
-                                    /month
+                                    {subscription.monthlyPrice === null ? "Price not configured" : `${formatCurrency(subscription.monthlyPrice)}/month`}
                                 </span>
                             </div>
 
@@ -833,18 +707,14 @@ export default function SubscriptionsPage() {
                                     </p>
 
                                     <p className="mt-2 text-sm text-zinc-300">
-                                        {subscription.storageUsed} GB{" "}
-                                        <span className="text-zinc-600">
-                                            / {subscription.storageLimit} GB
-                                        </span>
+                                        {subscription.storageUsed === null ? "Not tracked" : `${subscription.storageUsed} GB / ${subscription.storageLimit} GB`}
                                     </p>
 
-                                    <div className="mt-2">
-                                        <UsageBar
-                                            value={subscription.storageUsed}
-                                            max={subscription.storageLimit}
-                                        />
-                                    </div>
+                                    {subscription.storageUsed !== null && (
+                                        <div className="mt-2">
+                                            <UsageBar value={subscription.storageUsed} max={subscription.storageLimit} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -862,18 +732,15 @@ export default function SubscriptionsPage() {
                                     </p>
                                 </div>
 
-                                <div>
+                                {/* <div>
                                     <p className="text-xs text-zinc-600">
                                         Customers
                                     </p>
 
                                     <p className="mt-1 text-sm text-zinc-300">
-                                        {subscription.customers}{" "}
-                                        <span className="text-zinc-600">
-                                            / {subscription.maxCustomers}
-                                        </span>
+                                        {subscription.customers === null ? "Not tracked" : `${subscription.customers} / ${subscription.maxCustomers}`}
                                     </p>
-                                </div>
+                                </div> */}
                             </div>
 
                             <div className="mt-5 flex gap-2">
@@ -907,9 +774,11 @@ export default function SubscriptionsPage() {
                     )
                 )}
 
-                {paginatedSubscriptions.length === 0 && (
+                {isLoading ? (
+                    <div className="px-6 py-16 text-center text-sm text-zinc-500">Loading subscriptions...</div>
+                ) : paginatedSubscriptions.length === 0 ? (
                     <EmptyState />
-                )}
+                ) : null}
             </div>
 
             {/* Pagination */}
@@ -942,8 +811,8 @@ export default function SubscriptionsPage() {
                                 type="button"
                                 onClick={() => setCurrentPage(page)}
                                 className={`hidden h-9 min-w-9 items-center justify-center rounded-lg px-3 text-xs font-medium transition sm:flex ${page === safeCurrentPage
-                                        ? "bg-white text-black"
-                                        : "border border-zinc-800 bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+                                    ? "bg-white text-black"
+                                    : "border border-zinc-800 bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-white"
                                     }`}
                             >
                                 {page}
@@ -976,19 +845,19 @@ export default function SubscriptionsPage() {
                 <InfoCard
                     icon={<CreditCard size={18} />}
                     title="Subscription Management"
-                    description="Plans and subscription dates are currently UI-only and will be connected to the database later."
+                    description="Studio subscription plans and dates are loaded from the database."
                 />
 
                 <InfoCard
                     icon={<ShieldCheck size={18} />}
                     title="Usage Limits"
-                    description="Storage, event, customer and image limits are configured per studio."
+                    description="Event limits are loaded from each studio plan. Actual storage and customer usage are not tracked yet."
                 />
 
                 <InfoCard
                     icon={<AlertCircle size={18} />}
                     title="Renewal Attention"
-                    description="Expiring and expired subscriptions are highlighted so they can be handled quickly."
+                    description="Active, expiring-soon and inactive studio subscriptions are highlighted automatically."
                 />
             </div>
         </div>
@@ -1090,6 +959,7 @@ function PlanBadge({
             "border-blue-500/20 bg-blue-500/10 text-blue-400",
         Enterprise:
             "border-purple-500/20 bg-purple-500/10 text-purple-400",
+        "Not configured": "border-amber-500/20 bg-amber-500/10 text-amber-400",
     };
 
     return (
@@ -1106,25 +976,17 @@ function StatusBadge({
 }: {
     status: SubscriptionStatus;
 }) {
-    const config = {
+    const config: Record<SubscriptionStatus, { className: string; icon: React.ReactNode }> = {
         Active: {
-            className:
-                "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
+            className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
             icon: <CheckCircle2 size={13} />,
         },
         "Expiring Soon": {
-            className:
-                "border-amber-500/20 bg-amber-500/10 text-amber-400",
+            className: "border-amber-500/20 bg-amber-500/10 text-amber-400",
             icon: <Clock3 size={13} />,
         },
-        Expired: {
-            className:
-                "border-red-500/20 bg-red-500/10 text-red-400",
-            icon: <XCircle size={13} />,
-        },
-        Cancelled: {
-            className:
-                "border-zinc-700 bg-zinc-800 text-zinc-500",
+        Inactive: {
+            className: "border-zinc-700 bg-zinc-800 text-zinc-400",
             icon: <XCircle size={13} />,
         },
     };
@@ -1148,56 +1010,34 @@ function RemainingDays({
     endDate: string;
     status: SubscriptionStatus;
 }) {
-    if (status === "Expired") {
+    if (!endDate) {
         return (
-            <p className="mt-2 text-xs font-medium text-red-400">
-                Subscription expired
+            <p className="mt-2 text-xs font-medium text-amber-400">
+                Subscription dates not set
             </p>
         );
     }
+    if (status === "Inactive") {
+        return <p className="mt-2 text-xs font-medium text-zinc-500">Subscription inactive</p>;
+    }
 
-    if (status === "Cancelled") {
-        return (
-            <p className="mt-2 text-xs font-medium text-zinc-500">
-                Subscription cancelled
-            </p>
-        );
+    if (!endDate) {
+        return <p className="mt-2 text-xs text-zinc-500">End date not set</p>;
     }
 
     const today = new Date();
     const end = new Date(endDate);
-
     today.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-
-    const difference =
-        end.getTime() - today.getTime();
-
-    const days = Math.ceil(
-        difference / (1000 * 60 * 60 * 24)
-    );
+    const days = Math.ceil((end.getTime() - today.getTime()) / 86400000);
 
     if (days <= 0) {
-        return (
-            <p className="mt-2 text-xs font-medium text-red-400">
-                Expires today
-            </p>
-        );
+        return <p className="mt-2 text-xs font-medium text-zinc-500">Subscription inactive</p>;
     }
-
     if (days <= 30) {
-        return (
-            <p className="mt-2 text-xs font-medium text-amber-400">
-                {days} days remaining
-            </p>
-        );
+        return <p className="mt-2 text-xs font-medium text-amber-400">{days} days remaining</p>;
     }
-
-    return (
-        <p className="mt-2 text-xs text-zinc-600">
-            {days} days remaining
-        </p>
-    );
+    return <p className="mt-2 text-xs text-zinc-600">{days} days remaining</p>;
 }
 
 function UsageBar({
@@ -1227,9 +1067,11 @@ function UsageBar({
 function ActionMenu({
     onClose,
     onView,
+    onEdit,
 }: {
     onClose: () => void;
     onView: () => void;
+    onEdit: () => void;
 }) {
     return (
         <div className="absolute right-5 top-14 z-30 w-48 rounded-xl border border-zinc-700 bg-zinc-950 p-1.5 text-left shadow-2xl">
@@ -1247,30 +1089,14 @@ function ActionMenu({
 
             <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                    onClose();
+                    onEdit();
+                }}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
             >
-                <CreditCard size={16} />
-                Manage Plan
-            </button>
-
-            <button
-                type="button"
-                onClick={onClose}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
-            >
-                <CalendarDays size={16} />
-                Change Dates
-            </button>
-
-            <div className="my-1 border-t border-zinc-800" />
-
-            <button
-                type="button"
-                onClick={onClose}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
-            >
-                Renew Subscription
+                <Pencil size={16} />
+                Edit Studio
             </button>
         </div>
     );
@@ -1326,7 +1152,9 @@ function InfoCard({
 /* -------------------------------------------------------------------------- */
 
 function formatDate(dateString: string) {
-    const date = new Date(`${dateString}T00:00:00`);
+    if (!dateString) return "Not set";
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "Not set";
 
     return date.toLocaleDateString("en-IN", {
         day: "2-digit",

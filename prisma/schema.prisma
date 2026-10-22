@@ -124,10 +124,17 @@ model Admin {
 }
 
 model SuperAdmin {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id                 String    @id @default(cuid())
+  username           String    @unique
+  passwordHash       String
+  name               String?
+  email              String?   @unique
+  logoUrl            String?
+  passwordUpdatedAt  DateTime?
+  passwordResetToken String?   @unique
+  passwordResetExpiry DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Subscription {

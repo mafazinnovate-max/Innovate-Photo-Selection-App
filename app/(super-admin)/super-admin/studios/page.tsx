@@ -14,8 +14,10 @@ import {
     Eye,
     HardDrive,
     Mail,
+    MapPin,
     MoreHorizontal,
     Pencil,
+    Phone,
     Plus,
     Search,
     ShieldCheck,
@@ -27,12 +29,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 
-type StudioStatus = "Active" | "Inactive" | "Expiring";
+type StudioStatus = "Active" | "Inactive" | "Expiring Soon";
 type Plan = "Basic" | "Professional" | "Enterprise";
 
 interface Studio {
     id: string;
     name: string;
+    logoUrl: string | null;
+    phone: string;
     shortName: string;
     adminName: string;
     adminEmail: string;
@@ -53,6 +57,7 @@ interface Studio {
 interface ApiStudio {
     id: string;
     name: string;
+    logoUrl?: string | null;
     createdAt: string;
     isActive: boolean;
     email?: string | null;
@@ -86,7 +91,7 @@ interface ApiStudio {
 const statusOptions = [
     "All Status",
     "Active",
-    "Expiring",
+    "Expiring Soon",
     "Inactive",
 ];
 
@@ -168,7 +173,7 @@ function getStudioStatus(
     );
 
     if (remainingDays < 0) return "Inactive";
-    if (remainingDays <= 10) return "Expiring";
+    if (remainingDays <= 10) return "Expiring Soon";
 
     return "Active";
 }
@@ -183,11 +188,11 @@ function StatusBadge({ status }: { status: StudioStatus }) {
         );
     }
 
-    if (status === "Expiring") {
+    if (status === "Expiring Soon") {
         return (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-400">
                 <Clock3 size={13} />
-                Expiring
+                Expiring Soon
             </span>
         );
     }
@@ -252,7 +257,6 @@ export default function StudiosPage() {
                     );
                 }
 
-
                 const mappedStudios: Studio[] = (
                     data.studios as ApiStudio[]
                 ).map((studio) => {
@@ -281,7 +285,9 @@ export default function StudiosPage() {
                     return {
                         id: studio.id,
                         name: studio.name,
+                        logoUrl: studio.logoUrl || null,
                         shortName: getInitials(studio.name),
+                        phone: studio.phone || "—",
 
                         adminName:
                             firstAdmin?.name ||
@@ -387,7 +393,7 @@ export default function StudiosPage() {
                 );
 
                 if (daysLeft >= 0 && daysLeft <= 10) {
-                    updatedStatus = "Expiring";
+                    updatedStatus = "Expiring Soon";
                 }
             }
 
@@ -453,7 +459,7 @@ export default function StudiosPage() {
     ).length;
 
     const expiringStudios = studios.filter(
-        (studio) => studio.status === "Expiring"
+        (studio) => studio.status === "Expiring Soon"
     ).length;
 
     const inactiveStudios = studios.filter(
@@ -804,24 +810,53 @@ export default function StudiosPage() {
                                             {/* Studio */}
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
-                                                        {getInitials(
-                                                            studio.name
-                                                        )}
-                                                    </div>
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
+                                                        <img
+                                                            src={studio.logoUrl || ""}
+                                                            alt={`${studio.name} logo`}
+                                                            className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
+                                                                }`}
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = "none";
+                                                                const fallback = e.currentTarget.nextElementSibling;
+                                                                if (fallback) {
+                                                                    fallback.classList.remove("hidden");
+                                                                }
+                                                            }}
+                                                        />
 
+                                                        <span className={studio.logoUrl ? "hidden" : ""}>
+                                                            {getInitials(
+                                                                studio.name
+                                                            )}
+                                                        </span>
+                                                    </div>
                                                     <div>
                                                         <p className="font-medium text-white">
                                                             {
                                                                 studio.name
                                                             }
                                                         </p>
-
-                                                        <p className="mt-1 text-xs text-zinc-500">
+                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                            <Phone
+                                                                size={
+                                                                    12
+                                                                }
+                                                            />
+                                                            {
+                                                                studio.phone
+                                                            }
+                                                        </div>
+                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                            <MapPin
+                                                                size={
+                                                                    12
+                                                                }
+                                                            />
                                                             {
                                                                 studio.location
                                                             }
-                                                        </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -834,6 +869,17 @@ export default function StudiosPage() {
                                                     }
                                                 </p>
 
+                                                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                    <Phone
+                                                        size={
+                                                            12
+                                                        }
+                                                    />
+
+                                                    {
+                                                        studio.adminPhone
+                                                    }
+                                                </div>
                                                 <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                                                     <Mail
                                                         size={

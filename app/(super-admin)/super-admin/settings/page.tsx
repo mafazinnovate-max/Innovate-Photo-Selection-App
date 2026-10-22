@@ -1,1445 +1,755 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-    AlertTriangle,
-    Bell,
+    ArrowLeft,
+    Camera,
     Check,
-    Cloud,
-    Database,
-    Globe,
-    ImageIcon,
-    Lock,
+    Eye,
+    EyeOff,
+    KeyRound,
+    LogOut,
     Mail,
-    Save,
-    Settings,
-    Shield,
-    Smartphone,
-    ToggleLeft,
-    Users,
-    Wrench,
+    ShieldCheck,
+    Upload,
+    UserRound,
     X,
 } from "lucide-react";
 
-type Tab =
-    | "platform"
-    | "subscription"
-    | "storage"
-    | "gallery"
-    | "security"
-    | "notifications";
+type ProfileForm = {
+    name: string;
+    username: string;
+    email: string;
+    logoUrl: string;
+};
+
+type PasswordForm = {
+    current: string;
+    next: string;
+    confirm: string;
+};
 
 export default function SuperAdminSettingsPage() {
-    const [activeTab, setActiveTab] = useState<Tab>("platform");
-    const [saved, setSaved] = useState(false);
+    const router = useRouter();
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
-    const [maintenanceMode, setMaintenanceMode] = useState(false);
-    const [allowNewStudios, setAllowNewStudios] = useState(true);
-
-    const [settings, setSettings] = useState({
-        platformName: "Innovate Photo Selection",
-        platformEmail: "admin@innovatewedding.com",
-        supportEmail: "support@innovatewedding.com",
-        supportPhone: "+91 98765 43210",
-        website: "https://innovatewedding.com",
-        description:
-            "Professional photo selection and customer gallery platform for photography studios.",
-
-        basicStorage: "25",
-        professionalStorage: "100",
-        enterpriseStorage: "300",
-
-        basicEvents: "15",
-        professionalEvents: "50",
-        enterpriseEvents: "150",
-
-        basicCustomers: "100",
-        professionalCustomers: "500",
-        enterpriseCustomers: "1500",
-
-        basicImages: "25000",
-        professionalImages: "100000",
-        enterpriseImages: "300000",
-
-        storageProvider: "Cloudinary",
-        maxUploadSize: "25",
-        allowedFormats: "JPG, JPEG, PNG, WEBP",
-        warningThreshold: "75",
-        criticalThreshold: "90",
-
-        defaultGalleryMode: "single",
-        commentsEnabled: true,
-        downloadsEnabled: false,
-        autoSaveSelections: true,
-        lightboxEnabled: true,
-
-        sessionTimeout: "120",
-        accessCodeLength: "4",
-        loginProtection: true,
-        twoFactorAuth: false,
-
-        newStudioNotification: true,
-        subscriptionExpiryNotification: true,
-        storageWarningNotification: true,
-        systemEmailNotifications: true,
+    const [profile, setProfile] = useState<ProfileForm>({
+        name: "",
+        username: "",
+        email: "",
+        logoUrl: "",
     });
 
-    const updateSetting = (
-        key: keyof typeof settings,
-        value: string | boolean
-    ) => {
-        setSettings((previous) => ({
-            ...previous,
-            [key]: value,
-        }));
+    const [passwords, setPasswords] = useState<PasswordForm>({
+        current: "",
+        next: "",
+        confirm: "",
+    });
 
-        setSaved(false);
+    const [showPasswords, setShowPasswords] = useState(false);
+    const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState("");
+    const [logoName, setLogoName] = useState("");
+    const [notice, setNotice] = useState("");
+    const [noticeType, setNoticeType] = useState<"success" | "error">("success");
+
+    const [loadingProfile, setLoadingProfile] = useState(true);
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [changingPassword, setChangingPassword] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    const [originalLogoUrl, setOriginalLogoUrl] = useState("");
+
+    const showMessage = (message: string, type: "success" | "error" = "success") => {
+        setNotice(message);
+        setNoticeType(type);
     };
 
-    const saveSettings = () => {
-        console.log("Super Admin Settings:", {
-            ...settings,
-            maintenanceMode,
-            allowNewStudios,
-        });
+    useEffect(() => {
+        let active = true;
 
-        setSaved(true);
+        async function loadProfile() {
+            try {
+                const response = await fetch("/api/super-admin/settings/profile", {
+                    method: "GET",
+                    cache: "no-store",
+                });
 
-        setTimeout(() => {
-            setSaved(false);
-        }, 2500);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        router.replace("/login");
+                        return;
+                    }
+
+                    throw new Error(data.message || "Unable to load profile.");
+                }
+
+                if (!active) return;
+
+                const loadedProfile = data.profile;
+
+                setProfile({
+                    name: loadedProfile.name ?? "",
+                    username: loadedProfile.username ?? "",
+                    email: loadedProfile.email ?? "",
+                    logoUrl: loadedProfile.logoUrl ?? "",
+                });
+
+                setOriginalLogoUrl(loadedProfile.logoUrl ?? "");
+            } catch (error) {
+                if (active) {
+                    showMessage(
+                        error instanceof Error ? error.message : "Unable to load profile.",
+                        "error"
+                    );
+                }
+            } finally {
+                if (active) setLoadingProfile(false);
+            }
+        }
+
+        loadProfile();
+
+        return () => {
+            active = false;
+        };
+    }, [router]);
+
+    useEffect(() => {
+        if (!selectedLogo) {
+            setLogoPreview("");
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(selectedLogo);
+        setLogoPreview(previewUrl);
+
+        return () => URL.revokeObjectURL(previewUrl);
+    }, [selectedLogo]);
+
+    const updateProfile = (field: keyof ProfileForm, value: string) => {
+        setProfile((current) => ({ ...current, [field]: value }));
+        setNotice("");
     };
+
+    const updatePassword = (field: keyof PasswordForm, value: string) => {
+        setPasswords((current) => ({ ...current, [field]: value }));
+        setNotice("");
+    };
+
+    async function handleSaveProfile() {
+        if (savingProfile) return;
+
+        setSavingProfile(true);
+        setNotice("");
+
+        try {
+            const response = await fetch("/api/super-admin/settings/profile", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: profile.name,
+                    username: profile.username,
+                    email: profile.email,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    router.replace("/login");
+                    return;
+                }
+
+                throw new Error(data.message || "Unable to save profile.");
+            }
+
+            setProfile((current) => ({
+                ...current,
+                ...data.profile,
+            }));
+
+            showMessage(data.message || "Profile saved successfully.");
+        } catch (error) {
+            showMessage(
+                error instanceof Error ? error.message : "Unable to save profile.",
+                "error"
+            );
+        } finally {
+            setSavingProfile(false);
+        }
+    }
+
+    async function handleChangePassword() {
+        if (changingPassword) return;
+
+        if (!passwords.current || !passwords.next || !passwords.confirm) {
+            showMessage("Fill in all three password fields.", "error");
+            return;
+        }
+
+        if (passwords.next.length < 8) {
+            showMessage("New password must be at least 8 characters.", "error");
+            return;
+        }
+
+        if (passwords.next !== passwords.confirm) {
+            showMessage("New password and confirmation do not match.", "error");
+            return;
+        }
+
+        setChangingPassword(true);
+        setNotice("");
+
+        try {
+            const response = await fetch("/api/super-admin/settings/password", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    currentPassword: passwords.current,
+                    newPassword: passwords.next,
+                    confirmPassword: passwords.confirm,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    router.replace("/login");
+                    return;
+                }
+
+                throw new Error(data.message || "Unable to change password.");
+            }
+
+            setPasswords({
+                current: "",
+                next: "",
+                confirm: "",
+            });
+
+            showMessage(data.message || "Password updated successfully.");
+        } catch (error) {
+            showMessage(
+                error instanceof Error ? error.message : "Unable to change password.",
+                "error"
+            );
+        } finally {
+            setChangingPassword(false);
+        }
+    }
+
+    function handleLogoChange(file?: File) {
+        if (!file) return;
+
+        const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+
+        if (!allowedTypes.includes(file.type)) {
+            showMessage("Choose a PNG, JPG or WebP image.", "error");
+            if (logoInputRef.current) logoInputRef.current.value = "";
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showMessage("Logo image must be 5 MB or smaller.", "error");
+            if (logoInputRef.current) logoInputRef.current.value = "";
+            return;
+        }
+
+        setSelectedLogo(file);
+        setLogoName(file.name);
+        setNotice("");
+    }
+
+    async function handleUploadLogo() {
+        if (!selectedLogo || uploadingLogo) return;
+
+        setUploadingLogo(true);
+        setNotice("");
+
+        try {
+            const formData = new FormData();
+            formData.append("logo", selectedLogo);
+
+            const response = await fetch("/api/super-admin/settings/logo", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    router.replace("/login");
+                    return;
+                }
+
+                throw new Error(data.message || "Logo upload failed.");
+            }
+
+            setProfile((current) => ({
+                ...current,
+                logoUrl: data.logoUrl,
+            }));
+
+            setOriginalLogoUrl(data.logoUrl);
+            setSelectedLogo(null);
+            setLogoName("");
+
+            if (logoInputRef.current) {
+                logoInputRef.current.value = "";
+            }
+
+            showMessage(data.message || "Platform logo uploaded successfully.");
+        } catch (error) {
+            showMessage(
+                error instanceof Error ? error.message : "Logo upload failed.",
+                "error"
+            );
+        } finally {
+            setUploadingLogo(false);
+        }
+    }
+
+    async function handleLogout() {
+        if (loggingOut) return;
+
+        setLoggingOut(true);
+
+        try {
+            const response = await fetch("/api/super-admin/logout", {
+                method: "POST",
+            });
+
+            if (!response.ok) {
+                throw new Error("Unable to log out. Please try again.");
+            }
+
+            router.replace("/login");
+            router.refresh();
+        } catch (error) {
+            showMessage(
+                error instanceof Error ? error.message : "Unable to log out.",
+                "error"
+            );
+            setShowLogoutConfirm(false);
+            setLoggingOut(false);
+        }
+    }
+
+    const displayedLogo = logoPreview || profile.logoUrl || originalLogoUrl;
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div>
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-black">
-                        <Settings size={22} />
-                    </div>
-
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Super Admin Settings
-                        </h1>
-
-                        <p className="mt-1 text-sm text-zinc-400">
-                            Manage platform configuration, subscriptions, storage,
-                            security and notifications.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Settings Layout */}
-            <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-                {/* Sidebar */}
-                <SettingsNavigation
-                    activeTab={activeTab}
-                    onChange={setActiveTab}
-                />
-
-                {/* Content */}
-                <div className="min-w-0 space-y-6">
-                    {activeTab === "platform" && (
-                        <PlatformSettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {activeTab === "subscription" && (
-                        <SubscriptionSettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {activeTab === "storage" && (
-                        <StorageSettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {activeTab === "gallery" && (
-                        <GallerySettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {activeTab === "security" && (
-                        <SecuritySettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {activeTab === "notifications" && (
-                        <NotificationSettings
-                            settings={settings}
-                            updateSetting={updateSetting}
-                        />
-                    )}
-
-                    {/* Save Button */}
-                    <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/95 p-4 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            {saved ? (
-                                <div className="flex items-center gap-2 text-sm text-emerald-400">
-                                    <Check size={16} />
-                                    Settings saved successfully.
-                                </div>
-                            ) : (
-                                <p className="text-xs text-zinc-500">
-                                    Changes are currently saved only in the interface.
-                                </p>
-                            )}
-                        </div>
-
+        <div className="min-h-screen bg-zinc-950 text-white">
+            <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-4">
                         <button
-                            onClick={saveSettings}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+                            type="button"
+                            onClick={() => router.back()}
+                            aria-label="Go back"
+                            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
                         >
-                            <Save size={16} />
-                            Save Changes
+                            <ArrowLeft size={18} />
                         </button>
+
+                        <div>
+                            <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                                <ShieldCheck size={14} /> Super Admin / Settings
+                            </div>
+
+                            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                                Settings
+                            </h1>
+
+                            <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                                Manage your account details, password and platform branding.
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Danger Zone */}
-                    <DangerZone
-                        maintenanceMode={maintenanceMode}
-                        setMaintenanceMode={(value) => {
-                            setMaintenanceMode(value);
-                            setSaved(false);
-                        }}
-                        allowNewStudios={allowNewStudios}
-                        setAllowNewStudios={(value) => {
-                            setAllowNewStudios(value);
-                            setSaved(false);
-                        }}
-                    />
+                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+                        <span className={`h-2 w-2 rounded-full ${loadingProfile ? "bg-amber-400" : "bg-emerald-400"}`} />
+                        {loadingProfile ? "Loading settings" : "Account settings"}
+                    </div>
                 </div>
-            </div>
-        </div>
-    );
-}
 
-/* -------------------------------------------------------------------------- */
-/* Navigation                                                                 */
-/* -------------------------------------------------------------------------- */
+                <div className="space-y-6">
+                    {/* Account profile */}
+                    <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70 shadow-xl shadow-black/10">
+                        <div className="flex items-start gap-4 border-b border-zinc-800 p-5 sm:p-6">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-200">
+                                <UserRound size={20} />
+                            </div>
 
-function SettingsNavigation({
-    activeTab,
-    onChange,
-}: {
-    activeTab: Tab;
-    onChange: (tab: Tab) => void;
-}) {
-    const items: {
-        id: Tab;
-        label: string;
-        description: string;
-        icon: React.ElementType;
-    }[] = [
-            {
-                id: "platform",
-                label: "Platform",
-                description: "General platform information",
-                icon: Globe,
-            },
-            {
-                id: "subscription",
-                label: "Subscriptions",
-                description: "Plans and usage limits",
-                icon: Users,
-            },
-            {
-                id: "storage",
-                label: "Storage",
-                description: "File storage configuration",
-                icon: Cloud,
-            },
-            {
-                id: "gallery",
-                label: "Gallery",
-                description: "Customer gallery defaults",
-                icon: ImageIcon,
-            },
-            {
-                id: "security",
-                label: "Security",
-                description: "Authentication and access",
-                icon: Shield,
-            },
-            {
-                id: "notifications",
-                label: "Notifications",
-                description: "Email and system alerts",
-                icon: Bell,
-            },
-        ];
-
-    return (
-        <aside className="h-fit rounded-2xl border border-zinc-800 bg-zinc-950 p-2">
-            <div className="space-y-1">
-                {items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onChange(item.id)}
-                            className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition ${isActive
-                                    ? "bg-white text-black"
-                                    : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                                }`}
-                        >
-                            <Icon
-                                size={18}
-                                className={`mt-0.5 shrink-0 ${isActive ? "text-black" : "text-zinc-500"
-                                    }`}
-                            />
-
-                            <div className="min-w-0">
-                                <p className="text-sm font-medium">{item.label}</p>
-
-                                <p
-                                    className={`mt-0.5 text-[11px] ${isActive ? "text-zinc-600" : "text-zinc-600"
-                                        }`}
-                                >
-                                    {item.description}
+                            <div>
+                                <h2 className="font-semibold text-white">Account profile</h2>
+                                <p className="mt-1 text-sm text-zinc-500">
+                                    Your Super Admin name and email address.
                                 </p>
                             </div>
+                        </div>
+
+                        <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                            <FormField
+                                label="Full name"
+                                value={profile.name}
+                                onChange={(value) => updateProfile("name", value)}
+                                placeholder="Enter your full name"
+                                icon={<UserRound size={16} />}
+                                disabled={loadingProfile || savingProfile}
+                            />
+
+                            <FormField
+                                label="Username"
+                                value={profile.username}
+                                onChange={(value) => updateProfile("username", value)}
+                                placeholder="Enter your username"
+                                icon={<UserRound size={16} />}
+                                disabled={loadingProfile || savingProfile}
+                            />
+
+                            <FormField
+                                label="Email address"
+                                type="email"
+                                value={profile.email}
+                                onChange={(value) => updateProfile("email", value)}
+                                placeholder="admin@example.com"
+                                icon={<Mail size={16} />}
+                                disabled={loadingProfile || savingProfile}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-3 border-t border-zinc-800 bg-zinc-950/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                            <p className="text-xs leading-5 text-zinc-500">
+                                Profile details are saved to your account.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveProfile}
+                                disabled={loadingProfile || savingProfile}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Check size={16} />
+                                {savingProfile ? "Saving..." : "Save profile"}
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* Change password */}
+                    <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70 shadow-xl shadow-black/10">
+                        <div className="flex items-start gap-4 border-b border-zinc-800 p-5 sm:p-6">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-200">
+                                <KeyRound size={20} />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <h2 className="font-semibold text-white">Change password</h2>
+                                <p className="mt-1 text-sm text-zinc-500">
+                                    Choose a strong password that you do not use elsewhere.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswords((value) => !value)}
+                                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+                                className="inline-flex shrink-0 items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+                            >
+                                {showPasswords ? <EyeOff size={15} /> : <Eye size={15} />}
+                                <span className="hidden sm:inline">
+                                    {showPasswords ? "Hide" : "Show"}
+                                </span>
+                            </button>
+                        </div>
+
+                        <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                            <FormField
+                                label="Current password"
+                                type={showPasswords ? "text" : "password"}
+                                value={passwords.current}
+                                onChange={(value) => updatePassword("current", value)}
+                                placeholder="Enter current password"
+                                disabled={changingPassword}
+                            />
+
+                            <div className="hidden sm:block" />
+
+                            <FormField
+                                label="New password"
+                                type={showPasswords ? "text" : "password"}
+                                value={passwords.next}
+                                onChange={(value) => updatePassword("next", value)}
+                                placeholder="At least 8 characters"
+                                disabled={changingPassword}
+                            />
+
+                            <FormField
+                                label="Confirm new password"
+                                type={showPasswords ? "text" : "password"}
+                                value={passwords.confirm}
+                                onChange={(value) => updatePassword("confirm", value)}
+                                placeholder="Re-enter new password"
+                                disabled={changingPassword}
+                            />
+
+                            <p className="text-xs leading-5 text-zinc-500 sm:col-span-2">
+                                Use at least 8 characters. Your current password is required to make this change.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end border-t border-zinc-800 bg-zinc-950/40 px-5 py-4 sm:px-6">
+                            <button
+                                type="button"
+                                onClick={handleChangePassword}
+                                disabled={changingPassword}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <KeyRound size={16} />
+                                {changingPassword ? "Updating..." : "Update password"}
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* Platform logo */}
+                    <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70 shadow-xl shadow-black/10">
+                        <div className="flex items-start gap-4 border-b border-zinc-800 p-5 sm:p-6">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-200">
+                                <Camera size={20} />
+                            </div>
+
+                            <div>
+                                <h2 className="font-semibold text-white">Platform logo</h2>
+                                <p className="mt-1 text-sm text-zinc-500">
+                                    Update Picnovate branding.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
+                            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950">
+                                {displayedLogo ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={displayedLogo}
+                                        alt="Picnovate platform logo"
+                                        className="h-full w-full object-contain p-2"
+                                    />
+                                ) : (
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-xl font-black tracking-tight text-zinc-950">
+                                        P.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-white">Picnovate logo</p>
+                                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                                    PNG, JPG or WebP. Maximum file size: 5 MB. The selected image will be uploaded to Cloudinary when you click Upload logo.
+                                </p>
+
+                                {logoName && (
+                                    <p className="mt-2 truncate text-xs text-zinc-300">
+                                        Selected: {logoName}
+                                    </p>
+                                )}
+
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    <input
+                                        ref={logoInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        className="hidden"
+                                        onChange={(event) =>
+                                            handleLogoChange(event.target.files?.[0])
+                                        }
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={() => logoInputRef.current?.click()}
+                                        disabled={uploadingLogo}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50"
+                                    >
+                                        <Camera size={16} /> Choose logo
+                                    </button>
+
+                                    {selectedLogo && (
+                                        <button
+                                            type="button"
+                                            onClick={handleUploadLogo}
+                                            disabled={uploadingLogo}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:opacity-50"
+                                        >
+                                            <Upload size={16} />
+                                            {uploadingLogo ? "Uploading..." : "Upload logo"}
+                                        </button>
+                                    )}
+
+                                    {selectedLogo && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedLogo(null);
+                                                setLogoName("");
+                                                if (logoInputRef.current) {
+                                                    logoInputRef.current.value = "";
+                                                }
+                                                setNotice("");
+                                            }}
+                                            disabled={uploadingLogo}
+                                            className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+                                        >
+                                            <X size={16} /> Cancel selection
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Logout */}
+                    <section className="flex flex-col gap-4 rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-300">
+                                <LogOut size={19} />
+                            </div>
+
+                            <div>
+                                <h2 className="font-semibold text-white">Sign out</h2>
+                                <p className="mt-1 max-w-lg text-sm leading-5 text-zinc-400">
+                                    Sign out of your Super Admin session on this device.
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowLogoutConfirm(true)}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20"
+                        >
+                            <LogOut size={16} /> Logout
                         </button>
-                    );
-                })}
-            </div>
-        </aside>
-    );
-}
+                    </section>
 
-/* -------------------------------------------------------------------------- */
-/* Platform Settings                                                          */
-/* -------------------------------------------------------------------------- */
-
-function PlatformSettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={Globe}
-                title="Platform Information"
-                description="Basic information about your SaaS platform."
-            >
-                <div className="grid gap-5 md:grid-cols-2">
-                    <Input
-                        label="Platform Name"
-                        value={settings.platformName}
-                        onChange={(value) =>
-                            updateSetting("platformName", value)
-                        }
-                        placeholder="Platform name"
-                    />
-
-                    <Input
-                        label="Platform Email"
-                        type="email"
-                        value={settings.platformEmail}
-                        onChange={(value) =>
-                            updateSetting("platformEmail", value)
-                        }
-                        placeholder="admin@example.com"
-                    />
-
-                    <Input
-                        label="Support Email"
-                        type="email"
-                        value={settings.supportEmail}
-                        onChange={(value) =>
-                            updateSetting("supportEmail", value)
-                        }
-                        placeholder="support@example.com"
-                    />
-
-                    <Input
-                        label="Support Phone"
-                        value={settings.supportPhone}
-                        onChange={(value) =>
-                            updateSetting("supportPhone", value)
-                        }
-                        placeholder="+91..."
-                    />
-
-                    <div className="md:col-span-2">
-                        <Input
-                            label="Website"
-                            value={settings.website}
-                            onChange={(value) =>
-                                updateSetting("website", value)
-                            }
-                            placeholder="https://example.com"
-                        />
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <Textarea
-                            label="Platform Description"
-                            value={settings.description}
-                            onChange={(value) =>
-                                updateSetting("description", value)
-                            }
-                            placeholder="Describe your platform..."
-                        />
-                    </div>
+                    {notice && (
+                        <div
+                            role="status"
+                            className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${noticeType === "success"
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                                    : "border-red-500/30 bg-red-500/10 text-red-200"
+                                }`}
+                        >
+                            <span
+                                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${noticeType === "success" ? "bg-emerald-400" : "bg-red-400"
+                                    }`}
+                            />
+                            <p className="flex-1 leading-5">{notice}</p>
+                            <button
+                                type="button"
+                                onClick={() => setNotice("")}
+                                aria-label="Dismiss message"
+                                className="text-zinc-400 hover:text-white"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
                 </div>
-            </Section>
+            </div>
 
-            <Section
-                icon={Smartphone}
-                title="Platform Status"
-                description="Control the overall availability of the platform."
-            >
-                <ToggleRow
-                    icon={Wrench}
-                    title="Maintenance Mode"
-                    description="Temporarily restrict platform access while maintenance is in progress."
-                    checked={false}
-                    disabled
-                />
+            {/* Logout confirmation */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-300">
+                            <LogOut size={21} />
+                        </div>
 
-                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        <h2 className="mt-4 text-lg font-semibold text-white">
+                            Log out of Picnovate?
+                        </h2>
 
-                        <div>
-                            <p className="text-sm font-medium text-white">
-                                Platform is currently operational
-                            </p>
+                        <p className="mt-2 text-sm leading-6 text-zinc-400">
+                            Are you sure you want to end your Super Admin session?
+                        </p>
 
-                            <p className="mt-1 text-xs text-zinc-500">
-                                All platform services are available.
-                            </p>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                disabled={loggingOut}
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={loggingOut}
+                                onClick={handleLogout}
+                                className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-400 disabled:opacity-50"
+                            >
+                                {loggingOut ? "Logging out..." : "Confirm logout"}
+                            </button>
                         </div>
                     </div>
                 </div>
-            </Section>
+            )}
         </div>
     );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Subscription Settings                                                      */
-/* -------------------------------------------------------------------------- */
-
-function SubscriptionSettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={Users}
-                title="Plan Defaults"
-                description="Default resource limits assigned to new studios."
-            >
-                <PlanLimitCard
-                    title="Basic"
-                    description="For small photography studios."
-                    storage={settings.basicStorage}
-                    events={settings.basicEvents}
-                    customers={settings.basicCustomers}
-                    images={settings.basicImages}
-                    onChange={updateSetting}
-                    storageKey="basicStorage"
-                    eventsKey="basicEvents"
-                    customersKey="basicCustomers"
-                    imagesKey="basicImages"
-                />
-
-                <PlanLimitCard
-                    title="Professional"
-                    description="For growing photography businesses."
-                    storage={settings.professionalStorage}
-                    events={settings.professionalEvents}
-                    customers={settings.professionalCustomers}
-                    images={settings.professionalImages}
-                    onChange={updateSetting}
-                    storageKey="professionalStorage"
-                    eventsKey="professionalEvents"
-                    customersKey="professionalCustomers"
-                    imagesKey="professionalImages"
-                />
-
-                <PlanLimitCard
-                    title="Enterprise"
-                    description="For high-volume studios and larger teams."
-                    storage={settings.enterpriseStorage}
-                    events={settings.enterpriseEvents}
-                    customers={settings.enterpriseCustomers}
-                    images={settings.enterpriseImages}
-                    onChange={updateSetting}
-                    storageKey="enterpriseStorage"
-                    eventsKey="enterpriseEvents"
-                    customersKey="enterpriseCustomers"
-                    imagesKey="enterpriseImages"
-                />
-            </Section>
-
-            <Section
-                icon={Database}
-                title="Subscription Behaviour"
-                description="Default behaviour for studio subscriptions."
-            >
-                <div className="space-y-4">
-                    <InfoRow
-                        title="New subscription status"
-                        description="Newly created studio subscriptions start as active."
-                        value="Active"
-                    />
-
-                    <InfoRow
-                        title="Expired subscriptions"
-                        description="Access should be restricted when the subscription expires."
-                        value="Restricted"
-                    />
-
-                    <InfoRow
-                        title="Grace period"
-                        description="Additional access period after subscription expiry."
-                        value="0 days"
-                    />
-                </div>
-            </Section>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Storage Settings                                                           */
-/* -------------------------------------------------------------------------- */
-
-function StorageSettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={Cloud}
-                title="Storage Provider"
-                description="Configure where uploaded gallery media is stored."
-            >
-                <div className="grid gap-5 md:grid-cols-2">
-                    <SelectInput
-                        label="Storage Provider"
-                        value={settings.storageProvider}
-                        onChange={(value) =>
-                            updateSetting("storageProvider", value)
-                        }
-                        options={[
-                            "Cloudinary",
-                            "Cloudflare R2",
-                            "Amazon S3",
-                        ]}
-                    />
-
-                    <NumberInput
-                        label="Maximum Upload Size"
-                        value={settings.maxUploadSize}
-                        suffix="MB"
-                        onChange={(value) =>
-                            updateSetting("maxUploadSize", value)
-                        }
-                    />
-                </div>
-
-                <div className="mt-5">
-                    <Input
-                        label="Allowed Image Formats"
-                        value={settings.allowedFormats}
-                        onChange={(value) =>
-                            updateSetting("allowedFormats", value)
-                        }
-                        placeholder="JPG, JPEG, PNG, WEBP"
-                    />
-                </div>
-            </Section>
-
-            <Section
-                icon={AlertTriangle}
-                title="Storage Alerts"
-                description="Set the thresholds used for usage warnings."
-            >
-                <div className="grid gap-5 md:grid-cols-2">
-                    <NumberInput
-                        label="Warning Threshold"
-                        value={settings.warningThreshold}
-                        suffix="%"
-                        onChange={(value) =>
-                            updateSetting("warningThreshold", value)
-                        }
-                    />
-
-                    <NumberInput
-                        label="Critical Threshold"
-                        value={settings.criticalThreshold}
-                        suffix="%"
-                        onChange={(value) =>
-                            updateSetting("criticalThreshold", value)
-                        }
-                    />
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <ThresholdCard
-                        title="Warning"
-                        value={`${settings.warningThreshold}%`}
-                        description="Studio should receive a storage warning."
-                        type="warning"
-                    />
-
-                    <ThresholdCard
-                        title="Critical"
-                        value={`${settings.criticalThreshold}%`}
-                        description="Studio is close to its storage limit."
-                        type="critical"
-                    />
-                </div>
-            </Section>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Gallery Settings                                                           */
-/* -------------------------------------------------------------------------- */
-
-function GallerySettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={ImageIcon}
-                title="Gallery Defaults"
-                description="Default settings applied when studios create new galleries."
-            >
-                <SelectInput
-                    label="Default Gallery Mode"
-                    value={settings.defaultGalleryMode}
-                    onChange={(value) =>
-                        updateSetting("defaultGalleryMode", value)
-                    }
-                    options={[
-                        "single",
-                        "bride_groom",
-                    ]}
-                    displayOptions={{
-                        single: "Single Folder",
-                        bride_groom: "Nested / Bride & Groom",
-                    }}
-                />
-
-                <div className="mt-5 divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-                    <ToggleRow
-                        icon={ImageIcon}
-                        title="Comments"
-                        description="Allow customers to add comments to photos."
-                        checked={settings.commentsEnabled}
-                        onChange={(value) =>
-                            updateSetting("commentsEnabled", value)
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={Cloud}
-                        title="Downloads"
-                        description="Allow customers to download original or preview files."
-                        checked={settings.downloadsEnabled}
-                        onChange={(value) =>
-                            updateSetting("downloadsEnabled", value)
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={Save}
-                        title="Auto-save Selections"
-                        description="Automatically save customer photo selections."
-                        checked={settings.autoSaveSelections}
-                        onChange={(value) =>
-                            updateSetting("autoSaveSelections", value)
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={ImageIcon}
-                        title="Lightbox"
-                        description="Enable full-screen photo preview and selection."
-                        checked={settings.lightboxEnabled}
-                        onChange={(value) =>
-                            updateSetting("lightboxEnabled", value)
-                        }
-                    />
-                </div>
-            </Section>
-
-            <Section
-                icon={Lock}
-                title="Customer Access"
-                description="Default access behaviour for customer galleries."
-            >
-                <div className="grid gap-4 md:grid-cols-2">
-                    <InfoRow
-                        title="Access method"
-                        description="Customer gallery access."
-                        value="Share Link + Access Code"
-                    />
-
-                    <InfoRow
-                        title="Selection saving"
-                        description="Customer selections are persisted automatically."
-                        value={
-                            settings.autoSaveSelections
-                                ? "Automatic"
-                                : "Manual"
-                        }
-                    />
-                </div>
-            </Section>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Security Settings                                                          */
-/* -------------------------------------------------------------------------- */
-
-function SecuritySettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={Shield}
-                title="Authentication"
-                description="Configure admin and platform authentication behaviour."
-            >
-                <div className="grid gap-5 md:grid-cols-2">
-                    <NumberInput
-                        label="Session Timeout"
-                        value={settings.sessionTimeout}
-                        suffix="minutes"
-                        onChange={(value) =>
-                            updateSetting("sessionTimeout", value)
-                        }
-                    />
-
-                    <NumberInput
-                        label="Gallery Access Code Length"
-                        value={settings.accessCodeLength}
-                        suffix="digits"
-                        onChange={(value) =>
-                            updateSetting("accessCodeLength", value)
-                        }
-                    />
-                </div>
-
-                <div className="mt-5 divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-                    <ToggleRow
-                        icon={Shield}
-                        title="Login Protection"
-                        description="Protect admin login from repeated failed attempts."
-                        checked={settings.loginProtection}
-                        onChange={(value) =>
-                            updateSetting("loginProtection", value)
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={Smartphone}
-                        title="Two-Factor Authentication"
-                        description="Require an additional authentication step for Super Admin."
-                        checked={settings.twoFactorAuth}
-                        onChange={(value) =>
-                            updateSetting("twoFactorAuth", value)
-                        }
-                    />
-                </div>
-            </Section>
-
-            <Section
-                icon={Lock}
-                title="Security Information"
-                description="Current platform security configuration."
-            >
-                <div className="grid gap-4 md:grid-cols-2">
-                    <SecurityStatus
-                        title="Admin Login"
-                        status="Protected"
-                        icon={Lock}
-                    />
-
-                    <SecurityStatus
-                        title="Gallery Access"
-                        status="Access Code Protected"
-                        icon={Shield}
-                    />
-
-                    <SecurityStatus
-                        title="Session Management"
-                        status={`${settings.sessionTimeout} minute timeout`}
-                        icon={Smartphone}
-                    />
-
-                    <SecurityStatus
-                        title="Two-Factor Authentication"
-                        status={
-                            settings.twoFactorAuth ? "Enabled" : "Disabled"
-                        }
-                        icon={Shield}
-                    />
-                </div>
-            </Section>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Notification Settings                                                      */
-/* -------------------------------------------------------------------------- */
-
-function NotificationSettings({
-    settings,
-    updateSetting,
-}: {
-    settings: SettingsState;
-    updateSetting: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-}) {
-    return (
-        <div className="space-y-6">
-            <Section
-                icon={Bell}
-                title="Notification Preferences"
-                description="Control which platform events generate notifications."
-            >
-                <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-                    <ToggleRow
-                        icon={Users}
-                        title="New Studio Registration"
-                        description="Notify Super Admin when a new studio is created."
-                        checked={settings.newStudioNotification}
-                        onChange={(value) =>
-                            updateSetting("newStudioNotification", value)
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={Bell}
-                        title="Subscription Expiry"
-                        description="Notify when a studio subscription is approaching expiry."
-                        checked={settings.subscriptionExpiryNotification}
-                        onChange={(value) =>
-                            updateSetting(
-                                "subscriptionExpiryNotification",
-                                value
-                            )
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={AlertTriangle}
-                        title="Storage Warning"
-                        description="Notify when a studio reaches the configured storage threshold."
-                        checked={settings.storageWarningNotification}
-                        onChange={(value) =>
-                            updateSetting(
-                                "storageWarningNotification",
-                                value
-                            )
-                        }
-                    />
-
-                    <ToggleRow
-                        icon={Mail}
-                        title="System Emails"
-                        description="Enable automated platform emails."
-                        checked={settings.systemEmailNotifications}
-                        onChange={(value) =>
-                            updateSetting(
-                                "systemEmailNotifications",
-                                value
-                            )
-                        }
-                    />
-                </div>
-            </Section>
-
-            <Section
-                icon={Mail}
-                title="Email Configuration"
-                description="Email sender information used by the platform."
-            >
-                <div className="grid gap-5 md:grid-cols-2">
-                    <InfoRow
-                        title="Sender"
-                        description="Default sender address."
-                        value={settings.platformEmail}
-                    />
-
-                    <InfoRow
-                        title="Support"
-                        description="Support contact address."
-                        value={settings.supportEmail}
-                    />
-                </div>
-            </Section>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Danger Zone                                                                */
-/* -------------------------------------------------------------------------- */
-
-function DangerZone({
-    maintenanceMode,
-    setMaintenanceMode,
-    allowNewStudios,
-    setAllowNewStudios,
-}: {
-    maintenanceMode: boolean;
-    setMaintenanceMode: (value: boolean) => void;
-    allowNewStudios: boolean;
-    setAllowNewStudios: (value: boolean) => void;
-}) {
-    return (
-        <section className="rounded-2xl border border-red-500/20 bg-red-500/[0.03]">
-            <div className="border-b border-red-500/10 p-6">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-                        <AlertTriangle size={19} />
-                    </div>
-
-                    <div>
-                        <h2 className="font-semibold text-white">
-                            Danger Zone
-                        </h2>
-
-                        <p className="mt-1 text-sm text-zinc-500">
-                            Platform-level controls that can affect all studios.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="divide-y divide-red-500/10">
-                <ToggleRow
-                    icon={Wrench}
-                    title="Maintenance Mode"
-                    description="Temporarily prevent normal platform access."
-                    checked={maintenanceMode}
-                    onChange={setMaintenanceMode}
-                    danger
-                />
-
-                <ToggleRow
-                    icon={Users}
-                    title="Allow New Studio Registrations"
-                    description="Allow Super Admin to create and onboard new studios."
-                    checked={allowNewStudios}
-                    onChange={setAllowNewStudios}
-                    danger={!allowNewStudios}
-                />
-
-                <div className="p-5">
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-                        <p className="text-sm font-medium text-red-400">
-                            Destructive actions are disabled for now
-                        </p>
-
-                        <p className="mt-1 text-xs leading-5 text-zinc-500">
-                            Permanent platform deletion, database reset and bulk studio
-                            deletion will be connected later with additional confirmation
-                            and authentication.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Shared Components                                                          */
-/* -------------------------------------------------------------------------- */
-
-function Section({
-    icon: Icon,
-    title,
-    description,
-    children,
-}: {
-    icon: React.ElementType;
-    title: string;
-    description: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950">
-            <div className="border-b border-zinc-800 p-6">
-                <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-zinc-400">
-                        <Icon size={19} />
-                    </div>
-
-                    <div>
-                        <h2 className="font-semibold text-white">{title}</h2>
-
-                        <p className="mt-1 text-sm leading-6 text-zinc-500">
-                            {description}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="p-6">{children}</div>
-        </section>
-    );
-}
-
-function Input({
+function FormField({
     label,
     value,
     onChange,
     placeholder,
     type = "text",
+    icon,
+    disabled = false,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
-    placeholder?: string;
+    placeholder: string;
     type?: string;
+    icon?: React.ReactNode;
+    disabled?: boolean;
 }) {
     return (
-        <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
+        <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-300">
                 {label}
-            </span>
-
-            <input
-                type={type}
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                placeholder={placeholder}
-                className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-            />
-        </label>
-    );
-}
-
-function Textarea({
-    label,
-    value,
-    onChange,
-    placeholder,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    placeholder?: string;
-}) {
-    return (
-        <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
-                {label}
-            </span>
-
-            <textarea
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                placeholder={placeholder}
-                rows={4}
-                className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
-            />
-        </label>
-    );
-}
-
-function NumberInput({
-    label,
-    value,
-    suffix,
-    onChange,
-}: {
-    label: string;
-    value: string;
-    suffix?: string;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
-                {label}
-            </span>
+            </label>
 
             <div className="relative">
-                <input
-                    type="number"
-                    min="0"
-                    value={value}
-                    onChange={(event) => onChange(event.target.value)}
-                    className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 pr-20 text-sm text-white outline-none transition focus:border-zinc-600"
-                />
-
-                {suffix && (
-                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-zinc-600">
-                        {suffix}
+                {icon && (
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                        {icon}
                     </span>
                 )}
-            </div>
-        </label>
-    );
-}
 
-function SelectInput({
-    label,
-    value,
-    onChange,
-    options,
-    displayOptions,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    options: string[];
-    displayOptions?: Record<string, string>;
-}) {
-    return (
-        <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">
-                {label}
-            </span>
-
-            <select
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-sm text-white outline-none transition focus:border-zinc-600"
-            >
-                {options.map((option) => (
-                    <option key={option} value={option}>
-                        {displayOptions?.[option] ?? option}
-                    </option>
-                ))}
-            </select>
-        </label>
-    );
-}
-
-function ToggleRow({
-    icon: Icon,
-    title,
-    description,
-    checked,
-    onChange,
-    disabled = false,
-    danger = false,
-}: {
-    icon: React.ElementType;
-    title: string;
-    description: string;
-    checked: boolean;
-    onChange?: (value: boolean) => void;
-    disabled?: boolean;
-    danger?: boolean;
-}) {
-    return (
-        <div
-            className={`flex items-center justify-between gap-4 p-4 ${disabled ? "opacity-60" : ""
-                }`}
-        >
-            <div className="flex min-w-0 items-start gap-3">
-                <div
-                    className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${danger
-                            ? "bg-red-500/10 text-red-400"
-                            : "bg-zinc-900 text-zinc-500"
-                        }`}
-                >
-                    <Icon size={17} />
-                </div>
-
-                <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{title}</p>
-
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                        {description}
-                    </p>
-                </div>
-            </div>
-
-            <button
-                type="button"
-                disabled={disabled}
-                onClick={() => onChange?.(!checked)}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked
-                        ? danger
-                            ? "bg-red-500"
-                            : "bg-white"
-                        : "bg-zinc-800"
-                    } ${disabled ? "cursor-not-allowed" : ""}`}
-            >
-                <span
-                    className={`absolute top-1 h-4 w-4 rounded-full transition ${checked
-                            ? "left-6 bg-black"
-                            : "left-1 bg-zinc-500"
+                <input
+                    type={type}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    autoComplete="off"
+                    className={`w-full rounded-xl border border-zinc-700 bg-zinc-950 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/10 disabled:cursor-not-allowed disabled:opacity-60 ${icon ? "pl-10 pr-4" : "px-4"
                         }`}
                 />
-            </button>
-        </div>
-    );
-}
-
-function InfoRow({
-    title,
-    description,
-    value,
-}: {
-    title: string;
-    description: string;
-    value: string;
-}) {
-    return (
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="min-w-0">
-                <p className="text-sm font-medium text-white">{title}</p>
-
-                <p className="mt-1 text-xs text-zinc-500">{description}</p>
-            </div>
-
-            <span className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300">
-                {value}
-            </span>
-        </div>
-    );
-}
-
-function SecurityStatus({
-    title,
-    status,
-    icon: Icon,
-}: {
-    title: string;
-    status: string;
-    icon: React.ElementType;
-}) {
-    return (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400">
-                    <Icon size={17} />
-                </div>
-
-                <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{title}</p>
-
-                    <p className="mt-1 text-xs text-emerald-400">{status}</p>
-                </div>
             </div>
         </div>
     );
 }
-
-function ThresholdCard({
-    title,
-    value,
-    description,
-    type,
-}: {
-    title: string;
-    value: string;
-    description: string;
-    type: "warning" | "critical";
-}) {
-    return (
-        <div
-            className={`rounded-xl border p-4 ${type === "critical"
-                    ? "border-red-500/20 bg-red-500/5"
-                    : "border-yellow-500/20 bg-yellow-500/5"
-                }`}
-        >
-            <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white">{title}</p>
-
-                <span
-                    className={`text-lg font-bold ${type === "critical"
-                            ? "text-red-400"
-                            : "text-yellow-400"
-                        }`}
-                >
-                    {value}
-                </span>
-            </div>
-
-            <p className="mt-2 text-xs leading-5 text-zinc-500">
-                {description}
-            </p>
-        </div>
-    );
-}
-
-function PlanLimitCard({
-    title,
-    description,
-    storage,
-    events,
-    customers,
-    images,
-    onChange,
-    storageKey,
-    eventsKey,
-    customersKey,
-    imagesKey,
-}: {
-    title: string;
-    description: string;
-    storage: string;
-    events: string;
-    customers: string;
-    images: string;
-    onChange: (
-        key: keyof SettingsState,
-        value: string | boolean
-    ) => void;
-    storageKey: keyof SettingsState;
-    eventsKey: keyof SettingsState;
-    customersKey: keyof SettingsState;
-    imagesKey: keyof SettingsState;
-}) {
-    return (
-        <div className="mb-5 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-5 last:mb-0">
-            <div className="mb-5">
-                <h3 className="font-semibold text-white">{title}</h3>
-
-                <p className="mt-1 text-xs text-zinc-500">{description}</p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <NumberInput
-                    label="Storage"
-                    value={storage}
-                    suffix="GB"
-                    onChange={(value) => onChange(storageKey, value)}
-                />
-
-                <NumberInput
-                    label="Events"
-                    value={events}
-                    onChange={(value) => onChange(eventsKey, value)}
-                />
-
-                <NumberInput
-                    label="Customers"
-                    value={customers}
-                    onChange={(value) => onChange(customersKey, value)}
-                />
-
-                <NumberInput
-                    label="Images"
-                    value={images}
-                    onChange={(value) => onChange(imagesKey, value)}
-                />
-            </div>
-        </div>
-    );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Types                                                                      */
-/* -------------------------------------------------------------------------- */
-
-type SettingsState = {
-    platformName: string;
-    platformEmail: string;
-    supportEmail: string;
-    supportPhone: string;
-    website: string;
-    description: string;
-
-    basicStorage: string;
-    professionalStorage: string;
-    enterpriseStorage: string;
-
-    basicEvents: string;
-    professionalEvents: string;
-    enterpriseEvents: string;
-
-    basicCustomers: string;
-    professionalCustomers: string;
-    enterpriseCustomers: string;
-
-    basicImages: string;
-    professionalImages: string;
-    enterpriseImages: string;
-
-    storageProvider: string;
-    maxUploadSize: string;
-    allowedFormats: string;
-    warningThreshold: string;
-    criticalThreshold: string;
-
-    defaultGalleryMode: string;
-    commentsEnabled: boolean;
-    downloadsEnabled: boolean;
-    autoSaveSelections: boolean;
-    lightboxEnabled: boolean;
-
-    sessionTimeout: string;
-    accessCodeLength: string;
-    loginProtection: boolean;
-    twoFactorAuth: boolean;
-
-    newStudioNotification: boolean;
-    subscriptionExpiryNotification: boolean;
-    storageWarningNotification: boolean;
-    systemEmailNotifications: boolean;
-};
