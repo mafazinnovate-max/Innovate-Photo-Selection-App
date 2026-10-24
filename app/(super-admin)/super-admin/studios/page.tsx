@@ -2,6 +2,7 @@
 
 import {
     AlertCircle,
+    Ban,
     Building2,
     CalendarDays,
     CheckCircle2,
@@ -13,6 +14,7 @@ import {
     Eye,
     HardDrive,
     Mail,
+    MapPin,
     MoreHorizontal,
     Pencil,
     Phone,
@@ -24,15 +26,17 @@ import {
     XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type StudioStatus = "Active" | "Inactive" | "Expiring";
 
+type StudioStatus = "Active" | "Inactive" | "Expiring Soon";
 type Plan = "Basic" | "Professional" | "Enterprise";
 
 interface Studio {
-    id: number;
+    id: string;
     name: string;
+    logoUrl: string | null;
+    phone: string;
     shortName: string;
     adminName: string;
     adminEmail: string;
@@ -43,131 +47,53 @@ interface Studio {
     events: number;
     customers: number;
     images: number;
-    storageUsed: number;
+    storageUsed: number | null;
     storageLimit: number;
     subscriptionStart: string;
     subscriptionEnd: string;
     createdAt: string;
 }
 
-const studios: Studio[] = [
-    {
-        id: 1,
-        name: "Innovate Wedding",
-        shortName: "IW",
-        adminName: "Mafaz Malik",
-        adminEmail: "admin@innovatewedding.com",
-        adminPhone: "+91 98765 43210",
-        location: "Chennai, Tamil Nadu",
-        plan: "Professional",
-        status: "Active",
-        events: 42,
-        customers: 38,
-        images: 18450,
-        storageUsed: 68.4,
-        storageLimit: 100,
-        subscriptionStart: "01 Aug 2026",
-        subscriptionEnd: "31 Jul 2027",
-        createdAt: "01 Aug 2026",
-    },
-    {
-        id: 2,
-        name: "Moments Studio",
-        shortName: "MS",
-        adminName: "Rahul Kumar",
-        adminEmail: "admin@momentsstudio.com",
-        adminPhone: "+91 98765 12345",
-        location: "Coimbatore, Tamil Nadu",
-        plan: "Basic",
-        status: "Active",
-        events: 18,
-        customers: 16,
-        images: 7620,
-        storageUsed: 24.8,
-        storageLimit: 50,
-        subscriptionStart: "15 Jul 2026",
-        subscriptionEnd: "14 Jul 2027",
-        createdAt: "15 Jul 2026",
-    },
-    {
-        id: 3,
-        name: "Dream Frame Photography",
-        shortName: "DF",
-        adminName: "Arun Prakash",
-        adminEmail: "admin@dreamframe.com",
-        adminPhone: "+91 91234 56789",
-        location: "Madurai, Tamil Nadu",
-        plan: "Enterprise",
-        status: "Active",
-        events: 86,
-        customers: 79,
-        images: 48210,
-        storageUsed: 214.6,
-        storageLimit: 500,
-        subscriptionStart: "10 Jun 2026",
-        subscriptionEnd: "09 Jun 2027",
-        createdAt: "10 Jun 2026",
-    },
-    {
-        id: 4,
-        name: "Pixel Stories",
-        shortName: "PS",
-        adminName: "Vijay Raj",
-        adminEmail: "admin@pixelstories.com",
-        adminPhone: "+91 99887 66554",
-        location: "Bangalore, Karnataka",
-        plan: "Professional",
-        status: "Expiring",
-        events: 31,
-        customers: 28,
-        images: 12640,
-        storageUsed: 54.2,
-        storageLimit: 100,
-        subscriptionStart: "05 Oct 2025",
-        subscriptionEnd: "04 Oct 2026",
-        createdAt: "05 Oct 2025",
-    },
-    {
-        id: 5,
-        name: "Golden Moments",
-        shortName: "GM",
-        adminName: "Suresh Babu",
-        adminEmail: "admin@goldenmoments.com",
-        adminPhone: "+91 90000 11223",
-        location: "Salem, Tamil Nadu",
-        plan: "Basic",
-        status: "Inactive",
-        events: 7,
-        customers: 6,
-        images: 2480,
-        storageUsed: 8.2,
-        storageLimit: 50,
-        subscriptionStart: "01 Jan 2026",
-        subscriptionEnd: "31 Dec 2026",
-        createdAt: "01 Jan 2026",
-    },
-    {
-        id: 6,
-        name: "Forever Frames",
-        shortName: "FF",
-        adminName: "Karthik S",
-        adminEmail: "admin@foreverframes.com",
-        adminPhone: "+91 94444 77889",
-        location: "Trichy, Tamil Nadu",
-        plan: "Professional",
-        status: "Active",
-        events: 27,
-        customers: 24,
-        images: 10980,
-        storageUsed: 42.7,
-        storageLimit: 100,
-        subscriptionStart: "20 Aug 2026",
-        subscriptionEnd: "19 Aug 2027",
-        createdAt: "20 Aug 2026",
-    },
-];
+interface ApiStudio {
+    id: string;
+    name: string;
+    logoUrl?: string | null;
+    createdAt: string;
+    isActive: boolean;
+    email?: string | null;
+    phone?: string | null;
+    city?: string | null;
+    state?: string | null;
+    admins?: {
+        id: string;
+        username: string;
+        name?: string | null;
+        email?: string | null;
+        phone?: string | null;
+        createdAt: string;
+    }[];
+    subscriptions?: {
+        plan: string;
+        status: string;
+        startDate: string;
+        endDate: string | null;
+        storageLimitGb: number;
+    }[];
+    _count?: {
+        events: number;
+    };
+    metrics?: {
+        customers?: number;
+        images?: number;
+    };
+}
 
-const statusOptions = ["All Status", "Active", "Expiring", "Inactive"];
+const statusOptions = [
+    "All Status",
+    "Active",
+    "Expiring Soon",
+    "Inactive",
+];
 
 const planOptions = [
     "All Plans",
@@ -189,6 +115,69 @@ function getInitials(name: string) {
         .toUpperCase();
 }
 
+function formatDate(value: string) {
+    if (!value) {
+        return "—";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+
+function getStudioStatus(
+    isActive: boolean,
+    subscription?: ApiStudio["subscriptions"] extends (infer T)[] | undefined
+        ? T
+        : never
+): StudioStatus {
+    if (!isActive) return "Inactive";
+    if (!subscription) return "Active";
+
+    if (subscription.status.toLowerCase() !== "active") {
+        return "Inactive";
+    }
+
+    if (!subscription.endDate) return "Active";
+
+    const end = new Date(subscription.endDate);
+
+    if (Number.isNaN(end.getTime())) return "Active";
+
+    const now = new Date();
+
+    const today = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const endDay = new Date(
+        end.getFullYear(),
+        end.getMonth(),
+        end.getDate()
+    );
+
+    const remainingDays = Math.ceil(
+        (endDay.getTime() - today.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    if (remainingDays < 0) return "Inactive";
+    if (remainingDays <= 10) return "Expiring Soon";
+
+    return "Active";
+}
+
 function StatusBadge({ status }: { status: StudioStatus }) {
     if (status === "Active") {
         return (
@@ -199,11 +188,11 @@ function StatusBadge({ status }: { status: StudioStatus }) {
         );
     }
 
-    if (status === "Expiring") {
+    if (status === "Expiring Soon") {
         return (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-400">
                 <Clock3 size={13} />
-                Expiring
+                Expiring Soon
             </span>
         );
     }
@@ -225,22 +214,222 @@ function PlanBadge({ plan }: { plan: Plan }) {
 }
 
 export default function StudiosPage() {
+    const [studios, setStudios] = useState<Studio[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All Status");
     const [planFilter, setPlanFilter] = useState("All Plans");
-    const [openMenu, setOpenMenu] = useState<number | null>(null);
+
+    const [openMenu, setOpenMenu] = useState<string | null>(null);
+
     const router = useRouter();
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadStudios() {
+            try {
+                setIsLoading(true);
+                setLoadError("");
+
+                const response = await fetch(
+                    "/api/super-admin/studios",
+                    {
+                        method: "GET",
+                        cache: "no-store",
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message ||
+                        "Failed to fetch studios."
+                    );
+                }
+
+                if (!Array.isArray(data.studios)) {
+                    throw new Error(
+                        "Invalid studio data received."
+                    );
+                }
+
+                const mappedStudios: Studio[] = (
+                    data.studios as ApiStudio[]
+                ).map((studio) => {
+                    const firstAdmin = studio.admins?.[0];
+                    const subscription = studio.subscriptions?.[0];
+
+                    const validPlans: Plan[] = [
+                        "Basic",
+                        "Professional",
+                        "Enterprise",
+                    ];
+
+                    const plan: Plan = validPlans.includes(
+                        subscription?.plan as Plan
+                    )
+                        ? (subscription?.plan as Plan)
+                        : "Basic";
+
+                    const location = [
+                        studio.city,
+                        studio.state,
+                    ]
+                        .filter(Boolean)
+                        .join(", ");
+
+                    return {
+                        id: studio.id,
+                        name: studio.name,
+                        logoUrl: studio.logoUrl || null,
+                        shortName: getInitials(studio.name),
+                        phone: studio.phone || "—",
+
+                        adminName:
+                            firstAdmin?.name ||
+                            firstAdmin?.username ||
+                            "—",
+
+                        adminEmail: firstAdmin?.email || "—",
+                        adminPhone: firstAdmin?.phone || "—",
+
+                        location: location || "—",
+
+                        plan,
+
+                        status: getStudioStatus(
+                            studio.isActive,
+                            subscription
+                        ),
+
+                        events: studio._count?.events ?? 0,
+
+                        // No Customer model exists in the current Prisma schema.
+                        customers: studio.metrics?.customers ?? 0,
+
+                        images: studio.metrics?.images ?? 0,
+
+                        // Storage usage is not currently tracked in the schema.
+                        storageUsed: null,
+
+                        storageLimit: subscription?.storageLimitGb ?? 100,
+
+                        subscriptionStart: subscription?.startDate ?? "",
+                        subscriptionEnd: subscription?.endDate ?? "",
+
+                        createdAt: studio.createdAt,
+                    };
+                });
+
+                if (!cancelled) {
+                    setStudios(mappedStudios);
+                }
+            } catch (error) {
+                console.error(
+                    "Failed to load studios:",
+                    error
+                );
+
+                if (!cancelled) {
+                    setLoadError(
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to load studios."
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadStudios();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+
+    const handleToggleStatus = async (
+        studioId: string,
+        currentStatus: StudioStatus,
+        subscriptionEnd: string
+    ) => {
+        const nextStatus: StudioStatus =
+            currentStatus === "Inactive" ? "Active" : "Inactive";
+
+        try {
+            const response = await fetch(
+                `/api/super-admin/studios/${encodeURIComponent(studioId)}`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "set-status",
+                        isActive: nextStatus !== "Inactive",
+                    }),
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Failed to update studio status.");
+            }
+
+            let updatedStatus: StudioStatus = nextStatus;
+
+            if (nextStatus === "Active" && subscriptionEnd !== "—") {
+                const expiryDate = new Date(subscriptionEnd);
+                const today = new Date();
+                const daysLeft = Math.ceil(
+                    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                );
+
+                if (daysLeft >= 0 && daysLeft <= 10) {
+                    updatedStatus = "Expiring Soon";
+                }
+            }
+
+            setStudios((current) =>
+                current.map((item) =>
+                    item.id === studioId
+                        ? { ...item, status: updatedStatus }
+                        : item
+                )
+            );
+        } catch (err) {
+            window.alert(
+                err instanceof Error ? err.message : "Failed to update studio status."
+            );
+        }
+    };
 
     const filteredStudios = useMemo(() => {
         return studios.filter((studio) => {
-            const searchValue = search.toLowerCase().trim();
+            const searchValue =
+                search.toLowerCase().trim();
 
             const matchesSearch =
                 !searchValue ||
-                studio.name.toLowerCase().includes(searchValue) ||
-                studio.adminName.toLowerCase().includes(searchValue) ||
-                studio.adminEmail.toLowerCase().includes(searchValue) ||
-                studio.location.toLowerCase().includes(searchValue);
+                studio.name
+                    .toLowerCase()
+                    .includes(searchValue) ||
+                studio.adminName
+                    .toLowerCase()
+                    .includes(searchValue) ||
+                studio.adminEmail
+                    .toLowerCase()
+                    .includes(searchValue) ||
+                studio.location
+                    .toLowerCase()
+                    .includes(searchValue);
 
             const matchesStatus =
                 statusFilter === "All Status" ||
@@ -250,25 +439,32 @@ export default function StudiosPage() {
                 planFilter === "All Plans" ||
                 studio.plan === planFilter;
 
-            return matchesSearch && matchesStatus && matchesPlan;
+            return (
+                matchesSearch &&
+                matchesStatus &&
+                matchesPlan
+            );
         });
-    }, [search, statusFilter, planFilter]);
+    }, [
+        studios,
+        search,
+        statusFilter,
+        planFilter,
+    ]);
 
     const totalStudios = studios.length;
+
     const activeStudios = studios.filter(
         (studio) => studio.status === "Active"
     ).length;
+
     const expiringStudios = studios.filter(
-        (studio) => studio.status === "Expiring"
+        (studio) => studio.status === "Expiring Soon"
     ).length;
+
     const inactiveStudios = studios.filter(
         (studio) => studio.status === "Inactive"
     ).length;
-
-    const totalStorage = studios.reduce(
-        (total, studio) => total + studio.storageUsed,
-        0
-    );
 
     return (
         <div
@@ -289,7 +485,9 @@ export default function StudiosPage() {
                             </h1>
 
                             <p className="mt-1 text-sm text-zinc-400">
-                                Manage all studios registered on your platform.
+                                Manage all studios
+                                registered on your
+                                platform.
                             </p>
                         </div>
                     </div>
@@ -298,14 +496,47 @@ export default function StudiosPage() {
                 <button
                     onClick={(event) => {
                         event.stopPropagation();
-                        router.push("/super-admin/studios/new");
+                        router.push(
+                            "/super-admin/studios/new"
+                        );
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg transition hover:bg-zinc-200 cursor-pointer"
+                    className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg transition hover:bg-zinc-200"
                 >
                     <Plus size={17} />
                     Add Studio
                 </button>
             </div>
+
+            {/* Loading */}
+            {isLoading && (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+                    <p className="text-sm text-zinc-400">
+                        Loading studios from database...
+                    </p>
+                </div>
+            )}
+
+            {/* Error */}
+            {!isLoading && loadError && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-5">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle
+                            size={20}
+                            className="mt-0.5 shrink-0 text-red-400"
+                        />
+
+                        <div>
+                            <p className="font-medium text-red-300">
+                                Failed to load studios
+                            </p>
+
+                            <p className="mt-1 text-sm text-red-400">
+                                {loadError}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -322,7 +553,10 @@ export default function StudiosPage() {
                         </div>
 
                         <div className="rounded-lg bg-zinc-800 p-2.5">
-                            <Building2 size={20} className="text-zinc-300" />
+                            <Building2
+                                size={20}
+                                className="text-zinc-300"
+                            />
                         </div>
                     </div>
 
@@ -389,12 +623,23 @@ export default function StudiosPage() {
                             </p>
 
                             <p className="mt-2 text-2xl font-semibold text-white">
-                                {totalStorage.toFixed(1)} GB
+                                {studios.some((studio) => studio.storageUsed !== null)
+                                    ? `${studios
+                                        .reduce(
+                                            (total, studio) =>
+                                                total + (studio.storageUsed ?? 0),
+                                            0
+                                        )
+                                        .toFixed(1)} GB`
+                                    : "Not tracked"}
                             </p>
                         </div>
 
                         <div className="rounded-lg bg-zinc-800 p-2.5">
-                            <HardDrive size={20} className="text-zinc-300" />
+                            <HardDrive
+                                size={20}
+                                className="text-zinc-300"
+                            />
                         </div>
                     </div>
 
@@ -418,7 +663,9 @@ export default function StudiosPage() {
                             type="text"
                             value={search}
                             onChange={(event) =>
-                                setSearch(event.target.value)
+                                setSearch(
+                                    event.target.value
+                                )
                             }
                             placeholder="Search by studio, admin, email or location..."
                             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
@@ -430,13 +677,21 @@ export default function StudiosPage() {
                         <select
                             value={statusFilter}
                             onChange={(event) =>
-                                setStatusFilter(event.target.value)
+                                setStatusFilter(
+                                    event.target.value
+                                )
                             }
                             className="w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 pr-10 text-sm text-zinc-300 outline-none focus:border-zinc-600 xl:w-44"
                         >
-                            {statusOptions.map((option) => (
-                                <option key={option}>{option}</option>
-                            ))}
+                            {statusOptions.map(
+                                (option) => (
+                                    <option
+                                        key={option}
+                                    >
+                                        {option}
+                                    </option>
+                                )
+                            )}
                         </select>
 
                         <ChevronDown
@@ -450,13 +705,21 @@ export default function StudiosPage() {
                         <select
                             value={planFilter}
                             onChange={(event) =>
-                                setPlanFilter(event.target.value)
+                                setPlanFilter(
+                                    event.target.value
+                                )
                             }
                             className="w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 pr-10 text-sm text-zinc-300 outline-none focus:border-zinc-600 xl:w-48"
                         >
-                            {planOptions.map((option) => (
-                                <option key={option}>{option}</option>
-                            ))}
+                            {planOptions.map(
+                                (option) => (
+                                    <option
+                                        key={option}
+                                    >
+                                        {option}
+                                    </option>
+                                )
+                            )}
                         </select>
 
                         <ChevronDown
@@ -476,15 +739,19 @@ export default function StudiosPage() {
                         </h2>
 
                         <p className="mt-1 text-sm text-zinc-500">
-                            Showing {filteredStudios.length} of {totalStudios}{" "}
-                            studios
+                            Showing{" "}
+                            {filteredStudios.length}{" "}
+                            of {totalStudios} studios
                         </p>
                     </div>
 
                     {inactiveStudios > 0 && (
                         <div className="text-xs text-zinc-500">
-                            {inactiveStudios} inactive account
-                            {inactiveStudios !== 1 ? "s" : ""}
+                            {inactiveStudios} inactive
+                            account
+                            {inactiveStudios !== 1
+                                ? "s"
+                                : ""}
                         </div>
                     )}
                 </div>
@@ -525,76 +792,438 @@ export default function StudiosPage() {
                         </thead>
 
                         <tbody>
-                            {filteredStudios.map((studio) => {
-                                const storagePercentage =
-                                    (studio.storageUsed / studio.storageLimit) *
-                                    100;
+                            {filteredStudios.map(
+                                (studio) => {
+                                    const storagePercentage =
+                                        studio.storageUsed !== null &&
+                                            studio.storageLimit > 0
+                                            ? (studio.storageUsed / studio.storageLimit) * 100
+                                            : null;
 
-                                return (
-                                    <tr
-                                        key={studio.id}
-                                        className="border-b border-zinc-800/70 transition hover:bg-zinc-900"
-                                    >
-                                        {/* Studio */}
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
-                                                    {getInitials(studio.name)}
+                                    return (
+                                        <tr
+                                            key={
+                                                studio.id
+                                            }
+                                            className="border-b border-zinc-800/70 transition hover:bg-zinc-900"
+                                        >
+                                            {/* Studio */}
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
+                                                        <img
+                                                            src={studio.logoUrl || ""}
+                                                            alt={`${studio.name} logo`}
+                                                            className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
+                                                                }`}
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = "none";
+                                                                const fallback = e.currentTarget.nextElementSibling;
+                                                                if (fallback) {
+                                                                    fallback.classList.remove("hidden");
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        <span className={studio.logoUrl ? "hidden" : ""}>
+                                                            {getInitials(
+                                                                studio.name
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-white">
+                                                            {
+                                                                studio.name
+                                                            }
+                                                        </p>
+                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                            <Phone
+                                                                size={
+                                                                    12
+                                                                }
+                                                            />
+                                                            {
+                                                                studio.phone
+                                                            }
+                                                        </div>
+                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                            <MapPin
+                                                                size={
+                                                                    12
+                                                                }
+                                                            />
+                                                            {
+                                                                studio.location
+                                                            }
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                            </td>
 
-                                                <div>
-                                                    <p className="font-medium text-white">
-                                                        {studio.name}
-                                                    </p>
+                                            {/* Admin */}
+                                            <td className="px-6 py-5">
+                                                <p className="text-sm font-medium text-zinc-200">
+                                                    {
+                                                        studio.adminName
+                                                    }
+                                                </p>
 
-                                                    <p className="mt-1 text-xs text-zinc-500">
-                                                        {studio.location}
-                                                    </p>
+                                                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                    <Phone
+                                                        size={
+                                                            12
+                                                        }
+                                                    />
+
+                                                    {
+                                                        studio.adminPhone
+                                                    }
                                                 </div>
+                                                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                    <Mail
+                                                        size={
+                                                            12
+                                                        }
+                                                    />
+
+                                                    {
+                                                        studio.adminEmail
+                                                    }
+                                                </div>
+                                            </td>
+
+                                            {/* Activity */}
+                                            <td className="px-6 py-5">
+                                                <div className="space-y-1.5 text-xs w-20">
+                                                    <div className="flex items-center gap-2 text-zinc-400">
+                                                        <CalendarDays
+                                                            size={
+                                                                13
+                                                            }
+                                                        />
+
+                                                        {
+                                                            studio.events
+                                                        }{" "}
+                                                        events
+                                                    </div>
+
+                                                    {/* <div className="flex items-center gap-2 text-zinc-500">
+                                                        <Users
+                                                            size={
+                                                                13
+                                                            }
+                                                        />
+
+                                                        {
+                                                            studio.customers
+                                                        }{" "}
+                                                        customers
+                                                    </div> */}
+                                                </div>
+                                            </td>
+
+                                            {/* Storage */}
+                                            <td className="px-6 py-5">
+                                                <div className="w-36">
+                                                    <div className="mb-2 flex items-center justify-between text-xs">
+                                                        <span className="text-zinc-300">
+                                                            {studio.storageLimit >
+                                                                0
+                                                                ? `${studio.storageUsed} GB`
+                                                                : "—"}
+                                                        </span>
+
+                                                        <span className="text-zinc-600">
+                                                            {studio.storageLimit >
+                                                                0
+                                                                ? `${studio.storageLimit} GB`
+                                                                : "—"}
+                                                        </span>
+                                                    </div>
+
+                                                    {storagePercentage !== null && (
+                                                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                                            <div
+                                                                className={`h-full rounded-full ${storagePercentage >= 90
+                                                                    ? "bg-red-400"
+                                                                    : storagePercentage >= 75
+                                                                        ? "bg-amber-400"
+                                                                        : "bg-white"
+                                                                    }`}
+                                                                style={{
+                                                                    width: `${Math.min(storagePercentage, 100)}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Subscription */}
+                                            <td className="px-6 py-5">
+                                                <PlanBadge
+                                                    plan={
+                                                        studio.plan
+                                                    }
+                                                />
+
+                                                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                    <Clock3
+                                                        size={
+                                                            12
+                                                        }
+                                                    />
+
+                                                    Until{" "}
+                                                    {studio.subscriptionEnd &&
+                                                        studio.subscriptionEnd !== "—"
+                                                        ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })
+                                                        : "—"}
+                                                </div>
+                                            </td>
+
+                                            {/* Status */}
+                                            <td className="px-6 py-5">
+                                                <StatusBadge
+                                                    status={
+                                                        studio.status
+                                                    }
+                                                />
+                                            </td>
+
+                                            {/* Action */}
+                                            <td className="relative px-6 py-5 text-right">
+                                                <button
+                                                    onClick={(
+                                                        event
+                                                    ) => {
+                                                        event.stopPropagation();
+
+                                                        setOpenMenu(
+                                                            openMenu ===
+                                                                studio.id
+                                                                ? null
+                                                                : studio.id
+                                                        );
+                                                    }}
+                                                    className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+                                                >
+                                                    <MoreHorizontal
+                                                        size={
+                                                            18
+                                                        }
+                                                    />
+                                                </button>
+
+                                                {openMenu ===
+                                                    studio.id && (
+                                                        <div
+                                                            onClick={(
+                                                                event
+                                                            ) => {
+                                                                event.stopPropagation()
+                                                                setOpenMenu(
+                                                                    openMenu ===
+                                                                        studio.id
+                                                                        ? null
+                                                                        : studio.id
+                                                                );
+                                                            }}
+                                                            className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
+                                                        >
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push(
+                                                                        `/super-admin/studios/${studio.id}`
+                                                                    );
+                                                                }}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                <Eye
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                View Studio
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push(
+                                                                        `/super-admin/studios/${studio.id}/edit`
+                                                                    );
+                                                                }}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                <Pencil
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                Edit Studio
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleStatus(studio.id, studio.status, studio.subscriptionEnd)}
+                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                            >
+                                                                {studio.status === "Inactive" ? (
+                                                                    <>
+                                                                        <CheckCircle2 size={15} />
+                                                                        Activate
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <XCircle size={15} />
+                                                                        Deactivate
+                                                                    </>
+                                                                )}
+                                                            </button>
+
+
+                                                            {/* <div className="my-1 border-t border-zinc-800" /> */}
+                                                        </div>
+                                                    )}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile / Tablet Cards */}
+                <div className="divide-y divide-zinc-800 lg:hidden">
+                    {filteredStudios.map(
+                        (studio) => {
+                            const storagePercentage =
+                                studio.storageUsed !== null &&
+                                    studio.storageLimit > 0
+                                    ? (studio.storageUsed / studio.storageLimit) * 100
+                                    : null;
+
+                            return (
+                                <div
+                                    key={studio.id}
+                                    className="p-5"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
+                                                {getInitials(
+                                                    studio.name
+                                                )}
                                             </div>
-                                        </td>
 
-                                        {/* Admin */}
-                                        <td className="px-6 py-5">
-                                            <p className="text-sm font-medium text-zinc-200">
-                                                {studio.adminName}
+                                            <div>
+                                                <p className="font-medium text-white">
+                                                    {
+                                                        studio.name
+                                                    }
+                                                </p>
+
+                                                <p className="mt-1 text-xs text-zinc-500">
+                                                    {
+                                                        studio.location
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <StatusBadge
+                                            status={
+                                                studio.status
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <p className="text-xs text-zinc-500">
+                                                Admin
                                             </p>
 
-                                            <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                <Mail size={12} />
-                                                {studio.adminEmail}
+                                            <p className="mt-1 text-sm text-zinc-300">
+                                                {
+                                                    studio.adminName
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 break-all text-xs text-zinc-500">
+                                                {
+                                                    studio.adminEmail
+                                                }
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-zinc-500">
+                                                Subscription
+                                            </p>
+
+                                            <div className="mt-1">
+                                                <PlanBadge
+                                                    plan={
+                                                        studio.plan
+                                                    }
+                                                />
                                             </div>
-                                        </td>
 
-                                        {/* Activity */}
-                                        <td className="px-6 py-5">
-                                            <div className="space-y-1.5 text-xs">
-                                                <div className="flex items-center gap-2 text-zinc-400">
-                                                    <CalendarDays size={13} />
-                                                    {studio.events} events
-                                                </div>
+                                            <p className="mt-1 text-xs text-zinc-500">
+                                                Until{" "}
+                                                {studio.subscriptionEnd &&
+                                                    studio.subscriptionEnd !== "—"
+                                                    ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    })
+                                                    : "—"}
+                                            </p>
+                                        </div>
 
-                                                <div className="flex items-center gap-2 text-zinc-500">
-                                                    <Users size={13} />
-                                                    {studio.customers} customers
-                                                </div>
-                                            </div>
-                                        </td>
+                                        <div>
+                                            <p className="text-xs text-zinc-500">
+                                                Activity
+                                            </p>
 
-                                        {/* Storage */}
-                                        <td className="px-6 py-5">
-                                            <div className="w-36">
-                                                <div className="mb-2 flex items-center justify-between text-xs">
-                                                    <span className="text-zinc-300">
-                                                        {studio.storageUsed} GB
-                                                    </span>
+                                            <p className="mt-1 text-sm text-zinc-300">
+                                                {
+                                                    studio.events
+                                                }{" "}
+                                                events
+                                            </p>
 
-                                                    <span className="text-zinc-600">
-                                                        {studio.storageLimit} GB
-                                                    </span>
-                                                </div>
+                                            <p className="mt-1 text-xs text-zinc-500">
+                                                {
+                                                    studio.customers
+                                                }{" "}
+                                                customers
+                                            </p>
+                                        </div>
 
-                                                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                        <div>
+                                            <p className="text-xs text-zinc-500">
+                                                Storage
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-zinc-300">
+                                                {studio.storageLimit >
+                                                    0
+                                                    ? `${studio.storageUsed} GB / ${studio.storageLimit} GB`
+                                                    : "—"}
+                                            </p>
+
+                                            {storagePercentage !== null && (
+                                                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
                                                     <div
                                                         className={`h-full rounded-full ${storagePercentage >= 90
                                                             ? "bg-red-400"
@@ -603,249 +1232,102 @@ export default function StudiosPage() {
                                                                 : "bg-white"
                                                             }`}
                                                         style={{
-                                                            width: `${Math.min(
-                                                                storagePercentage,
-                                                                100
-                                                            )}%`,
+                                                            width: `${Math.min(storagePercentage, 100)}%`,
                                                         }}
                                                     />
                                                 </div>
-                                            </div>
-                                        </td>
-
-                                        {/* Subscription */}
-                                        <td className="px-6 py-5">
-                                            <PlanBadge plan={studio.plan} />
-
-                                            <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                <Clock3 size={12} />
-                                                Until {studio.subscriptionEnd}
-                                            </div>
-                                        </td>
-
-                                        {/* Status */}
-                                        <td className="px-6 py-5">
-                                            <StatusBadge status={studio.status} />
-                                        </td>
-
-                                        {/* Action */}
-                                        <td className="relative px-6 py-5 text-right">
-                                            <button
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setOpenMenu(
-                                                        openMenu === studio.id
-                                                            ? null
-                                                            : studio.id
-                                                    );
-                                                }}
-                                                className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
-                                            >
-                                                <MoreHorizontal size={18} />
-                                            </button>
-
-                                            {openMenu === studio.id && (
-                                                <div
-                                                    onClick={(event) =>
-                                                        event.stopPropagation()
-                                                    }
-                                                    className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
-                                                >
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                                                        <Eye size={15} />
-                                                        View Studio
-                                                    </button>
-
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                                                        <Pencil size={15} />
-                                                        Edit Studio
-                                                    </button>
-
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">
-                                                        {studio.status === "Inactive" ? (
-                                                            <>
-                                                                <CheckCircle2 size={15} />
-                                                                Activate
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <XCircle size={15} />
-                                                                Deactivate
-                                                            </>
-                                                        )}
-                                                    </button>
-
-                                                    <div className="my-1 border-t border-zinc-800" />
-
-                                                    <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10">
-                                                        <Trash2 size={15} />
-                                                        Delete Studio
-                                                    </button>
-                                                </div>
                                             )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile / Tablet Cards */}
-                <div className="divide-y divide-zinc-800 lg:hidden">
-                    {filteredStudios.map((studio) => {
-                        const storagePercentage =
-                            (studio.storageUsed / studio.storageLimit) * 100;
-
-                        return (
-                            <div
-                                key={studio.id}
-                                className="p-5"
-                            >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
-                                            {getInitials(studio.name)}
-                                        </div>
-
-                                        <div>
-                                            <p className="font-medium text-white">
-                                                {studio.name}
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-zinc-500">
-                                                {studio.location}
-                                            </p>
                                         </div>
                                     </div>
 
-                                    <StatusBadge status={studio.status} />
-                                </div>
-
-                                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <p className="text-xs text-zinc-500">
-                                            Admin
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-zinc-300">
-                                            {studio.adminName}
-                                        </p>
-
-                                        <p className="mt-1 break-all text-xs text-zinc-500">
-                                            {studio.adminEmail}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs text-zinc-500">
-                                            Subscription
-                                        </p>
-
-                                        <div className="mt-1">
-                                            <PlanBadge plan={studio.plan} />
-                                        </div>
-
-                                        <p className="mt-1 text-xs text-zinc-500">
-                                            Until {studio.subscriptionEnd}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs text-zinc-500">
-                                            Activity
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-zinc-300">
-                                            {studio.events} events
-                                        </p>
-
-                                        <p className="mt-1 text-xs text-zinc-500">
-                                            {studio.customers} customers
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs text-zinc-500">
-                                            Storage
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-zinc-300">
-                                            {studio.storageUsed} GB /{" "}
-                                            {studio.storageLimit} GB
-                                        </p>
-
-                                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                                            <div
-                                                className={`h-full rounded-full ${storagePercentage >= 90
-                                                    ? "bg-red-400"
-                                                    : storagePercentage >= 75
-                                                        ? "bg-amber-400"
-                                                        : "bg-white"
-                                                    }`}
-                                                style={{
-                                                    width: `${Math.min(
-                                                        storagePercentage,
-                                                        100
-                                                    )}%`,
-                                                }}
+                                    <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
+                                        <button
+                                            onClick={() =>
+                                                router.push(
+                                                    `/super-admin/studios/${studio.id}`
+                                                )
+                                            }
+                                            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                                        >
+                                            <Eye
+                                                size={
+                                                    14
+                                                }
                                             />
-                                        </div>
+                                            View
+                                        </button>
+
+                                        <button
+                                            onClick={() =>
+                                                router.push(
+                                                    `/super-admin/studios/${studio.id}/edit`
+                                                )
+                                            }
+                                            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                                        >
+                                            <Pencil
+                                                size={
+                                                    14
+                                                }
+                                            />
+                                            Edit
+                                        </button>
+
+                                        <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
+                                            {studio.status ===
+                                                "Inactive" ? (
+                                                <>
+                                                    <CheckCircle2
+                                                        size={
+                                                            14
+                                                        }
+                                                    />
+                                                    Activate
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <XCircle
+                                                        size={
+                                                            14
+                                                        }
+                                                    />
+                                                    Deactivate
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
-                                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
-                                        <Eye size={14} />
-                                        View
-                                    </button>
-
-                                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
-                                        <Pencil size={14} />
-                                        Edit
-                                    </button>
-
-                                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
-                                        {studio.status === "Inactive" ? (
-                                            <>
-                                                <CheckCircle2 size={14} />
-                                                Activate
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle size={14} />
-                                                Deactivate
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        }
+                    )}
                 </div>
 
                 {/* No Results */}
-                {filteredStudios.length === 0 && (
-                    <div className="flex min-h-80 items-center justify-center px-6">
-                        <div className="max-w-sm text-center">
-                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800">
-                                <Building2
-                                    size={23}
-                                    className="text-zinc-500"
-                                />
+                {!isLoading &&
+                    filteredStudios.length === 0 && (
+                        <div className="flex min-h-80 items-center justify-center px-6">
+                            <div className="max-w-sm text-center">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800">
+                                    <Building2
+                                        size={23}
+                                        className="text-zinc-500"
+                                    />
+                                </div>
+
+                                <h3 className="mt-4 text-sm font-semibold text-zinc-200">
+                                    No studios found
+                                </h3>
+
+                                <p className="mt-2 text-sm text-zinc-500">
+                                    Try changing your
+                                    search or filters
+                                    to find the studio
+                                    you are looking
+                                    for.
+                                </p>
                             </div>
-
-                            <h3 className="mt-4 text-sm font-semibold text-zinc-200">
-                                No studios found
-                            </h3>
-
-                            <p className="mt-2 text-sm text-zinc-500">
-                                Try changing your search or filters to find
-                                the studio you are looking for.
-                            </p>
                         </div>
-                    </div>
-                )}
+                    )}
 
                 {/* Pagination */}
                 {filteredStudios.length > 0 && (
@@ -853,11 +1335,16 @@ export default function StudiosPage() {
                         <p className="text-xs text-zinc-500">
                             Showing{" "}
                             <span className="text-zinc-300">
-                                1–{filteredStudios.length}
+                                1–
+                                {
+                                    filteredStudios.length
+                                }
                             </span>{" "}
                             of{" "}
                             <span className="text-zinc-300">
-                                {filteredStudios.length}
+                                {
+                                    filteredStudios.length
+                                }
                             </span>{" "}
                             studios
                         </p>
@@ -867,7 +1354,9 @@ export default function StudiosPage() {
                                 disabled
                                 className="rounded-lg border border-zinc-800 p-2 text-zinc-600 disabled:cursor-not-allowed"
                             >
-                                <ChevronLeft size={16} />
+                                <ChevronLeft
+                                    size={16}
+                                />
                             </button>
 
                             <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-white px-2 text-xs font-medium text-black">
@@ -878,7 +1367,9 @@ export default function StudiosPage() {
                                 disabled
                                 className="rounded-lg border border-zinc-800 p-2 text-zinc-600 disabled:cursor-not-allowed"
                             >
-                                <ChevronRight size={16} />
+                                <ChevronRight
+                                    size={16}
+                                />
                             </button>
                         </div>
                     </div>
@@ -898,12 +1389,16 @@ export default function StudiosPage() {
 
                         <div>
                             <p className="text-sm font-medium text-zinc-300">
-                                Subscription Management
+                                Subscription
+                                Management
                             </p>
 
                             <p className="mt-1 text-xs text-zinc-500">
-                                Plans and billing will be managed from the
-                                subscription module.
+                                Plans and billing
+                                will be managed
+                                from the
+                                subscription
+                                module.
                             </p>
                         </div>
                     </div>
@@ -920,12 +1415,17 @@ export default function StudiosPage() {
 
                         <div>
                             <p className="text-sm font-medium text-zinc-300">
-                                Storage Monitoring
+                                Storage
+                                Monitoring
                             </p>
 
                             <p className="mt-1 text-xs text-zinc-500">
-                                Storage usage will be calculated from the
-                                connected file storage provider.
+                                Storage usage
+                                will be
+                                calculated from
+                                the connected
+                                file storage
+                                provider.
                             </p>
                         </div>
                     </div>
@@ -946,8 +1446,10 @@ export default function StudiosPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-zinc-500">
-                                Activate or deactivate studio access when
-                                required.
+                                Activate or
+                                deactivate
+                                studio access
+                                when required.
                             </p>
                         </div>
                     </div>

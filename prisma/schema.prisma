@@ -23,43 +23,44 @@ model Event {
   phoneNumber        String?
   email              String?
   galleryMode        String    @default("single")
-  folders            Folder[]
-
-  // Used only when galleryMode = "single"
   maxSelections      Int?
+  accessCodeVersion  Int       @default(1)
+  studioId           String?
+  deletedAt          DateTime?
 
-  galleryAccesses   GalleryAccess[]
-  accessCodeVersion Int             @default(1)
+  studio          Studio?         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  folders         Folder[]
+  galleryAccesses GalleryAccess[]
 }
 
 model Folder {
-  id        String   @id @default(cuid())
-  name      String
-  eventId   String
-  createdAt DateTime @default(now())
-  type      String   @default("general")
-  parentId  String?
+  id              String                @id @default(cuid())
+  name            String
+  eventId         String
+  createdAt       DateTime              @default(now())
+  type            String                @default("general")
+  parentId        String?
+  maxSelections   Int?
+  selectionStatus FolderSelectionStatus @default(SELECTING)
 
-  // Used only when galleryMode = "bride_groom"
-  maxSelections Int?
-
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  images    Image[]
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  images Image[]
 }
 
 model Image {
-  id             String      @id @default(cuid())
+  id             String   @id @default(cuid())
   imageUrl       String
   publicId       String?
   folderId       String
-  isSelected     Boolean     @default(false)
+  isSelected     Boolean  @default(false)
   selectionOrder Int?
-  status         Boolean     @default(false)
+  status         Boolean  @default(false)
   comment        String?
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime @default(now())
   fileName       String?
-  folder         Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  selections     Selection[]
+
+  folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  selections Selection[]
 }
 
 model Selection {
@@ -67,16 +68,113 @@ model Selection {
   imageId   String
   comment   String?
   createdAt DateTime @default(now())
-  image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
 }
 
 model GalleryAccess {
-  id String @id @default(cuid())
-  eventId String
-  parentId String?
-  deviceId String
-  accessVersion Int @default(1)
-  createdAt DateTime @default(now())
- event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id            String   @id
+  eventId       String
+  parentId      String?
+  deviceId      String
+  accessVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, parentId, deviceId, accessVersion])
+}
+
+model Studio {
+  id            String   @id @default(cuid())
+  name          String
+  createdAt     DateTime @default(now())
+  logoUrl       String?
+  logoZoom      Float    @default(1)
+  logoPositionX Float    @default(0)
+  logoPositionY Float    @default(0)
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  country       String   @default("India")
+  website       String?
+  description   String?
+  internalNotes String?
+  isActive      Boolean  @default(true)
+
+  admins       Admin[]
+  events       Event[]
+  Subscription Subscription[]
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  name     String?
+  email    String?
+  phone    String?
+  studioId String
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  authSecret AuthSecret?
+}
+
+model SuperAdmin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name               String?
+  email              String?   @unique
+  logoUrl            String?
+  passwordUpdatedAt  DateTime?
+  passwordResetToken String?   @unique
+  passwordResetExpiry DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  authSecret AuthSecret?
+}
+
+model AuthSecret {
+  id           String      @id @default(cuid())
+  secret       String      @unique
+  createdAt    DateTime    @default(now())
+
+  adminId      String?     @unique
+  superAdminId String?     @unique
+
+  admin        Admin?      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id             String    @id
+  plan           String    @default("Basic")
+  status         String    @default("Active")
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  storageLimitGb Int       @default(100)
+  maxEvents      Int       @default(50)
+  maxCustomers   Int       @default(500)
+  maxImages      Int       @default(100000)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  studioId       String
+
+  Studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+enum FolderSelectionStatus {
+  SELECTING
+  COMPLETED
 }

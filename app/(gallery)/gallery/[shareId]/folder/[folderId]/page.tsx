@@ -1,8 +1,13 @@
 import ClientFolderPage from "@/components/gallery/client-folder-page";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import { hasGalleryAccess } from "@/lib/gallery-access";
-
 import { prisma } from "@/lib/prisma";
+
+interface SelectionCategory {
+  folderId: string;
+  folderName: string;
+  selectedCount: number;
+}
 
 interface FolderPageProps {
   params: Promise<{
@@ -11,53 +16,52 @@ interface FolderPageProps {
   }>;
 }
 
-export default async function FolderPage({ params }: FolderPageProps) {
+export default async function FolderPage({
+  params,
+}: FolderPageProps) {
   const { shareId, folderId } = await params;
+
   const hasAccess = await hasGalleryAccess(shareId);
+
   if (!hasAccess) {
-    return (
-      <GalleryAccessModal
-        shareId={shareId}
-      />
-    );
+    return <GalleryAccessModal shareId={shareId} />;
   }
 
-  // const folder = await prisma.folder.findUnique({
-  //   where: {
-  //     id: folderId,
-  //   },
-  //   select: {
-  //     id: true,
-  //     name: true,
-  //     images: {
-  //       select: {
-  //         id: true,
-  //         imageUrl: true,
-  //         fileName: true,
-  //         isSelected: true,
-  //         comment: true,
-  //       },
-  //       orderBy: {
-  //         createdAt: "desc",
-  //       },
-  //     },
-  //   },
-  // });
-
-  const folder = await prisma.folder.findUnique({
+  const folder = await prisma.folder.findFirst({
     where: {
       id: folderId,
+      event: {
+        shareId: shareId,
+      },
     },
     select: {
       id: true,
       name: true,
+      eventId: true,
       parentId: true,
+      selectionStatus: true,
+
       event: {
         select: {
           galleryMode: true,
           maxSelections: true,
+
+          studio: {
+            select: {
+              name: true,
+              logoUrl: true,
+              logoZoom: true,
+              logoPositionX: true,
+              logoPositionY: true,
+              phone: true,
+              address: true,
+              city: true,
+              state: true,
+            },
+          },
         },
       },
+
       images: {
         select: {
           id: true,
@@ -73,14 +77,19 @@ export default async function FolderPage({ params }: FolderPageProps) {
     },
   });
 
+  if (!folder) {
+    return <div>Folder not found</div>;
+  }
+
   let maxSelections: number | null = null;
 
-  if (folder?.event.galleryMode === "single") {
+  if (folder.event.galleryMode === "single") {
     maxSelections = folder.event.maxSelections;
-  } else if (folder?.parentId) {
-    const parentFolder = await prisma.folder.findUnique({
+  } else if (folder.parentId) {
+    const parentFolder = await prisma.folder.findFirst({
       where: {
         id: folder.parentId,
+        eventId: folder.eventId,
       },
       select: {
         maxSelections: true,
@@ -90,9 +99,61 @@ export default async function FolderPage({ params }: FolderPageProps) {
     maxSelections = parentFolder?.maxSelections ?? null;
   }
 
-  if (!folder) {
-    return <div>Folder not found</div>;
-  }
+  /*
+   * Selection Summary
+   *
+   * SINGLE MODE:
+   * Only the currently opened folder is included.
+   *
+   * BRIDE & GROOM MODE:
+   * Only the child folders belonging to the
+   * currently opened folder's parent are included.
+   */
+
+  const categoryFolders =
+    folder.event.galleryMode === "bride_groom" && folder.parentId
+      ? await prisma.folder.findMany({
+          where: {
+            eventId: folder.eventId,
+            parentId: folder.parentId,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        })
+      : await prisma.folder.findMany({
+          where: {
+            id: folder.id,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+  const selectionSummary: SelectionCategory[] =
+    categoryFolders.map((category) => ({
+      folderId: category.id,
+      folderName: category.name,
+      selectedCount: category.images.length,
+    }));
 
   return (
     <ClientFolderPage
@@ -102,6 +163,9 @@ export default async function FolderPage({ params }: FolderPageProps) {
       shareId={shareId}
       maxSelections={maxSelections}
       parentId={folder.parentId}
+      selectionSummary={selectionSummary}
+      selectionStatus={folder.selectionStatus}
+      studio={folder.event.studio}
     />
   );
 }
