@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
     Building2,
     CalendarDays,
@@ -5,34 +8,110 @@ import {
     Users,
 } from "lucide-react";
 
-const stats = [
-    {
-        title: "Total Studios",
-        value: "0",
-        description: "Registered studios",
-        icon: Building2,
-    },
-    {
-        title: "Active Studios",
-        value: "0",
-        description: "Currently active",
-        icon: Users,
-    },
-    {
-        title: "Total Events",
-        value: "0",
-        description: "Across all studios",
-        icon: CalendarDays,
-    },
-    {
-        title: "Storage Used",
-        value: "0 GB",
-        description: "Total storage usage",
-        icon: HardDrive,
-    },
-];
+interface ApiStudio {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    createdAt: string;
+    isActive: boolean;
+    _count?: {
+        events: number;
+    };
+}
+
+interface DashboardStats {
+    totalStudios: number;
+    activeStudios: number;
+    totalEvents: number;
+}
 
 export default function SuperAdminDashboardPage() {
+    const [studios, setStudios] = useState<ApiStudio[]>([]);
+    const [stats, setStats] = useState<DashboardStats>({
+        totalStudios: 0,
+        activeStudios: 0,
+        totalEvents: 0,
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const response = await fetch("/api/super-admin/studios", {
+                    method: "GET",
+                    cache: "no-store",
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.message || "Failed to load dashboard data."
+                    );
+                }
+
+                const studioList: ApiStudio[] = data.studios ?? [];
+
+                setStudios(studioList);
+
+                setStats({
+                    totalStudios: studioList.length,
+                    activeStudios: studioList.filter(
+                        (studio) => studio.isActive
+                    ).length,
+                    totalEvents: studioList.reduce(
+                        (total, studio) =>
+                            total + (studio._count?.events ?? 0),
+                        0
+                    ),
+                });
+            } catch (err) {
+                console.error("Dashboard loading error:", err);
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to load dashboard data."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDashboard();
+    }, []);
+
+    const cards = [
+        {
+            title: "Total Studios",
+            value: stats.totalStudios.toLocaleString(),
+            description: "Registered studios",
+            icon: Building2,
+        },
+        {
+            title: "Active Studios",
+            value: stats.activeStudios.toLocaleString(),
+            description: "Currently active",
+            icon: Users,
+        },
+        {
+            title: "Total Events",
+            value: stats.totalEvents.toLocaleString(),
+            description: "Across all studios",
+            icon: CalendarDays,
+        },
+        {
+            title: "Storage Used",
+            value: "Not tracked",
+            description: "Actual storage usage unavailable",
+            icon: HardDrive,
+        },
+    ];
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -46,9 +125,16 @@ export default function SuperAdminDashboardPage() {
                 </p>
             </div>
 
+            {/* Error */}
+            {error && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                    {error}
+                </div>
+            )}
+
             {/* Stats */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {stats.map((stat) => {
+                {cards.map((stat) => {
                     const Icon = stat.icon;
 
                     return (
@@ -63,7 +149,7 @@ export default function SuperAdminDashboardPage() {
                                     </p>
 
                                     <p className="mt-2 text-2xl font-semibold text-white">
-                                        {stat.value}
+                                        {loading ? "—" : stat.value}
                                     </p>
                                 </div>
 
@@ -92,20 +178,102 @@ export default function SuperAdminDashboardPage() {
                     </p>
                 </div>
 
-                <div className="flex min-h-64 items-center justify-center px-6">
-                    <div className="text-center">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800">
-                            <Building2 className="h-5 w-5 text-zinc-500" />
+                <div className="px-6 py-5">
+                    {loading ? (
+                        <div className="flex min-h-48 items-center justify-center">
+                            <p className="text-sm text-zinc-500">
+                                Loading studios...
+                            </p>
                         </div>
+                    ) : studios.length === 0 ? (
+                        <div className="flex min-h-64 items-center justify-center">
+                            <div className="text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800">
+                                    <Building2 className="h-5 w-5 text-zinc-500" />
+                                </div>
 
-                        <h3 className="mt-4 text-sm font-medium text-zinc-300">
-                            No studios yet
-                        </h3>
+                                <h3 className="mt-4 text-sm font-medium text-zinc-300">
+                                    No studios yet
+                                </h3>
 
-                        <p className="mt-1 text-sm text-zinc-500">
-                            Studio information will appear here once studios are added.
-                        </p>
-                    </div>
+                                <p className="mt-1 text-sm text-zinc-500">
+                                    Studio information will appear here once
+                                    studios are added.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-zinc-800">
+                            {studios.slice(0, 5).map((studio) => (
+                                <div
+                                    key={studio.id}
+                                    className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
+                                            <img
+                                                src={studio.logoUrl || ""}
+                                                alt={`${studio.name} logo`}
+                                                className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
+                                                    }`}
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = "none";
+                                                    const fallback = e.currentTarget.nextElementSibling;
+                                                    if (fallback) {
+                                                        fallback.classList.remove("hidden");
+                                                    }
+                                                }}
+                                            />
+
+                                            <span className={studio.logoUrl ? "hidden" : ""}>
+                                                {studio.name
+                                                    .trim()
+                                                    .split(/\s+/)
+                                                    .slice(0, 2)
+                                                    .map((word) => word[0])
+                                                    .join("")
+                                                    .toUpperCase()}
+                                            </span>
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-white">
+                                                {studio.name}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-zinc-500">
+                                                Created{" "}
+                                                {new Date(
+                                                    studio.createdAt
+                                                ).toLocaleDateString("en-GB", {
+                                                    day: "2-digit",
+                                                    month: "short",
+                                                    year: "numeric",
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center gap-4">
+                                        <span className="hidden text-xs text-zinc-400 sm:inline">
+                                            {studio._count?.events ?? 0} events
+                                        </span>
+
+                                        <span
+                                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${studio.isActive
+                                                ? "bg-emerald-500/10 text-emerald-400"
+                                                : "bg-zinc-800 text-zinc-400"
+                                                }`}
+                                        >
+                                            {studio.isActive
+                                                ? "Active"
+                                                : "Inactive"}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
