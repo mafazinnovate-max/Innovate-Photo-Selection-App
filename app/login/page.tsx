@@ -3,7 +3,7 @@
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function LoginPage() {
@@ -11,7 +11,26 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const router = useRouter();
+
+
+    useEffect(() => {
+    const loadLogo = async () => {
+        try {
+            const response = await fetch("/api/public-logo");
+            const data = await response.json();
+
+            if (data.success && data.logoUrl) {
+                setLogoUrl(data.logoUrl);
+            }
+        } catch (error) {
+            console.error("Failed to load logo:", error);
+        }
+    };
+
+    loadLogo();
+}, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,14 +94,16 @@ export default function LoginPage() {
                 className="w-full max-w-md rounded-2xl bg-zinc-900 p-6"
             >
                 <div className="mb-8 flex flex-col items-center">
-<Image
-    src="/picknovate-logo.png"
-    alt="Picknnovate"
-    width={140}
-    height={140}
-    priority
-    className="h-36 w-36 rounded-2xl object-contain"
-/>
+{logoUrl && (
+    <Image
+        src={logoUrl}
+        alt="Picknnovate"
+        width={140}
+        height={140}
+        priority
+        className="h-36 w-36 rounded-2xl object-contain"
+    />
+)}
                 </div>
 
                 <h1 className="text-center text-3xl font-bold text-white">

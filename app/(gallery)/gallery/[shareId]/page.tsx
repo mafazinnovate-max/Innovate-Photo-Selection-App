@@ -28,6 +28,12 @@ export default async function GalleryPage({
     },
   });
 
+  const superAdmin = await prisma.superAdmin.findFirst({
+  select: {
+    logoUrl: true,
+  },
+});
+
   if (!event) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -290,13 +296,15 @@ export default async function GalleryPage({
             Powered by
           </p>
 
-          <Image
-            src="/picknovate-logo.png"
-            alt="Picknovate"
-             width={64}
-  height={64}
-  className="h-14 w-14 object-contain opacity-90 sm:h-16 sm:w-16"
-          />
+       {superAdmin?.logoUrl && (
+  <Image
+    src={superAdmin.logoUrl}
+    alt="Picknovate"
+    width={64}
+    height={64}
+    className="h-14 w-14 object-contain opacity-90 sm:h-16 sm:w-16"
+  />
+)}
         </div>
       </div>
     </div>

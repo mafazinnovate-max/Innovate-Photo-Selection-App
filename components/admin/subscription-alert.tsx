@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from "react";
@@ -97,7 +98,79 @@ export default function SubscriptionAlert({
     }
 
     /*
+     * Last 3 days remaining.
+     *
+     * Show a SEPARATE contact/renewal popup.
+     *
+     * This does NOT replace or merge with the
+     * existing subscription warning below.
+     */
+    if (remainingDays > 0 && remainingDays <= 3) {
+      const alertKey = `subscription-renewal-contact-${subscription.id}`;
+
+      if (!alertsHandledThisPageLoad.has(alertKey)) {
+        alertsHandledThisPageLoad.add(alertKey);
+
+        toast.warning(
+          ({ closeToast }) => (
+            <div className="relative pr-6">
+              <div className="font-semibold">
+                Ready to continue with Picknovate?
+              </div>
+
+              <div className="mt-1 text-sm">
+                Renew your subscription before it expires.
+              </div>
+
+              <div className="mt-2 flex flex-col gap-1">
+                <a
+                  href="tel:+918438430504"
+                  className="font-semibold underline"
+                >
+                  +91 84384 30504
+                </a>
+
+                <a
+                  href="tel:+918925363228"
+                  className="font-semibold underline"
+                >
+                  +91 89253 63228
+                </a>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeToast}
+                aria-label="Close"
+                className="absolute right-0 top-0 text-lg font-bold opacity-70 transition hover:opacity-100"
+              >
+                ×
+              </button>
+            </div>
+          ),
+          {
+            autoClose: false,
+            closeOnClick: false,
+            closeButton: false,
+            draggable: false,
+            pauseOnHover: true,
+          },
+        );
+      }
+
+      /*
+       * IMPORTANT:
+       * Do NOT return here.
+       *
+       * The existing subscription warning below
+       * must also be shown separately.
+       */
+    }
+
+    /*
      * 4 days or less remaining.
+     *
+     * EXISTING POPUP — KEPT UNCHANGED.
      *
      * Show once per actual page load/refresh.
      *
