@@ -84,10 +84,11 @@ const token = await createAuthToken(
                     maxAge: 60 * 60 * 24 * 7,
                 });
 
-                return NextResponse.json({
-                    success: true,
-                    role: "superadmin",
-                });
+               return NextResponse.json({
+    success: true,
+    role: "superadmin",
+    logoUrl: superAdmin.logoUrl,
+});
             }
         }
 

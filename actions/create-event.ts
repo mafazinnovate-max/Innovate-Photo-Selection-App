@@ -62,6 +62,38 @@ export const createEvent = async ({
       };
     }
 
+    const subscription = await prisma.subscription.findFirst({
+  where: {
+    studioId: session.studioId,
+  },
+  orderBy: {
+    createdAt: "desc",
+  },
+  select: {
+    maxEvents: true,
+  },
+});
+
+if (!subscription) {
+  return {
+    success: false,
+    message: "Subscription not found.",
+  };
+}
+
+const eventCount = await prisma.event.count({
+  where: {
+    studioId: session.studioId,
+  },
+});
+
+if (eventCount + 2 > subscription.maxEvents) {
+  return {
+    success: false,
+    message: `You have reached your event limit of ${subscription.maxEvents}. Please contact the administrator to increase your limit.`,
+  };
+}
+
     // Create the event under the logged-in admin's studio
     const event = await prisma.event.create({
       data: {

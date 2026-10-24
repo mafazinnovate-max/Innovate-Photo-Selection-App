@@ -113,7 +113,7 @@ export default function SubscriptionSessionGuard({
 
         const interval = window.setInterval(
             checkExpiry,
-            1000
+            15 * 60 * 1000
         );
 
         return () => {

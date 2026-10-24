@@ -132,6 +132,9 @@ export default function ClientFolderPage({
   const [showMobileActionBar, setShowMobileActionBar] =
     useState(false);
 
+    const [superAdminLogoUrl, setSuperAdminLogoUrl] =
+    useState<string | null>(null);
+
   const lastTapRef = useRef(0);
   const pinchDistanceRef = useRef(0);
   const commentDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -167,6 +170,27 @@ export default function ClientFolderPage({
 
   const isDirty = () =>
     versionRef.current !== savedVersionRef.current;
+
+
+  useEffect(() => {
+  const loadLogo = async () => {
+    try {
+      const response = await fetch("/api/public-logo");
+      const data = await response.json();
+
+      if (data.success && data.logoUrl) {
+        setSuperAdminLogoUrl(data.logoUrl);
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load Picknovate logo:",
+        error,
+      );
+    }
+  };
+
+  loadLogo();
+}, []);
 
   /*
    * MOBILE ACTION BAR
@@ -2094,13 +2118,15 @@ window.history.back();
 
 <div className="border-t border-zinc-900 bg-black py-10">
   <div className="flex justify-center">
-    <Image
-      src="/picknovate-logo.png"
-      alt="Picknovate"
-      width={96}
-      height={96}
-      className="h-20 w-20 object-contain opacity-90 sm:h-24 sm:w-24"
-    />
+    {superAdminLogoUrl && (
+      <Image
+        src={superAdminLogoUrl}
+        alt="Picknovate"
+        width={96}
+        height={96}
+        className="h-20 w-20 object-contain opacity-90 sm:h-24 sm:w-24"
+      />
+    )}
   </div>
 </div>
     </div>

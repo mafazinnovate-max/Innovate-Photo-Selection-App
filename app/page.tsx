@@ -1,8 +1,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-export default function Home() {
+export default async function Home() {
+    const superAdmin = await prisma.superAdmin.findFirst({
+        select: {
+            logoUrl: true,
+        },
+    });
+
     return (
         <main className="min-h-screen bg-black text-white">
             {/* Navigation */}
@@ -11,14 +18,16 @@ export default function Home() {
                     href="/"
                     className="flex items-center"
                 >
-                    <Image
-                        src="/picknovate-logo.png"
-                        alt="Picknnovate"
-                        width={64}
-                        height={64}
-                        priority
-                        className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
-                    />
+                    {superAdmin?.logoUrl && (
+                        <Image
+                            src={superAdmin.logoUrl}
+                            alt="Picknnovate"
+                            width={64}
+                            height={64}
+                            priority
+                            className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
+                        />
+                    )}
                 </Link>
 
                 <div className="flex items-center gap-3 sm:gap-5">
@@ -48,18 +57,18 @@ export default function Home() {
                     </div>
 
                     <h1 className="max-w-5xl text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-    A New Perspective
-    <br />
-    <span className="text-zinc-400">
-        on Photo Selection.
-    </span>
-</h1>
+                        A New Perspective
+                        <br />
+                        <span className="text-zinc-400">
+                            on Photo Selection.
+                        </span>
+                    </h1>
 
-<p className="mt-8 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg sm:leading-8">
-    Simplify your studio workflow with a smarter,
-    more seamless way to curate and deliver
-    photographic collections.
-</p>
+                    <p className="mt-8 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg sm:leading-8">
+                        Simplify your studio workflow with a smarter,
+                        more seamless way to curate and deliver
+                        photographic collections.
+                    </p>
 
                     <div className="mt-10 flex w-full flex-col items-center justify-center gap-4 sm:w-auto sm:flex-row">
                         <Link
