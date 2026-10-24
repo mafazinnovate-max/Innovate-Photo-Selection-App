@@ -83,6 +83,7 @@ export const verifyGalleryAccess = async (
 
             await prisma.galleryAccess.create({
                 data: {
+                    id: randomUUID(),
                     eventId: event.id,
                     parentId: parentId ?? null,
                     deviceId,

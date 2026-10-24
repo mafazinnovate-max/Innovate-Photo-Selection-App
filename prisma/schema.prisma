@@ -73,7 +73,7 @@ model Selection {
 }
 
 model GalleryAccess {
-  id            String   @id @default(cuid())
+  id            String   @id
   eventId       String
   parentId      String?
   deviceId      String
@@ -86,26 +86,27 @@ model GalleryAccess {
 }
 
 model Studio {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  logoUrl   String?
-
-  // Studio profile
+  id            String   @id @default(cuid())
+  name          String
+  createdAt     DateTime @default(now())
+  logoUrl       String?
+  logoZoom      Float    @default(1)
+  logoPositionX Float    @default(0)
+  logoPositionY Float    @default(0)
   email         String?
   phone         String?
   address       String?
   city          String?
   state         String?
-  country       String  @default("India")
+  country       String   @default("India")
   website       String?
   description   String?
   internalNotes String?
-  isActive      Boolean @default(true)
+  isActive      Boolean  @default(true)
 
-  admins        Admin[]
-  events        Event[]
-  subscriptions Subscription[]
+  admins       Admin[]
+  events       Event[]
+  Subscription Subscription[]
 }
 
 model Admin {
@@ -114,19 +115,19 @@ model Admin {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  // Optional admin profile
-  name  String?
-  email String?
-  phone String?
-
+  name     String?
+  email    String?
+  phone    String?
   studioId String
-  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  authSecret AuthSecret?
 }
 
 model SuperAdmin {
-  id                 String    @id @default(cuid())
-  username           String    @unique
-  passwordHash       String
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
   name               String?
   email              String?   @unique
   logoUrl            String?
@@ -135,26 +136,36 @@ model SuperAdmin {
   passwordResetExpiry DateTime?
   createdAt          DateTime  @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  authSecret AuthSecret?
+}
+
+model AuthSecret {
+  id           String      @id @default(cuid())
+  secret       String      @unique
+  createdAt    DateTime    @default(now())
+
+  adminId      String?     @unique
+  superAdminId String?     @unique
+
+  admin        Admin?      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id        String    @id @default(cuid())
-  plan      String    @default("Basic")
-  status    String    @default("Active")
-  startDate DateTime  @default(now())
-  endDate   DateTime?
+  id             String    @id
+  plan           String    @default("Basic")
+  status         String    @default("Active")
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  storageLimitGb Int       @default(100)
+  maxEvents      Int       @default(50)
+  maxCustomers   Int       @default(500)
+  maxImages      Int       @default(100000)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  studioId       String
 
-  // Studio usage limits
-  storageLimitGb Int @default(100)
-  maxEvents      Int @default(50)
-  maxCustomers   Int @default(500)
-  maxImages      Int @default(100000)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  studioId String
-  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  Studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
 }
 
 model playing_with_neon {

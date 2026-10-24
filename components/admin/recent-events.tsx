@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,20 +9,30 @@ import {
   Images,
 } from "lucide-react";
 
+interface Category {
+  id: string;
+  name: string;
+  totalPhotos: number;
+  selectedPhotos: number;
+  children?: {
+    id: string;
+    name: string;
+    totalPhotos: number;
+    selectedPhotos: number;
+  }[];
+}
+
 interface RecentEvent {
   id: string;
   name: string;
   clientName: string;
   eventType: string;
   eventDate: string | null;
-  categories: {
-    id: string;
-    name: string;
-    totalPhotos: number;
-    selectedPhotos: number;
-  }[];
+  galleryMode: string;
+  categories: Category[];
   totalPhotos: number;
   selectedPhotos: number;
+  selectionStatus: string;
 }
 
 export default function RecentEvents({
@@ -39,6 +48,8 @@ export default function RecentEvents({
     <div className="divide-y divide-zinc-800">
       {events.map((event) => {
         const isExpanded = expandedEvent === event.id;
+        const isCompleted = event.selectionStatus === "COMPLETED";
+        const isNested = event.galleryMode === "bride_groom";
 
         return (
           <div key={event.id} className="py-4">
@@ -70,26 +81,39 @@ export default function RecentEvents({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 sm:justify-end">
-                <p className="text-sm text-zinc-400">
-                  {event.eventDate
-                    ? new Date(event.eventDate).toLocaleDateString(
-                        "en-IN",
-                        {
+              <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+                <span
+                  className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${
+                    isCompleted
+                      ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
+                      : "border-amber-900/60 bg-amber-950/30 text-amber-400"
+                  }`}
+                >
+                  {isCompleted
+                    ? "Client Completed Selecting Photos"
+                    : "Client Selecting Photos"}
+                </span>
+
+                <div className="flex items-center gap-3">
+                  <p className="whitespace-nowrap text-sm text-zinc-400">
+                    {event.eventDate
+                      ? new Date(
+                          event.eventDate
+                        ).toLocaleDateString("en-IN", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
-                        }
-                      )
-                    : "Date not set"}
-                </p>
+                        })
+                      : "Date not set"}
+                  </p>
 
-                <ChevronDown
-                  size={20}
-                  className={`shrink-0 text-zinc-400 transition-transform duration-300 ${
-                    isExpanded ? "rotate-180" : ""
-                  }`}
-                />
+                  <ChevronDown
+                    size={20}
+                    className={`shrink-0 text-zinc-400 transition-transform duration-300 ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                  />
+                </div>
               </div>
             </button>
 
@@ -107,8 +131,10 @@ export default function RecentEvents({
                     <h4 className="font-semibold text-white">
                       Categories
                     </h4>
+
                     <span className="text-xs text-zinc-500">
-                      {event.categories.length} categories
+                      {event.categories.length}{" "}
+                      {isNested ? "parent folders" : "categories"}
                     </span>
                   </div>
 
@@ -118,6 +144,7 @@ export default function RecentEvents({
                         size={24}
                         className="mx-auto text-zinc-600"
                       />
+
                       <p className="mt-2 text-sm text-zinc-500">
                         No categories available.
                       </p>
@@ -133,14 +160,42 @@ export default function RecentEvents({
                             {category.name}
                           </h5>
 
+                          {/* Child folders only for Bride & Groom mode */}
+                          {isNested &&
+                          category.children &&
+                          category.children.length > 0 ? (
+                            <div className="mt-4 space-y-2">
+                              {category.children.map((child) => (
+                                <div
+                                  key={child.id}
+                                  className="rounded-lg border border-zinc-800 bg-zinc-950 p-3"
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="truncate text-sm font-medium text-zinc-200">
+                                      {child.name}
+                                    </span>
+
+                                    <span className="shrink-0 text-xs text-zinc-500">
+                                      {child.selectedPhotos}/
+                                      {child.totalPhotos}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+
                           <div className="mt-4 grid grid-cols-2 gap-3">
                             <div>
                               <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                                 <Images size={14} />
                                 Total
                               </div>
+
                               <p className="mt-1 text-xl font-semibold text-white">
-                                {category.totalPhotos.toLocaleString("en-IN")}
+                                {category.totalPhotos.toLocaleString(
+                                  "en-IN"
+                                )}
                               </p>
                             </div>
 
@@ -149,8 +204,11 @@ export default function RecentEvents({
                                 <CheckCircle2 size={14} />
                                 Selected
                               </div>
+
                               <p className="mt-1 text-xl font-semibold text-emerald-400">
-                                {category.selectedPhotos.toLocaleString("en-IN")}
+                                {category.selectedPhotos.toLocaleString(
+                                  "en-IN"
+                                )}
                               </p>
                             </div>
                           </div>
@@ -165,6 +223,7 @@ export default function RecentEvents({
                       <p className="text-xs text-zinc-400">
                         Total Images
                       </p>
+
                       <p className="mt-2 text-2xl font-bold text-white">
                         {event.totalPhotos.toLocaleString("en-IN")}
                       </p>
@@ -174,6 +233,7 @@ export default function RecentEvents({
                       <p className="text-xs text-zinc-400">
                         Total Selected Images
                       </p>
+
                       <p className="mt-2 text-2xl font-bold text-emerald-400">
                         {event.selectedPhotos.toLocaleString("en-IN")}
                       </p>

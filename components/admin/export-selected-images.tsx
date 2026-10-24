@@ -11,35 +11,38 @@ export default function ExportSelectedImages({
     selectedImages,
     verifyFileName,
 }: ExportSelectedImagesProps) {
-
     const [isExporting, setIsExporting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [copiedCount, setCopiedCount] = useState(0);
     const [progress, setProgress] = useState(0);
 
-    if (!("showDirectoryPicker" in window)) {
-        alert(
-            "Your browser doesn't support folder export. Please use Google Chrome."
-        );
-        return;
-    }
-
     const handleExport = async () => {
         try {
-            setIsExporting(true);
+            // Browser support check
+            if (
+                typeof window === "undefined" ||
+                !("showDirectoryPicker" in window)
+            ) {
+                alert(
+                    "Your browser doesn't support folder export. Please use Google Chrome."
+                );
+                return;
+            }
 
-            // const sourceFolder = await (
-            //     window as any
-            // ).showDirectoryPicker();
+            // Selected images check
+            if (!verifyFileName) {
+                alert("No selected images found");
+                return;
+            }
+
+            setIsExporting(true);
 
             const sourceFolder = await (window as any).showDirectoryPicker({
                 mode: "readwrite",
             });
 
             try {
-                await sourceFolder.getFileHandle(
-                    verifyFileName
-                );
+                await sourceFolder.getFileHandle(verifyFileName);
             } catch {
                 alert(
                     "Wrong folder selected.\n\nPlease choose the original uploaded folder."
@@ -65,44 +68,6 @@ export default function ExportSelectedImages({
                     }
                 );
 
-            // let copiedCount = 0;
-
-            // const totalFiles = selectedImages.length;
-
-            // let processedFiles = 0;
-
-            // for await (const entry of sourceFolder.values()) {
-            //     if (
-            //         entry.kind === "file" &&
-            //         selectedImages.includes(entry.name)
-            //     ) {
-            //         const file = await entry.getFile();
-
-            //         const newFile =
-            //             await selectedFolder.getFileHandle(
-            //                 entry.name,
-            //                 {
-            //                     create: true,
-            //                 }
-            //             );
-
-            //         const writable = await newFile.createWritable();
-
-            //         await writable.write(file);
-
-            //         await writable.close();
-
-            //         copiedCount++;
-            //         processedFiles++;
-
-            //         setProgress(
-            //             Math.round(
-            //                 (processedFiles / totalFiles) * 100
-            //             )
-            //         );
-            //     }
-            // }
-
             let copiedCount = 0;
             const totalFiles = selectedImages.length;
 
@@ -110,15 +75,18 @@ export default function ExportSelectedImages({
                 const fileName = selectedImages[i];
 
                 try {
-                    const sourceFileHandle = await sourceFolder.getFileHandle(fileName);
+                    const sourceFileHandle =
+                        await sourceFolder.getFileHandle(fileName);
 
                     const file = await sourceFileHandle.getFile();
 
-                    const targetFileHandle = await selectedFolder.getFileHandle(fileName, {
-                        create: true,
-                    });
+                    const targetFileHandle =
+                        await selectedFolder.getFileHandle(fileName, {
+                            create: true,
+                        });
 
-                    const writable = await targetFileHandle.createWritable();
+                    const writable =
+                        await targetFileHandle.createWritable();
 
                     await writable.write(file);
 
@@ -150,11 +118,6 @@ export default function ExportSelectedImages({
             setIsExporting(false);
         }
     };
-
-    if (!verifyFileName) {
-        alert("No selected images found");
-        return;
-    }
 
     return (
         <>

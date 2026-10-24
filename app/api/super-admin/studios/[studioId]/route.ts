@@ -71,7 +71,7 @@ export async function GET(
                 admins: {
                     orderBy: { createdAt: "asc" },
                 },
-                subscriptions: {
+                Subscription: {
                     orderBy: { createdAt: "desc" },
                     take: 1,
                 },
@@ -160,7 +160,7 @@ export async function GET(
         }));
 
         const admin = studio.admins[0];
-        const subscription = studio.subscriptions[0];
+        const subscription = studio.Subscription[0];
 
         return NextResponse.json({
             success: true,
@@ -353,7 +353,7 @@ export async function PATCH(
                 admins: {
                     orderBy: { createdAt: "asc" },
                 },
-                subscriptions: {
+                Subscription: {
                     orderBy: { createdAt: "desc" },
                     take: 1,
                 },
@@ -438,7 +438,7 @@ export async function PATCH(
                 maxImages,
             };
 
-            const existingSubscription = currentStudio.subscriptions[0];
+            const existingSubscription = currentStudio.Subscription[0];
 
             if (existingSubscription) {
                 await tx.subscription.update({
@@ -448,6 +448,7 @@ export async function PATCH(
             } else {
                 await tx.subscription.create({
                     data: {
+                        id: crypto.randomUUID(),
                         ...subscriptionData,
                         studioId,
                     },

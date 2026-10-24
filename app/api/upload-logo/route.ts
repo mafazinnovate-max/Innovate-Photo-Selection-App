@@ -5,30 +5,32 @@ import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
 
+async function getAdminSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth-token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  const session = await verifyAuthToken(token);
+
+  if (
+    !session ||
+    session.role !== "admin" ||
+    !session.studioId
+  ) {
+    return null;
+  }
+
+  return session;
+}
+
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth-token")?.value;
+    const session = await getAdminSession();
 
-    if (!token) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-    }
-
-    const session = await verifyAuthToken(token);
-
-    if (
-      !session ||
-      session.role !== "admin" ||
-      !session.studioId
-    ) {
+    if (!session) {
       return NextResponse.json(
         {
           success: false,
@@ -132,12 +134,11 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function PUT(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth-token")?.value;
+    const session = await getAdminSession();
 
-    if (!token) {
+    if (!session) {
       return NextResponse.json(
         {
           success: false,
@@ -149,13 +150,74 @@ export async function GET() {
       );
     }
 
-    const session = await verifyAuthToken(token);
+    const body = await request.json();
+
+    const zoom = Number(body.zoom);
+    const positionX = Number(body.positionX);
+    const positionY = Number(body.positionY);
 
     if (
-      !session ||
-      session.role !== "admin" ||
-      !session.studioId
+      !Number.isFinite(zoom) ||
+      !Number.isFinite(positionX) ||
+      !Number.isFinite(positionY)
     ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid logo transform values",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const studio = await prisma.studio.update({
+      where: {
+        id: session.studioId,
+      },
+      data: {
+        logoZoom: zoom,
+        logoPositionX: positionX,
+        logoPositionY: positionY,
+      },
+     select: {
+  name: true,
+  logoUrl: true,
+  logoZoom: true,
+  logoPositionX: true,
+  logoPositionY: true,
+},
+    });
+
+    return NextResponse.json({
+  success: true,
+  studioName: studio?.name ?? "Your Studio",
+  logoUrl: studio?.logoUrl ?? null,
+  logoZoom: studio?.logoZoom ?? 1,
+  logoPositionX: studio?.logoPositionX ?? 0,
+  logoPositionY: studio?.logoPositionY ?? 0,
+});
+  } catch (error) {
+    console.error("Save logo transform error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to save logo settings",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getAdminSession();
+
+    if (!session) {
       return NextResponse.json(
         {
           success: false,
@@ -172,14 +234,22 @@ export async function GET() {
         id: session.studioId,
       },
       select: {
-        logoUrl: true,
-      },
+  name: true,
+  logoUrl: true,
+  logoZoom: true,
+  logoPositionX: true,
+  logoPositionY: true,
+},
     });
 
-    return NextResponse.json({
-      success: true,
-      logoUrl: studio?.logoUrl ?? null,
-    });
+   return NextResponse.json({
+  success: true,
+  studioName: studio?.name ?? "Your Studio",
+  logoUrl: studio?.logoUrl ?? null,
+  logoZoom: studio?.logoZoom ?? 1,
+  logoPositionX: studio?.logoPositionX ?? 0,
+  logoPositionY: studio?.logoPositionY ?? 0,
+});
   } catch (error) {
     console.error("Get logo error:", error);
 

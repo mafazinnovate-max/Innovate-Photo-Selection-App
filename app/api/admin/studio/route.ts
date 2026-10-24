@@ -49,6 +49,8 @@ export async function GET() {
         id: true,
         name: true,
         logoUrl: true,
+         isActive: true,
+        
       },
     });
 
@@ -113,11 +115,12 @@ export async function PATCH(request: Request) {
       data: {
         logoUrl,
       },
-      select: {
-        id: true,
-        name: true,
-        logoUrl: true,
-      },
+    select: {
+    id: true,
+    name: true,
+    logoUrl: true,
+    
+},
     });
 
     return NextResponse.json({
