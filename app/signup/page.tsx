@@ -1,8 +1,9 @@
+
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Step = 1 | 2;
 
@@ -22,6 +23,25 @@ export default function SignupPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadLogo = async () => {
+            try {
+                const response = await fetch("/api/public-logo");
+                const data = await response.json();
+
+                if (data.success && data.logoUrl) {
+                    setLogoUrl(data.logoUrl);
+                }
+            } catch (error) {
+                console.error("Failed to load Picknovate logo:", error);
+            }
+        };
+
+        loadLogo();
+    }, []);
 
     function handleNext() {
         setError("");
@@ -131,14 +151,16 @@ export default function SignupPage() {
                         href="/"
                         className="flex items-center"
                     >
-                        <Image
-                            src="/picknovate-logo.png"
-                            alt="Picknnovate"
-                            width={64}
-                            height={64}
-                            priority
-                            className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
-                        />
+                        {logoUrl && (
+                            <Image
+                                src={logoUrl}
+                                alt="Picknnovate"
+                                width={64}
+                                height={64}
+                                priority
+                                className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
+                            />
+                        )}
                     </Link>
                 </div>
 

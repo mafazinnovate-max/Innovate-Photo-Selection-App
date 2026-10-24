@@ -397,44 +397,113 @@ export default function Sidebar({
 
           {/* Subscription Countdown */}
           {subscriptionMessage && (
-            <div
-              className={`mt-6 rounded-xl border p-3 ${
-                subscriptionMessage.type ===
-                "ended"
-                  ? "border-red-500/30 bg-red-500/10"
-                  : "border-amber-500/30 bg-amber-500/10"
-              }`}
-            >
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle
-                  size={17}
-                  className={`mt-0.5 shrink-0 ${
-                    subscriptionMessage.type ===
-                    "ended"
-                      ? "text-red-400"
-                      : "text-amber-400"
-                  }`}
-                />
-
-                <div className="min-w-0">
-                  <p
-                    className={`text-xs font-semibold ${
+            <>
+              <div
+                className={`mt-6 rounded-xl border p-3 ${
+                  subscriptionMessage.type ===
+                  "ended"
+                    ? "border-red-500/30 bg-red-500/10"
+                    : "border-amber-500/30 bg-amber-500/10"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle
+                    size={17}
+                    className={`mt-0.5 shrink-0 ${
                       subscriptionMessage.type ===
                       "ended"
                         ? "text-red-400"
                         : "text-amber-400"
                     }`}
-                  >
-                    {subscriptionMessage.text}
-                  </p>
+                  />
 
-                  <p className="mt-1 text-[10px] leading-4 text-zinc-500">
-                    Please contact the administrator
-                    to renew your subscription.
-                  </p>
+                  <div className="min-w-0">
+                    <p
+                      className={`text-xs font-semibold ${
+                        subscriptionMessage.type ===
+                        "ended"
+                          ? "text-red-400"
+                          : "text-amber-400"
+                      }`}
+                    >
+                      {subscriptionMessage.text}
+                    </p>
+
+                    <p className="mt-1 text-[10px] leading-4 text-zinc-500">
+                      Please contact the administrator
+                      to renew your subscription.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {subscriptionMessage.type ===
+                "warning" &&
+                (() => {
+                  const endDate = subscription?.endDate
+                    ? new Date(subscription.endDate)
+                    : null;
+
+                  const now = currentTime
+                    ? new Date(currentTime)
+                    : null;
+
+                  const remainingDays =
+                    endDate && now
+                      ? Math.ceil(
+                          (endDate.getTime() -
+                            now.getTime()) /
+                            (1000 *
+                              60 *
+                              60 *
+                              24)
+                        )
+                      : null;
+
+                  return (
+                    remainingDays !== null &&
+                    remainingDays >= 1 &&
+                    remainingDays <= 3
+                  );
+                })() && (
+                  <div className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.07] p-3 shadow-[0_0_20px_rgba(34,211,238,0.05)]">
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10">
+                        <span className="text-sm text-cyan-400">
+                          →
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-cyan-300">
+                          Ready to continue with Picknovate?
+                        </p>
+
+                        <p className="mt-1 text-[10px] leading-4 text-zinc-400">
+                          Renew your subscription before it
+                          expires.
+                        </p>
+
+                        <div className="mt-2.5 space-y-1">
+                          <a
+                            href="tel:+918438430504"
+                            className="block text-[10px] font-semibold text-cyan-400 transition hover:text-cyan-300"
+                          >
+                            +91 84384 30504
+                          </a>
+
+                          <a
+                            href="tel:+918925363228"
+                            className="block text-[10px] font-semibold text-cyan-400 transition hover:text-cyan-300"
+                          >
+                            +91 89253 63228
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+            </>
           )}
         </div>
 
