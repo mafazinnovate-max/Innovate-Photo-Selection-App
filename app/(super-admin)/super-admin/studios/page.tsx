@@ -2,7 +2,6 @@
 
 import {
     AlertCircle,
-    Ban,
     Building2,
     CalendarDays,
     CheckCircle2,
@@ -25,6 +24,7 @@ import {
     Users,
     XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -223,8 +223,47 @@ export default function StudiosPage() {
     const [planFilter, setPlanFilter] = useState("All Plans");
 
     const [openMenu, setOpenMenu] = useState<string | null>(null);
+    const [isNavigating, setIsNavigating] = useState(false);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     const router = useRouter();
+
+    const navigateWithLoader = (path: string) => {
+        setIsNavigating(true);
+        router.push(path);
+    };
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(
+                    "/api/super-admin/settings/profile",
+                    { cache: "no-store" }
+                );
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+
+                if (isMounted && data.profile) {
+                    setLogoUrl(data.profile.logoUrl || null);
+                }
+            } catch (error) {
+                console.error(
+                    "Failed to load Super Admin logo:",
+                    error
+                );
+            }
+        }
+
+        loadProfile();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -471,6 +510,31 @@ export default function StudiosPage() {
             className="space-y-8"
             onClick={() => setOpenMenu(null)}
         >
+            {/* Navigation Loader */}
+            {isNavigating && (
+                <div
+                    className="fixed left-72 right-0 top-0 bottom-0 z-30 flex items-center justify-center bg-black"
+                    role="status"
+                    aria-label="Loading page"
+                >
+                    {logoUrl ? (
+                        <Image
+                            src={logoUrl}
+                            alt="Picnovate"
+                            width={96}
+                            height={96}
+                            priority
+                            unoptimized
+                            className="h-20 w-20 animate-pulse object-contain sm:h-24 sm:w-24"
+                        />
+                    ) : (
+                        <h1 className="animate-pulse text-3xl font-bold tracking-wide text-white">
+                            Picnovate
+                        </h1>
+                    )}
+                </div>
+            )}
+
             {/* Page Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -496,9 +560,7 @@ export default function StudiosPage() {
                 <button
                     onClick={(event) => {
                         event.stopPropagation();
-                        router.push(
-                            "/super-admin/studios/new"
-                        );
+                        navigateWithLoader("/super-admin/studios/new");
                     }}
                     className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg transition hover:bg-zinc-200"
                 >
@@ -506,15 +568,6 @@ export default function StudiosPage() {
                     Add Studio
                 </button>
             </div>
-
-            {/* Loading */}
-            {isLoading && (
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
-                    <p className="text-sm text-zinc-400">
-                        Loading studios from database...
-                    </p>
-                </div>
-            )}
 
             {/* Error */}
             {!isLoading && loadError && (
@@ -792,124 +845,181 @@ export default function StudiosPage() {
                         </thead>
 
                         <tbody>
-                            {filteredStudios.map(
-                                (studio) => {
-                                    const storagePercentage =
-                                        studio.storageUsed !== null &&
-                                            studio.storageLimit > 0
-                                            ? (studio.storageUsed / studio.storageLimit) * 100
-                                            : null;
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, index) => (
+                                    <tr
+                                        key={`studio-skeleton-${index}`}
+                                        className="border-b border-zinc-800/70 animate-pulse"
+                                    >
+                                        {/* Studio skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-800" />
+                                                <div className="space-y-2">
+                                                    <div className="h-3.5 w-32 rounded bg-zinc-800" />
+                                                    <div className="h-3 w-24 rounded bg-zinc-800/70" />
+                                                    <div className="h-3 w-28 rounded bg-zinc-800/70" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {/* Admin skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="space-y-2">
+                                                <div className="h-3.5 w-28 rounded bg-zinc-800" />
+                                                <div className="h-3 w-24 rounded bg-zinc-800/70" />
+                                                <div className="h-3 w-32 rounded bg-zinc-800/70" />
+                                            </div>
+                                        </td>
+                                        {/* Activity skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="h-3 w-16 rounded bg-zinc-800" />
+                                        </td>
+                                        {/* Storage skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="w-36 space-y-2">
+                                                <div className="flex justify-between gap-3">
+                                                    <div className="h-3 w-12 rounded bg-zinc-800" />
+                                                    <div className="h-3 w-12 rounded bg-zinc-800" />
+                                                </div>
+                                                <div className="h-1.5 rounded-full bg-zinc-800" />
+                                            </div>
+                                        </td>
+                                        {/* Subscription skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="space-y-2">
+                                                <div className="h-6 w-24 rounded-full bg-zinc-800" />
+                                                <div className="h-3 w-24 rounded bg-zinc-800/70" />
+                                            </div>
+                                        </td>
+                                        {/* Status skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="h-6 w-20 rounded-full bg-zinc-800" />
+                                        </td>
+                                        {/* Action skeleton */}
+                                        <td className="px-6 py-5">
+                                            <div className="ml-auto h-8 w-8 rounded-lg bg-zinc-800" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                filteredStudios.map(
+                                    (studio) => {
+                                        const storagePercentage =
+                                            studio.storageUsed !== null &&
+                                                studio.storageLimit > 0
+                                                ? (studio.storageUsed / studio.storageLimit) * 100
+                                                : null;
 
-                                    return (
-                                        <tr
-                                            key={
-                                                studio.id
-                                            }
-                                            className="border-b border-zinc-800/70 transition hover:bg-zinc-900"
-                                        >
-                                            {/* Studio */}
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
-                                                        <img
-                                                            src={studio.logoUrl || ""}
-                                                            alt={`${studio.name} logo`}
-                                                            className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
-                                                                }`}
-                                                            onError={(e) => {
-                                                                e.currentTarget.style.display = "none";
-                                                                const fallback = e.currentTarget.nextElementSibling;
-                                                                if (fallback) {
-                                                                    fallback.classList.remove("hidden");
-                                                                }
-                                                            }}
-                                                        />
-
-                                                        <span className={studio.logoUrl ? "hidden" : ""}>
-                                                            {getInitials(
-                                                                studio.name
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-white">
-                                                            {
-                                                                studio.name
-                                                            }
-                                                        </p>
-                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                            <Phone
-                                                                size={
-                                                                    12
-                                                                }
+                                        return (
+                                            <tr
+                                                key={
+                                                    studio.id
+                                                }
+                                                className="border-b border-zinc-800/70 transition hover:bg-zinc-900"
+                                            >
+                                                {/* Studio */}
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
+                                                            <img
+                                                                src={studio.logoUrl || ""}
+                                                                alt={`${studio.name} logo`}
+                                                                className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
+                                                                    }`}
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = "none";
+                                                                    const fallback = e.currentTarget.nextElementSibling;
+                                                                    if (fallback) {
+                                                                        fallback.classList.remove("hidden");
+                                                                    }
+                                                                }}
                                                             />
-                                                            {
-                                                                studio.phone
-                                                            }
+
+                                                            <span className={studio.logoUrl ? "hidden" : ""}>
+                                                                {getInitials(
+                                                                    studio.name
+                                                                )}
+                                                            </span>
                                                         </div>
-                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                            <MapPin
-                                                                size={
-                                                                    12
+                                                        <div>
+                                                            <p className="font-medium text-white">
+                                                                {
+                                                                    studio.name
                                                                 }
-                                                            />
-                                                            {
-                                                                studio.location
-                                                            }
+                                                            </p>
+                                                            <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                                <Phone
+                                                                    size={
+                                                                        12
+                                                                    }
+                                                                />
+                                                                {
+                                                                    studio.phone
+                                                                }
+                                                            </div>
+                                                            <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                                <MapPin
+                                                                    size={
+                                                                        12
+                                                                    }
+                                                                />
+                                                                {
+                                                                    studio.location
+                                                                }
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {/* Admin */}
-                                            <td className="px-6 py-5">
-                                                <p className="text-sm font-medium text-zinc-200">
-                                                    {
-                                                        studio.adminName
-                                                    }
-                                                </p>
-
-                                                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                    <Phone
-                                                        size={
-                                                            12
+                                                {/* Admin */}
+                                                <td className="px-6 py-5">
+                                                    <p className="text-sm font-medium text-zinc-200">
+                                                        {
+                                                            studio.adminName
                                                         }
-                                                    />
+                                                    </p>
 
-                                                    {
-                                                        studio.adminPhone
-                                                    }
-                                                </div>
-                                                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                    <Mail
-                                                        size={
-                                                            12
-                                                        }
-                                                    />
-
-                                                    {
-                                                        studio.adminEmail
-                                                    }
-                                                </div>
-                                            </td>
-
-                                            {/* Activity */}
-                                            <td className="px-6 py-5">
-                                                <div className="space-y-1.5 text-xs w-20">
-                                                    <div className="flex items-center gap-2 text-zinc-400">
-                                                        <CalendarDays
+                                                    <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                        <Phone
                                                             size={
-                                                                13
+                                                                12
                                                             }
                                                         />
 
                                                         {
-                                                            studio.events
-                                                        }{" "}
-                                                        events
+                                                            studio.adminPhone
+                                                        }
                                                     </div>
+                                                    <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                        <Mail
+                                                            size={
+                                                                12
+                                                            }
+                                                        />
 
-                                                    {/* <div className="flex items-center gap-2 text-zinc-500">
+                                                        {
+                                                            studio.adminEmail
+                                                        }
+                                                    </div>
+                                                </td>
+
+                                                {/* Activity */}
+                                                <td className="px-6 py-5">
+                                                    <div className="space-y-1.5 text-xs w-20">
+                                                        <div className="flex items-center gap-2 text-zinc-400">
+                                                            <CalendarDays
+                                                                size={
+                                                                    13
+                                                                }
+                                                            />
+
+                                                            {
+                                                                studio.events
+                                                            }{" "}
+                                                            events
+                                                        </div>
+
+                                                        {/* <div className="flex items-center gap-2 text-zinc-500">
                                                         <Users
                                                             size={
                                                                 13
@@ -921,61 +1031,297 @@ export default function StudiosPage() {
                                                         }{" "}
                                                         customers
                                                     </div> */}
-                                                </div>
-                                            </td>
-
-                                            {/* Storage */}
-                                            <td className="px-6 py-5">
-                                                <div className="w-36">
-                                                    <div className="mb-2 flex items-center justify-between text-xs">
-                                                        <span className="text-zinc-300">
-                                                            {studio.storageLimit >
-                                                                0
-                                                                ? `${studio.storageUsed} GB`
-                                                                : "—"}
-                                                        </span>
-
-                                                        <span className="text-zinc-600">
-                                                            {studio.storageLimit >
-                                                                0
-                                                                ? `${studio.storageLimit} GB`
-                                                                : "—"}
-                                                        </span>
                                                     </div>
+                                                </td>
 
-                                                    {storagePercentage !== null && (
-                                                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                                                            <div
-                                                                className={`h-full rounded-full ${storagePercentage >= 90
-                                                                    ? "bg-red-400"
-                                                                    : storagePercentage >= 75
-                                                                        ? "bg-amber-400"
-                                                                        : "bg-white"
-                                                                    }`}
-                                                                style={{
-                                                                    width: `${Math.min(storagePercentage, 100)}%`,
-                                                                }}
-                                                            />
+                                                {/* Storage */}
+                                                <td className="px-6 py-5">
+                                                    <div className="w-36">
+                                                        <div className="mb-2 flex items-center justify-between text-xs">
+                                                            <span className="text-zinc-300">
+                                                                {studio.storageLimit >
+                                                                    0
+                                                                    ? `${studio.storageUsed} GB`
+                                                                    : "—"}
+                                                            </span>
+
+                                                            <span className="text-zinc-600">
+                                                                {studio.storageLimit >
+                                                                    0
+                                                                    ? `${studio.storageLimit} GB`
+                                                                    : "—"}
+                                                            </span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </td>
 
-                                            {/* Subscription */}
-                                            <td className="px-6 py-5">
-                                                <PlanBadge
-                                                    plan={
-                                                        studio.plan
-                                                    }
-                                                />
+                                                        {storagePercentage !== null && (
+                                                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                                                <div
+                                                                    className={`h-full rounded-full ${storagePercentage >= 90
+                                                                        ? "bg-red-400"
+                                                                        : storagePercentage >= 75
+                                                                            ? "bg-amber-400"
+                                                                            : "bg-white"
+                                                                        }`}
+                                                                    style={{
+                                                                        width: `${Math.min(storagePercentage, 100)}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
 
-                                                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
-                                                    <Clock3
-                                                        size={
-                                                            12
+                                                {/* Subscription */}
+                                                <td className="px-6 py-5">
+                                                    <PlanBadge
+                                                        plan={
+                                                            studio.plan
                                                         }
                                                     />
 
+                                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+                                                        <Clock3
+                                                            size={
+                                                                12
+                                                            }
+                                                        />
+
+                                                        Until{" "}
+                                                        {studio.subscriptionEnd &&
+                                                            studio.subscriptionEnd !== "—"
+                                                            ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
+                                                                day: "2-digit",
+                                                                month: "short",
+                                                                year: "numeric",
+                                                            })
+                                                            : "—"}
+                                                    </div>
+                                                </td>
+
+                                                {/* Status */}
+                                                <td className="px-6 py-5">
+                                                    <StatusBadge
+                                                        status={
+                                                            studio.status
+                                                        }
+                                                    />
+                                                </td>
+
+                                                {/* Action */}
+                                                <td className="relative px-6 py-5 text-right">
+                                                    <button
+                                                        onClick={(
+                                                            event
+                                                        ) => {
+                                                            event.stopPropagation();
+
+                                                            setOpenMenu(
+                                                                openMenu ===
+                                                                    studio.id
+                                                                    ? null
+                                                                    : studio.id
+                                                            );
+                                                        }}
+                                                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+                                                    >
+                                                        <MoreHorizontal
+                                                            size={
+                                                                18
+                                                            }
+                                                        />
+                                                    </button>
+
+                                                    {openMenu ===
+                                                        studio.id && (
+                                                            <div
+                                                                onClick={(
+                                                                    event
+                                                                ) => {
+                                                                    event.stopPropagation()
+                                                                    setOpenMenu(
+                                                                        openMenu ===
+                                                                            studio.id
+                                                                            ? null
+                                                                            : studio.id
+                                                                    );
+                                                                }}
+                                                                className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
+                                                            >
+                                                                <button
+                                                                    onClick={() => {
+                                                                        navigateWithLoader(
+                                                                            `/super-admin/studios/${studio.id}`
+                                                                        );
+                                                                    }}
+                                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                                >
+                                                                    <Eye
+                                                                        size={
+                                                                            15
+                                                                        }
+                                                                    />
+                                                                    View Studio
+                                                                </button>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        navigateWithLoader(
+                                                                            `/super-admin/studios/${studio.id}/edit`
+                                                                        );
+                                                                    }}
+                                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                                >
+                                                                    <Pencil
+                                                                        size={
+                                                                            15
+                                                                        }
+                                                                    />
+                                                                    Edit Studio
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleToggleStatus(studio.id, studio.status, studio.subscriptionEnd)}
+                                                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                                                                >
+                                                                    {studio.status === "Inactive" ? (
+                                                                        <>
+                                                                            <CheckCircle2 size={15} />
+                                                                            Activate
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <XCircle size={15} />
+                                                                            Deactivate
+                                                                        </>
+                                                                    )}
+                                                                </button>
+
+
+                                                                {/* <div className="my-1 border-t border-zinc-800" /> */}
+                                                            </div>
+                                                        )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+                                )
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Mobile / Tablet Cards */}
+                <div className="divide-y divide-zinc-800 lg:hidden">
+                    {isLoading ? (
+                        Array.from({ length: 4 }).map((_, index) => (
+                            <div
+                                key={`studio-mobile-skeleton-${index}`}
+                                className="animate-pulse p-5"
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <div className="h-11 w-11 shrink-0 rounded-xl bg-zinc-800" />
+                                        <div className="min-w-0 space-y-2">
+                                            <div className="h-3.5 w-32 rounded bg-zinc-800" />
+                                            <div className="h-3 w-24 rounded bg-zinc-800/70" />
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-20 shrink-0 rounded-full bg-zinc-800" />
+                                </div>
+                                <div className="mt-5 grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <div className="h-3 w-16 rounded bg-zinc-800/70" />
+                                        <div className="h-3.5 w-24 rounded bg-zinc-800" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="h-3 w-16 rounded bg-zinc-800/70" />
+                                        <div className="h-3.5 w-20 rounded bg-zinc-800" />
+                                    </div>
+                                </div>
+                                <div className="mt-5 flex gap-2">
+                                    <div className="h-8 w-20 rounded-lg bg-zinc-800" />
+                                    <div className="h-8 w-24 rounded-lg bg-zinc-800" />
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        filteredStudios.map(
+                            (studio) => {
+                                const storagePercentage =
+                                    studio.storageUsed !== null &&
+                                        studio.storageLimit > 0
+                                        ? (studio.storageUsed / studio.storageLimit) * 100
+                                        : null;
+
+                                return (
+                                    <div
+                                        key={studio.id}
+                                        className="p-5"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
+                                                    {getInitials(
+                                                        studio.name
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-white">
+                                                        {
+                                                            studio.name
+                                                        }
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs text-zinc-500">
+                                                        {
+                                                            studio.location
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <StatusBadge
+                                                status={
+                                                    studio.status
+                                                }
+                                            />
+                                        </div>
+
+                                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <p className="text-xs text-zinc-500">
+                                                    Admin
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-zinc-300">
+                                                    {
+                                                        studio.adminName
+                                                    }
+                                                </p>
+
+                                                <p className="mt-1 break-all text-xs text-zinc-500">
+                                                    {
+                                                        studio.adminEmail
+                                                    }
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs text-zinc-500">
+                                                    Subscription
+                                                </p>
+
+                                                <div className="mt-1">
+                                                    <PlanBadge
+                                                        plan={
+                                                            studio.plan
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <p className="mt-1 text-xs text-zinc-500">
                                                     Until{" "}
                                                     {studio.subscriptionEnd &&
                                                         studio.subscriptionEnd !== "—"
@@ -985,320 +1331,119 @@ export default function StudiosPage() {
                                                             year: "numeric",
                                                         })
                                                         : "—"}
-                                                </div>
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="px-6 py-5">
-                                                <StatusBadge
-                                                    status={
-                                                        studio.status
-                                                    }
-                                                />
-                                            </td>
-
-                                            {/* Action */}
-                                            <td className="relative px-6 py-5 text-right">
-                                                <button
-                                                    onClick={(
-                                                        event
-                                                    ) => {
-                                                        event.stopPropagation();
-
-                                                        setOpenMenu(
-                                                            openMenu ===
-                                                                studio.id
-                                                                ? null
-                                                                : studio.id
-                                                        );
-                                                    }}
-                                                    className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
-                                                >
-                                                    <MoreHorizontal
-                                                        size={
-                                                            18
-                                                        }
-                                                    />
-                                                </button>
-
-                                                {openMenu ===
-                                                    studio.id && (
-                                                        <div
-                                                            onClick={(
-                                                                event
-                                                            ) => {
-                                                                event.stopPropagation()
-                                                                setOpenMenu(
-                                                                    openMenu ===
-                                                                        studio.id
-                                                                        ? null
-                                                                        : studio.id
-                                                                );
-                                                            }}
-                                                            className="absolute right-6 top-14 z-20 w-48 rounded-xl border border-zinc-700 bg-zinc-900 p-1.5 text-left shadow-2xl"
-                                                        >
-                                                            <button
-                                                                onClick={() => {
-                                                                    router.push(
-                                                                        `/super-admin/studios/${studio.id}`
-                                                                    );
-                                                                }}
-                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
-                                                            >
-                                                                <Eye
-                                                                    size={
-                                                                        15
-                                                                    }
-                                                                />
-                                                                View Studio
-                                                            </button>
-
-                                                            <button
-                                                                onClick={() => {
-                                                                    router.push(
-                                                                        `/super-admin/studios/${studio.id}/edit`
-                                                                    );
-                                                                }}
-                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
-                                                            >
-                                                                <Pencil
-                                                                    size={
-                                                                        15
-                                                                    }
-                                                                />
-                                                                Edit Studio
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleToggleStatus(studio.id, studio.status, studio.subscriptionEnd)}
-                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
-                                                            >
-                                                                {studio.status === "Inactive" ? (
-                                                                    <>
-                                                                        <CheckCircle2 size={15} />
-                                                                        Activate
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <XCircle size={15} />
-                                                                        Deactivate
-                                                                    </>
-                                                                )}
-                                                            </button>
-
-
-                                                            {/* <div className="my-1 border-t border-zinc-800" /> */}
-                                                        </div>
-                                                    )}
-                                            </td>
-                                        </tr>
-                                    );
-                                }
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile / Tablet Cards */}
-                <div className="divide-y divide-zinc-800 lg:hidden">
-                    {filteredStudios.map(
-                        (studio) => {
-                            const storagePercentage =
-                                studio.storageUsed !== null &&
-                                    studio.storageLimit > 0
-                                    ? (studio.storageUsed / studio.storageLimit) * 100
-                                    : null;
-
-                            return (
-                                <div
-                                    key={studio.id}
-                                    className="p-5"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-white">
-                                                {getInitials(
-                                                    studio.name
-                                                )}
+                                                </p>
                                             </div>
 
                                             <div>
-                                                <p className="font-medium text-white">
+                                                <p className="text-xs text-zinc-500">
+                                                    Activity
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-zinc-300">
                                                     {
-                                                        studio.name
-                                                    }
+                                                        studio.events
+                                                    }{" "}
+                                                    events
                                                 </p>
 
                                                 <p className="mt-1 text-xs text-zinc-500">
                                                     {
-                                                        studio.location
-                                                    }
+                                                        studio.customers
+                                                    }{" "}
+                                                    customers
                                                 </p>
                                             </div>
+
+                                            <div>
+                                                <p className="text-xs text-zinc-500">
+                                                    Storage
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-zinc-300">
+                                                    {studio.storageLimit >
+                                                        0
+                                                        ? `${studio.storageUsed} GB / ${studio.storageLimit} GB`
+                                                        : "—"}
+                                                </p>
+
+                                                {storagePercentage !== null && (
+                                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                                        <div
+                                                            className={`h-full rounded-full ${storagePercentage >= 90
+                                                                ? "bg-red-400"
+                                                                : storagePercentage >= 75
+                                                                    ? "bg-amber-400"
+                                                                    : "bg-white"
+                                                                }`}
+                                                            style={{
+                                                                width: `${Math.min(storagePercentage, 100)}%`,
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        <StatusBadge
-                                            status={
-                                                studio.status
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                                        <div>
-                                            <p className="text-xs text-zinc-500">
-                                                Admin
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-zinc-300">
-                                                {
-                                                    studio.adminName
+                                        <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
+                                            <button
+                                                onClick={() =>
+                                                    navigateWithLoader(
+                                                        `/super-admin/studios/${studio.id}`
+                                                    )
                                                 }
-                                            </p>
-
-                                            <p className="mt-1 break-all text-xs text-zinc-500">
-                                                {
-                                                    studio.adminEmail
-                                                }
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-xs text-zinc-500">
-                                                Subscription
-                                            </p>
-
-                                            <div className="mt-1">
-                                                <PlanBadge
-                                                    plan={
-                                                        studio.plan
+                                                className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                                            >
+                                                <Eye
+                                                    size={
+                                                        14
                                                     }
                                                 />
-                                            </div>
+                                                View
+                                            </button>
 
-                                            <p className="mt-1 text-xs text-zinc-500">
-                                                Until{" "}
-                                                {studio.subscriptionEnd &&
-                                                    studio.subscriptionEnd !== "—"
-                                                    ? new Date(studio.subscriptionEnd).toLocaleDateString("en-GB", {
-                                                        day: "2-digit",
-                                                        month: "short",
-                                                        year: "numeric",
-                                                    })
-                                                    : "—"}
-                                            </p>
-                                        </div>
+                                            <button
+                                                onClick={() =>
+                                                    navigateWithLoader(
+                                                        `/super-admin/studios/${studio.id}/edit`
+                                                    )
+                                                }
+                                                className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
+                                            >
+                                                <Pencil
+                                                    size={
+                                                        14
+                                                    }
+                                                />
+                                                Edit
+                                            </button>
 
-                                        <div>
-                                            <p className="text-xs text-zinc-500">
-                                                Activity
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-zinc-300">
-                                                {
-                                                    studio.events
-                                                }{" "}
-                                                events
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-zinc-500">
-                                                {
-                                                    studio.customers
-                                                }{" "}
-                                                customers
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-xs text-zinc-500">
-                                                Storage
-                                            </p>
-
-                                            <p className="mt-1 text-sm text-zinc-300">
-                                                {studio.storageLimit >
-                                                    0
-                                                    ? `${studio.storageUsed} GB / ${studio.storageLimit} GB`
-                                                    : "—"}
-                                            </p>
-
-                                            {storagePercentage !== null && (
-                                                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                                                    <div
-                                                        className={`h-full rounded-full ${storagePercentage >= 90
-                                                            ? "bg-red-400"
-                                                            : storagePercentage >= 75
-                                                                ? "bg-amber-400"
-                                                                : "bg-white"
-                                                            }`}
-                                                        style={{
-                                                            width: `${Math.min(storagePercentage, 100)}%`,
-                                                        }}
-                                                    />
-                                                </div>
-                                            )}
+                                            <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
+                                                {studio.status ===
+                                                    "Inactive" ? (
+                                                    <>
+                                                        <CheckCircle2
+                                                            size={
+                                                                14
+                                                            }
+                                                        />
+                                                        Activate
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <XCircle
+                                                            size={
+                                                                14
+                                                            }
+                                                        />
+                                                        Deactivate
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
-                                        <button
-                                            onClick={() =>
-                                                router.push(
-                                                    `/super-admin/studios/${studio.id}`
-                                                )
-                                            }
-                                            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
-                                        >
-                                            <Eye
-                                                size={
-                                                    14
-                                                }
-                                            />
-                                            View
-                                        </button>
-
-                                        <button
-                                            onClick={() =>
-                                                router.push(
-                                                    `/super-admin/studios/${studio.id}/edit`
-                                                )
-                                            }
-                                            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800"
-                                        >
-                                            <Pencil
-                                                size={
-                                                    14
-                                                }
-                                            />
-                                            Edit
-                                        </button>
-
-                                        <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800">
-                                            {studio.status ===
-                                                "Inactive" ? (
-                                                <>
-                                                    <CheckCircle2
-                                                        size={
-                                                            14
-                                                        }
-                                                    />
-                                                    Activate
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <XCircle
-                                                        size={
-                                                            14
-                                                        }
-                                                    />
-                                                    Deactivate
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        }
+                                );
+                            }
+                        )
                     )}
                 </div>
 
