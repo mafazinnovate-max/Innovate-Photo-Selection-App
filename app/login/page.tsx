@@ -16,21 +16,21 @@ export default function LoginPage() {
 
 
     useEffect(() => {
-    const loadLogo = async () => {
-        try {
-            const response = await fetch("/api/public-logo");
-            const data = await response.json();
+        const loadLogo = async () => {
+            try {
+                const response = await fetch("/api/public-logo");
+                const data = await response.json();
 
-            if (data.success && data.logoUrl) {
-                setLogoUrl(data.logoUrl);
+                if (data.success && data.logoUrl) {
+                    setLogoUrl(data.logoUrl);
+                }
+            } catch (error) {
+                console.error("Failed to load logo:", error);
             }
-        } catch (error) {
-            console.error("Failed to load logo:", error);
-        }
-    };
+        };
 
-    loadLogo();
-}, []);
+        loadLogo();
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,7 +55,7 @@ export default function LoginPage() {
                 if (data.role === "superadmin") {
                     router.replace("/super-admin/dashboard");
                 } else {
-                    router.push("/events");
+                    router.push("/dashboard");
                 }
 
                 return;
@@ -74,7 +74,7 @@ export default function LoginPage() {
              */
             toast.error(
                 data.message ||
-                    "Invalid username or password."
+                "Invalid username or password."
             );
         } catch (error) {
             console.error("Login request failed:", error);
@@ -94,16 +94,16 @@ export default function LoginPage() {
                 className="w-full max-w-md rounded-2xl bg-zinc-900 p-6"
             >
                 <div className="mb-8 flex flex-col items-center">
-{logoUrl && (
-    <Image
-        src={logoUrl}
-        alt="Picknnovate"
-        width={140}
-        height={140}
-        priority
-        className="h-36 w-36 rounded-2xl object-contain"
-    />
-)}
+                    {logoUrl && (
+                        <Image
+                            src={logoUrl}
+                            alt="Picknnovate"
+                            width={140}
+                            height={140}
+                            priority
+                            className="h-36 w-36 rounded-2xl object-contain"
+                        />
+                    )}
                 </div>
 
                 <h1 className="text-center text-3xl font-bold text-white">
