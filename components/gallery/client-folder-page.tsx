@@ -365,10 +365,10 @@ export default function ClientFolderPage({
       return;
     }
 
-    if (
-      maxSelections !== null &&
-      current.length >= maxSelections
-    ) {
+   if (
+  maxSelections !== null &&
+  totalSelected >= maxSelections
+) {
       setShowLimitWarning(true);
 
       if (limitTimeoutRef.current) {

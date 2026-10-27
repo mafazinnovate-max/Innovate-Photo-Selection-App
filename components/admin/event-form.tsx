@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createEvent } from "@/actions/create-event";
@@ -6,7 +7,7 @@ import { updateEvent } from "@/actions/update-event";
 import imageCompression from "browser-image-compression";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface EventFormProps {
     mode: "create" | "edit";
@@ -30,35 +31,45 @@ export default function EventForm({
     initialData,
 }: EventFormProps) {
     const router = useRouter();
+
     const [eventLimitReached, setEventLimitReached] = useState(false);
-const [checkingEventLimit, setCheckingEventLimit] = useState(
-    mode === "create",
-);
+    const [checkingEventLimit, setCheckingEventLimit] = useState(
+        mode === "create",
+    );
 
-useEffect(() => {
-    if (mode !== "create") {
-        return;
-    }
+    const clientNameRef = useRef<HTMLInputElement>(null);
+    const eventNameRef = useRef<HTMLInputElement>(null);
+    const eventTypeRef = useRef<HTMLSelectElement>(null);
+    const customEventTypeRef = useRef<HTMLInputElement>(null);
+    const eventDateRef = useRef<HTMLInputElement>(null);
+    const coverImageRef = useRef<HTMLInputElement>(null);
 
-    const checkLimit = async () => {
-        const response = await checkEventLimit();
+    const [validationError, setValidationError] = useState<string | null>(null);
 
-        if (!response.success) {
-            alert(response.message ?? "Unable to check event limit.");
-            setEventLimitReached(true);
-            setCheckingEventLimit(false);
+    useEffect(() => {
+        if (mode !== "create") {
             return;
         }
 
-        if (!response.allowed) {
-            setEventLimitReached(true);
-        }
+        const checkLimit = async () => {
+            const response = await checkEventLimit();
 
-        setCheckingEventLimit(false);
-    };
+            if (!response.success) {
+                alert(response.message ?? "Unable to check event limit.");
+                setEventLimitReached(true);
+                setCheckingEventLimit(false);
+                return;
+            }
 
-    checkLimit();
-}, [mode]);
+            if (!response.allowed) {
+                setEventLimitReached(true);
+            }
+
+            setCheckingEventLimit(false);
+        };
+
+        checkLimit();
+    }, [mode]);
 
     const [clientName, setClientName] = useState(
         initialData?.clientName ?? "",
@@ -163,9 +174,66 @@ useEffect(() => {
     const finalEventType =
         eventType === "Other" ? customEventType : eventType;
 
+    const scrollToMissingField = (
+        ref: React.RefObject<
+            HTMLInputElement | HTMLSelectElement | null
+        >,
+    ) => {
+        const element = ref.current;
+
+        if (!element) {
+            return;
+        }
+
+        element.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+        });
+
+        window.setTimeout(() => {
+            element.focus();
+        }, 400);
+    };
+
     const handleSubmit = async () => {
-        if (!clientName || !eventName || !eventType || !eventDate) {
-            alert("Please fill all required fields");
+        setValidationError(null);
+
+        if (!clientName.trim()) {
+            setValidationError("Please enter the client name.");
+            scrollToMissingField(clientNameRef);
+            return;
+        }
+
+        if (!eventName.trim()) {
+            setValidationError("Please enter the event name.");
+            scrollToMissingField(eventNameRef);
+            return;
+        }
+
+        if (!eventType) {
+            setValidationError("Please select an event category.");
+            scrollToMissingField(eventTypeRef);
+            return;
+        }
+
+        if (
+            eventType === "Other" &&
+            !customEventType.trim()
+        ) {
+            setValidationError("Please enter the custom event type.");
+            scrollToMissingField(customEventTypeRef);
+            return;
+        }
+
+        if (!eventDate) {
+            setValidationError("Please select the event date.");
+            scrollToMissingField(eventDateRef);
+            return;
+        }
+
+        if (mode === "create" && !coverImage) {
+            setValidationError("Please select a cover image.");
+            scrollToMissingField(coverImageRef);
             return;
         }
 
@@ -264,48 +332,72 @@ useEffect(() => {
         }
     };
 
+    const handleFormKeyDown = (
+        e: React.KeyboardEvent<HTMLDivElement>,
+    ) => {
+        if (e.key !== "Enter") {
+            return;
+        }
+
+        if (
+            e.target instanceof HTMLTextAreaElement ||
+            e.target instanceof HTMLButtonElement
+        ) {
+            return;
+        }
+
+        e.preventDefault();
+
+        if (!isSubmitting) {
+            handleSubmit();
+        }
+    };
+
     if (checkingEventLimit) {
-    return (
-        <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
-            <div className="text-center">
-                <Loader2
-                    size={28}
-                    className="mx-auto animate-spin text-zinc-400"
-                />
-                <p className="mt-3 text-zinc-400">
-                    Checking event limit...
-                </p>
+        return (
+            <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
+                <div className="text-center">
+                    <Loader2
+                        size={28}
+                        className="mx-auto animate-spin text-zinc-400"
+                    />
+                    <p className="mt-3 text-zinc-400">
+                        Checking event limit...
+                    </p>
+                </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
 
-if (eventLimitReached) {
-    return (
-        <div className="mx-auto max-w-3xl">
-            <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-8 text-center">
-                <h1 className="text-2xl font-bold text-red-400">
-                    Event Limit Reached
-                </h1>
+    if (eventLimitReached) {
+        return (
+            <div className="mx-auto max-w-3xl">
+                <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-8 text-center">
+                    <h1 className="text-2xl font-bold text-red-400">
+                        Event Limit Reached
+                    </h1>
 
-                <p className="mt-3 text-zinc-400">
-                    You have reached your maximum number of events.
-                    Please contact the administrator to increase your limit.
-                </p>
+                    <p className="mt-3 text-zinc-400">
+                        You have reached your maximum number of events.
+                        Please contact the administrator to increase your limit.
+                    </p>
 
-                <button
-                    onClick={() => router.push("/events")}
-                    className="mt-6 rounded-xl bg-white px-6 py-3 font-medium text-black hover:opacity-90"
-                >
-                    Back to Events
-                </button>
+                    <button
+                        onClick={() => router.push("/events")}
+                        className="mt-6 rounded-xl bg-white px-6 py-3 font-medium text-black hover:opacity-90"
+                    >
+                        Back to Events
+                    </button>
+                </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
 
     return (
-        <div className="mx-auto max-w-3xl">
+        <div
+            className="mx-auto max-w-3xl"
+            onKeyDown={handleFormKeyDown}
+        >
             <h1 className="text-3xl font-bold">
                 {mode === "create"
                     ? "Create Event"
@@ -325,14 +417,25 @@ if (eventLimitReached) {
                     </label>
 
                     <input
+                        ref={clientNameRef}
                         type="text"
                         placeholder="Enter client name"
                         value={clientName}
-                        onChange={(e) =>
-                            setClientName(e.target.value)
-                        }
+                        onChange={(e) => {
+                            setClientName(e.target.value);
+
+                            if (e.target.value.trim()) {
+                                setValidationError(null);
+                            }
+                        }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+                    {validationError === "Please enter the client name." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
                 </div>
 
                 <div>
@@ -341,14 +444,25 @@ if (eventLimitReached) {
                     </label>
 
                     <input
+                        ref={eventNameRef}
                         type="text"
                         placeholder="Wedding of Arjun & Meera"
                         value={eventName}
-                        onChange={(e) =>
-                            setEventName(e.target.value)
-                        }
+                        onChange={(e) => {
+                            setEventName(e.target.value);
+
+                            if (e.target.value.trim()) {
+                                setValidationError(null);
+                            }
+                        }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+                    {validationError === "Please enter the event name." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
                 </div>
 
                 <div>
@@ -357,8 +471,15 @@ if (eventLimitReached) {
                     </label>
 
                     <select
+                        ref={eventTypeRef}
                         value={eventType}
-                        onChange={(e) => setEventType(e.target.value)}
+                        onChange={(e) => {
+                            setEventType(e.target.value);
+
+                            if (e.target.value) {
+                                setValidationError(null);
+                            }
+                        }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     >
                         <option value="Wedding">Wedding</option>
@@ -369,14 +490,33 @@ if (eventLimitReached) {
                         <option value="Other">Other</option>
                     </select>
 
+                    {validationError === "Please select an event category." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
+
                     {eventType === "Other" && (
                         <input
+                            ref={customEventTypeRef}
                             type="text"
                             placeholder="Enter custom event type"
                             value={customEventType}
-                            onChange={(e) => setCustomEventType(e.target.value)}
+                            onChange={(e) => {
+                                setCustomEventType(e.target.value);
+
+                                if (e.target.value.trim()) {
+                                    setValidationError(null);
+                                }
+                            }}
                             className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                         />
+                    )}
+
+                    {validationError === "Please enter the custom event type." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
                     )}
                 </div>
 
@@ -386,14 +526,27 @@ if (eventLimitReached) {
                     </label>
 
                     <input
+                        ref={eventDateRef}
                         type="date"
                         value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
+                        onChange={(e) => {
+                            setEventDate(e.target.value);
+
+                            if (e.target.value) {
+                                setValidationError(null);
+                            }
+                        }}
                         className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-white"
                         style={{
                             colorScheme: "dark",
                         }}
                     />
+
+                    {validationError === "Please select the event date." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
                 </div>
 
                 <div>
@@ -449,12 +602,15 @@ if (eventLimitReached) {
                     </label>
 
                     <input
+                        ref={coverImageRef}
                         type="file"
                         accept="image/*"
                         onChange={async (e) => {
                             const file = e.target.files?.[0];
 
                             if (!file) return;
+
+                            setValidationError(null);
 
                             try {
                                 const compressedFile =
@@ -472,6 +628,12 @@ if (eventLimitReached) {
                         }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+                    {validationError === "Please select a cover image." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
 
                     {coverPreview && (
                         <div className="mt-4">
@@ -536,6 +698,7 @@ if (eventLimitReached) {
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
                 </div>
+
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}

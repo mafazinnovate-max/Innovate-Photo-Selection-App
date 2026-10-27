@@ -650,9 +650,11 @@ export default function PastEvents({
           <button
             type="button"
             onClick={() => setShowViewFilter(true)}
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-2xl hover:shadow-black/30 active:translate-y-0 active:scale-[0.98]"
           >
-            Filter
+            <span className="transition-transform duration-200 group-hover:scale-110">
+              Filter
+            </span>
           </button>
 
           <button
@@ -660,10 +662,12 @@ export default function PastEvents({
             onClick={() =>
               setShowDownloadModal(true)
             }
-            className="flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-black transition hover:opacity-90"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98]"
           >
-            <Download className="h-4 w-4" />
-            Download Summary
+            <Download className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+            <span>
+              Download Summary
+            </span>
           </button>
         </div>
       </div>
