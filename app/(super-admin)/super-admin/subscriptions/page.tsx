@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-type Plan = "Basic" | "Professional" | "Enterprise" | "Not configured";
+type Plan = "Trial" | "Basic" | "Professional" | "Enterprise" | "Not configured";
 
 type SubscriptionStatus =
     | "Active"
@@ -39,6 +39,7 @@ interface Subscription {
     status: SubscriptionStatus;
     startDate: string;
     endDate: string;
+    price: number | null;
     storageUsed: number | null;
     storageLimit: number;
     events: number;
@@ -61,12 +62,13 @@ interface StudioApiRecord {
         phone?: string | null;
         createdAt: string;
     }>;
-    subscriptions?: Array<{
+    Subscription?: Array<{
         id: string;
         plan: string;
         status: string;
         startDate: string;
         endDate: string | null;
+        price: number | null;
         storageLimitGb: number;
         maxEvents: number;
         maxCustomers: number;
@@ -76,7 +78,7 @@ interface StudioApiRecord {
 }
 
 function toPlan(value?: string): Plan {
-    if (value === "Professional" || value === "Enterprise") return value;
+    if (value === "Trial" || value === "Professional" || value === "Enterprise") return value;
     return "Basic";
 }
 
@@ -97,7 +99,7 @@ function getDisplayStatus(studioIsActive: boolean, endDate: string | null, subsc
 }
 
 function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
-    const latestSubscription = studio.subscriptions?.[0];
+    const latestSubscription = studio.Subscription?.[0];
     const admin = studio.admins?.[0];
 
     return {
@@ -111,6 +113,7 @@ function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
         startDate: latestSubscription?.startDate ?? "",
         endDate: latestSubscription?.endDate ?? "",
         storageUsed: null,
+        price: latestSubscription?.price ?? null,
         storageLimit: latestSubscription?.storageLimitGb ?? 0,
         events: studio._count?.events ?? 0,
         maxEvents: latestSubscription?.maxEvents ?? 0,
@@ -120,7 +123,7 @@ function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
     };
 }
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 10;
 
 export default function SubscriptionsPage() {
     const router = useRouter();
@@ -254,10 +257,20 @@ export default function SubscriptionsPage() {
     const activeSubscriptions = subscriptions.filter((item) => item.status === "Active").length;
     const expiringSubscriptions = subscriptions.filter((item) => item.status === "Expiring Soon").length;
     const inactiveSubscriptions = subscriptions.filter((item) => item.status === "Inactive").length;
-    const configuredMonthlyRevenue = subscriptions.some((item) => item.monthlyPrice !== null)
+
+    const configuredMonthlyRevenue = subscriptions.some(
+        (item) => item.price !== null
+    )
         ? subscriptions
-            .filter((item) => item.status === "Active" || item.status === "Expiring Soon")
-            .reduce((total, item) => total + (item.monthlyPrice ?? 0), 0)
+            .filter(
+                (item) =>
+                    item.status === "Active" ||
+                    item.status === "Expiring Soon"
+            )
+            .reduce(
+                (total, item) => total + (item.price ?? 0),
+                0
+            )
         : null;
 
     const resetPage = () => {
@@ -312,23 +325,20 @@ export default function SubscriptionsPage() {
 
             {/* Header */}
             <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <div className="mb-2 flex items-center gap-2 text-sm text-zinc-500">
-                        <span>Super Admin</span>
-                        <span>/</span>
-                        <span className="text-zinc-300">
-                            Subscriptions
-                        </span>
+                <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-black">
+                        <CreditCard size={21} />
                     </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">
+                            Subscriptions
+                        </h1>
 
-                    <h1 className="text-3xl font-bold text-white">
-                        Subscriptions
-                    </h1>
-
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                        Manage studio subscription plans, billing periods,
-                        usage limits and subscription status.
-                    </p>
+                        <p className="mt-1 text-sm text-zinc-400">
+                            Manage studio subscription plans, billing periods,
+                            usage limits and subscription status.
+                        </p>
+                    </div>
                 </div>
 
                 <button
@@ -415,6 +425,7 @@ export default function SubscriptionsPage() {
                             }
                             options={[
                                 "All",
+                                "Trial",
                                 "Basic",
                                 "Professional",
                                 "Enterprise",
@@ -661,7 +672,7 @@ export default function SubscriptionsPage() {
                                                         </span>
 
                                                         <span className="text-zinc-300">
-                                                            {subscription.storageUsed === null ? "Not tracked" : `${subscription.storageUsed} / ${subscription.storageLimit} GB`}
+                                                            {subscription.storageUsed === null ? "Not tracked" : subscription.storageUsed} / {subscription.storageLimit} GB
                                                         </span>
                                                     </div>
 
@@ -675,9 +686,9 @@ export default function SubscriptionsPage() {
                                                             {subscription.maxEvents} events
                                                         </span>
 
-                                                        <span>
+                                                        {/* <span>
                                                             {subscription.customers === null ? "Customers: Not tracked" : `${subscription.customers}/${subscription.maxCustomers} customers`}
-                                                        </span>
+                                                        </span> */}
                                                     </div>
                                                 </div>
                                             </td>
@@ -685,12 +696,12 @@ export default function SubscriptionsPage() {
                                             {/* Billing */}
                                             <td className="px-5 py-5">
                                                 <p className="text-sm font-medium text-white">
-                                                    {subscription.monthlyPrice === null ? "Not configured" : formatCurrency(subscription.monthlyPrice)}
+                                                    {subscription.price === null ? "Not configured" : formatCurrency(subscription.price)}
                                                 </p>
 
-                                                <p className="mt-1 text-xs text-zinc-600">
+                                                {/* <p className="mt-1 text-xs text-zinc-600">
                                                     Monthly
-                                                </p>
+                                                </p> */}
                                             </td>
 
                                             {/* Status */}
@@ -1118,6 +1129,7 @@ function PlanBadge({
     plan: Plan;
 }) {
     const classes = {
+        Trial: "border-amber-500/20 bg-amber-500/10 text-amber-400",
         Basic: "border-zinc-700 bg-zinc-800 text-zinc-300",
         Professional:
             "border-blue-500/20 bg-blue-500/10 text-blue-400",

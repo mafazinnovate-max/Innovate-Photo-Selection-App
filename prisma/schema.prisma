@@ -161,6 +161,7 @@ model Subscription {
   maxEvents      Int       @default(50)
   maxCustomers   Int       @default(500)
   maxImages      Int       @default(100000)
+  price          Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   studioId       String

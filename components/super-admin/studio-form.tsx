@@ -22,7 +22,18 @@ import {
     Users,
 } from "lucide-react";
 
-export type StudioPlan = "Basic" | "Professional" | "Enterprise";
+export type StudioPlan =
+    | "Trial"
+    | "Basic"
+    | "Professional"
+    | "Enterprise";
+
+export const PLAN_PRICES: Record<StudioPlan, number> = {
+    Trial: 0,
+    Basic: 3999,
+    Professional: 8999,
+    Enterprise: 24999,
+};
 export type StudioStatus = "Active" | "Inactive";
 
 export interface StudioFormData {
@@ -255,6 +266,7 @@ export default function StudioForm({
                     body: JSON.stringify({
                         ...formData,
                         plan,
+                        price: PLAN_PRICES[plan],
                         status,
                     }),
                 }
@@ -608,8 +620,8 @@ export default function StudioForm({
                             Plan
                         </label>
 
-                        <div className="grid gap-3 md:grid-cols-3">
-                            {(["Basic", "Professional", "Enterprise"] as StudioPlan[]).map(
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {(["Trial", "Basic", "Professional", "Enterprise"] as StudioPlan[]).map(
                                 (item) => (
                                     <button
                                         key={item}
@@ -625,25 +637,25 @@ export default function StudioForm({
                                                 {item}
                                             </span>
 
+                                            <p className="mt-3 text-xl font-bold">
+                                                {PLAN_PRICES[item] === 0
+                                                    ? "₹0"
+                                                    : `₹${PLAN_PRICES[item].toLocaleString("en-IN")}`}
+                                            </p>
+
                                             {plan === item && (
                                                 <Check size={17} />
                                             )}
                                         </div>
 
                                         <p
-                                            className={`mt-1 text-xs ${plan === item
-                                                ? "text-zinc-600"
-                                                : "text-zinc-500"
+                                            className={`mt-1 text-xs ${plan === item ? "text-zinc-600" : "text-zinc-500"
                                                 }`}
                                         >
-                                            {item === "Basic" &&
-                                                "For small photography studios."}
-
-                                            {item === "Professional" &&
-                                                "For growing studios and teams."}
-
-                                            {item === "Enterprise" &&
-                                                "For high-volume studios."}
+                                            {item === "Trial" && "Try Picnovate with the trial plan."}
+                                            {item === "Basic" && "For small photography studios."}
+                                            {item === "Professional" && "For growing studios and teams."}
+                                            {item === "Enterprise" && "For high-volume studios."}
                                         </p>
                                     </button>
                                 )
