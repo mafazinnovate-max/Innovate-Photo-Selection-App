@@ -200,7 +200,7 @@ export async function GET(
                 notes: studio.internalNotes ?? "",
             },
             plan: subscription?.plan ?? "Professional",
-            price: subscription?.price ?? 8999,
+            price: String(subscription?.price ?? 0),
             status: studio.isActive ? "Active" : "Inactive",
         });
     } catch (error) {
