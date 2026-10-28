@@ -200,6 +200,7 @@ export async function GET(
                 notes: studio.internalNotes ?? "",
             },
             plan: subscription?.plan ?? "Professional",
+            price: subscription?.price ?? 8999,
             status: studio.isActive ? "Active" : "Inactive",
         });
     } catch (error) {
@@ -341,9 +342,24 @@ export async function PATCH(
             );
         }
 
-        const plan = ["Basic", "Professional", "Enterprise"].includes(data.plan)
-            ? data.plan
+        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
+
+        type Plan = (typeof validPlans)[number];
+
+        const plan: Plan = (
+            validPlans as readonly string[]
+        ).includes(data.plan)
+            ? (data.plan as Plan)
             : "Professional";
+
+        const planPrices: Record<Plan, number> = {
+            Trial: 0,
+            Basic: 3999,
+            Professional: 8999,
+            Enterprise: 24999,
+        };
+
+        const price = planPrices[plan];
 
         const status = data.status === "Inactive" ? "Inactive" : "Active";
 
@@ -429,6 +445,7 @@ export async function PATCH(
 
             const subscriptionData = {
                 plan,
+                price,
                 status,
                 startDate,
                 endDate,

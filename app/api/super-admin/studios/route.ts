@@ -133,9 +133,22 @@ export async function POST(request: Request) {
             );
         }
 
-        const plan = ["Basic", "Professional", "Enterprise"].includes(data.plan)
+        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
+
+        type Plan = (typeof validPlans)[number];
+
+        const planPrices: Record<Plan, number> = {
+            Trial: 0,
+            Basic: 3999,
+            Professional: 8999,
+            Enterprise: 24999,
+        };
+
+        const plan: Plan = validPlans.includes(data.plan)
             ? data.plan
             : "Professional";
+
+        const price = planPrices[plan];
 
         const status = data.status === "Inactive" ? "Inactive" : "Active";
 
@@ -182,15 +195,16 @@ export async function POST(request: Request) {
             });
 
             const authSecret = await tx.authSecret.create({
-    data: {
-        secret: randomBytes(32).toString("hex"),
-        adminId: admin.id,
-    },
-});
+                data: {
+                    secret: randomBytes(32).toString("hex"),
+                    adminId: admin.id,
+                },
+            });
 
             const subscription = await tx.subscription.create({
                 data: {
                     plan,
+                    price,
                     id: crypto.randomUUID(),
                     status,
                     startDate,
@@ -258,10 +272,10 @@ export async function GET() {
                     },
                     orderBy: { createdAt: "asc" },
                 },
-Subscription: {
-    orderBy: { createdAt: "desc" },
-    take: 1,
-},
+                Subscription: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                },
 
                 _count: {
                     select: {

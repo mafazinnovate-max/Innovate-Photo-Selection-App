@@ -30,7 +30,7 @@ import { useEffect, useMemo, useState } from "react";
 
 
 type StudioStatus = "Active" | "Inactive" | "Expiring Soon";
-type Plan = "Basic" | "Professional" | "Enterprise";
+type Plan = "Trial" | "Basic" | "Professional" | "Enterprise";
 
 interface Studio {
     id: string;
@@ -72,7 +72,7 @@ interface ApiStudio {
         phone?: string | null;
         createdAt: string;
     }[];
-    subscriptions?: {
+    Subscription?: {
         plan: string;
         status: string;
         startDate: string;
@@ -97,6 +97,7 @@ const statusOptions = [
 
 const planOptions = [
     "All Plans",
+    "Trial",
     "Basic",
     "Professional",
     "Enterprise",
@@ -136,7 +137,7 @@ function formatDate(value: string) {
 
 function getStudioStatus(
     isActive: boolean,
-    subscription?: ApiStudio["subscriptions"] extends (infer T)[] | undefined
+    subscription?: ApiStudio["Subscription"] extends (infer T)[] | undefined
         ? T
         : never
 ): StudioStatus {
@@ -222,6 +223,9 @@ export default function StudiosPage() {
     const [statusFilter, setStatusFilter] = useState("All Status");
     const [planFilter, setPlanFilter] = useState("All Plans");
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 10;
+
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [isNavigating, setIsNavigating] = useState(false);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -282,7 +286,6 @@ export default function StudiosPage() {
                 );
 
                 const data = await response.json();
-
                 if (!response.ok) {
                     throw new Error(
                         data.message ||
@@ -300,9 +303,10 @@ export default function StudiosPage() {
                     data.studios as ApiStudio[]
                 ).map((studio) => {
                     const firstAdmin = studio.admins?.[0];
-                    const subscription = studio.subscriptions?.[0];
+                    const subscription = studio.Subscription?.[0];
 
                     const validPlans: Plan[] = [
+                        "Trial",
                         "Basic",
                         "Professional",
                         "Enterprise",
@@ -490,6 +494,29 @@ export default function StudiosPage() {
         statusFilter,
         planFilter,
     ]);
+
+    // Reset to first page whenever search or filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter, planFilter]);
+
+    // Pagination calculations
+    const totalPages = Math.ceil(
+        filteredStudios.length / PAGE_SIZE
+    );
+
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+
+    const endIndex = Math.min(
+        startIndex + PAGE_SIZE,
+        filteredStudios.length
+    );
+
+    // Studios to display on the current page
+    const paginatedStudios = filteredStudios.slice(
+        startIndex,
+        endIndex
+    );
 
     const totalStudios = studios.length;
 
@@ -902,7 +929,7 @@ export default function StudiosPage() {
                                     </tr>
                                 ))
                             ) : (
-                                filteredStudios.map(
+                                paginatedStudios.map(
                                     (studio) => {
                                         const storagePercentage =
                                             studio.storageUsed !== null &&
@@ -1246,7 +1273,7 @@ export default function StudiosPage() {
                             </div>
                         ))
                     ) : (
-                        filteredStudios.map(
+                        paginatedStudios.map(
                             (studio) => {
                                 const storagePercentage =
                                     studio.storageUsed !== null &&
@@ -1475,46 +1502,61 @@ export default function StudiosPage() {
                     )}
 
                 {/* Pagination */}
-                {filteredStudios.length > 0 && (
+                {!isLoading && filteredStudios.length > 0 && (
                     <div className="flex flex-col gap-3 border-t border-zinc-800 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-xs text-zinc-500">
                             Showing{" "}
                             <span className="text-zinc-300">
-                                1–
-                                {
-                                    filteredStudios.length
-                                }
+                                {startIndex + 1}–{endIndex}
                             </span>{" "}
                             of{" "}
                             <span className="text-zinc-300">
-                                {
-                                    filteredStudios.length
-                                }
+                                {filteredStudios.length}
                             </span>{" "}
                             studios
                         </p>
 
                         <div className="flex items-center gap-2">
+                            {/* Previous Page */}
                             <button
-                                disabled
-                                className="rounded-lg border border-zinc-800 p-2 text-zinc-600 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() =>
+                                    setCurrentPage((page) =>
+                                        Math.max(1, page - 1)
+                                    )
+                                }
+                                disabled={currentPage === 1}
+                                aria-label="Previous page"
+                                className="rounded-lg border border-zinc-800 p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                <ChevronLeft
-                                    size={16}
-                                />
+                                <ChevronLeft size={16} />
                             </button>
 
-                            <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-white px-2 text-xs font-medium text-black">
-                                1
+                            {/* Current Page */}
+                            <span
+                                aria-current="page"
+                                className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-white px-2 text-xs font-medium text-black"
+                            >
+                                {currentPage}
                             </span>
 
+                            <span className="text-xs text-zinc-500">
+                                of {totalPages}
+                            </span>
+
+                            {/* Next Page */}
                             <button
-                                disabled
-                                className="rounded-lg border border-zinc-800 p-2 text-zinc-600 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() =>
+                                    setCurrentPage((page) =>
+                                        Math.min(totalPages, page + 1)
+                                    )
+                                }
+                                disabled={currentPage >= totalPages}
+                                aria-label="Next page"
+                                className="rounded-lg border border-zinc-800 p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                <ChevronRight
-                                    size={16}
-                                />
+                                <ChevronRight size={16} />
                             </button>
                         </div>
                     </div>
