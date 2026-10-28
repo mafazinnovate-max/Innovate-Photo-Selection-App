@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -12,13 +11,18 @@ export default function SignupPage() {
 
     const [studioName, setStudioName] = useState("");
     const [studioEmail, setStudioEmail] = useState("");
-    const [adminName, setAdminName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [secondName, setSecondName] = useState("");
     const [adminContact, setAdminContact] = useState("");
     const [adminEmail, setAdminEmail] = useState("");
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] =
+        useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -36,7 +40,10 @@ export default function SignupPage() {
                     setLogoUrl(data.logoUrl);
                 }
             } catch (error) {
-                console.error("Failed to load Picknovate logo:", error);
+                console.error(
+                    "Failed to load Picknovate logo:",
+                    error
+                );
             }
         };
 
@@ -49,7 +56,8 @@ export default function SignupPage() {
         if (
             !studioName.trim() ||
             !studioEmail.trim() ||
-            !adminName.trim() ||
+            !firstName.trim() ||
+            !secondName.trim() ||
             !adminContact.trim() ||
             !adminEmail.trim()
         ) {
@@ -95,6 +103,8 @@ export default function SignupPage() {
             setError("Password must be at least 8 characters.");
             return;
         }
+
+        const adminName = `${firstName.trim()} ${secondName.trim()}`;
 
         try {
             setLoading(true);
@@ -243,25 +253,39 @@ export default function SignupPage() {
 
                                     {/* Admin Name */}
                                     <div>
-                                        <label
-                                            htmlFor="adminName"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
-                                        >
+                                        <label className="mb-2 block text-sm font-medium text-zinc-300">
                                             Admin Name
                                         </label>
 
-                                        <input
-                                            id="adminName"
-                                            type="text"
-                                            value={adminName}
-                                            onChange={(event) =>
-                                                setAdminName(
-                                                    event.target.value
-                                                )
-                                            }
-                                            placeholder="Your full name"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
-                                        />
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <input
+                                                id="firstName"
+                                                type="text"
+                                                value={firstName}
+                                                onChange={(event) =>
+                                                    setFirstName(
+                                                        event.target.value
+                                                    )
+                                                }
+                                                placeholder="First Name"
+                                                autoComplete="given-name"
+                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            />
+
+                                            <input
+                                                id="secondName"
+                                                type="text"
+                                                value={secondName}
+                                                onChange={(event) =>
+                                                    setSecondName(
+                                                        event.target.value
+                                                    )
+                                                }
+                                                placeholder="Second Name"
+                                                autoComplete="family-name"
+                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Admin Contact */}
@@ -372,19 +396,87 @@ export default function SignupPage() {
                                             Password
                                         </label>
 
-                                        <input
-                                            id="password"
-                                            type="password"
-                                            value={password}
-                                            onChange={(event) =>
-                                                setPassword(
-                                                    event.target.value
-                                                )
-                                            }
-                                            placeholder="Create a password"
-                                            autoComplete="new-password"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                id="password"
+                                                type={
+                                                    showPassword
+                                                        ? "text"
+                                                        : "password"
+                                                }
+                                                value={password}
+                                                onChange={(event) =>
+                                                    setPassword(
+                                                        event.target.value
+                                                    )
+                                                }
+                                                placeholder="Create a password"
+                                                autoComplete="new-password"
+                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowPassword(
+                                                        (value) => !value
+                                                    )
+                                                }
+                                                aria-label={
+                                                    showPassword
+                                                        ? "Hide password"
+                                                        : "Show password"
+                                                }
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition hover:text-white"
+                                            >
+                                                {showPassword ? (
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        className="h-5 w-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M3 3l18 18"
+                                                        />
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M10.58 10.58a2 2 0 102.83 2.83"
+                                                        />
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M9.88 4.24A10.45 10.45 0 0112 4c5.25 0 8.5 5 8.5 5a16.7 16.7 0 01-3.12 3.67M6.61 6.61C4.26 8.11 3.5 9 3.5 9s3.25 5 8.5 5c.73 0 1.42-.08 2.06-.22"
+                                                        />
+                                                    </svg>
+                                                ) : (
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        className="h-5 w-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12z"
+                                                        />
+                                                        <circle
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="2.5"
+                                                        />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Confirm Password */}
@@ -396,19 +488,88 @@ export default function SignupPage() {
                                             Confirm Password
                                         </label>
 
-                                        <input
-                                            id="confirmPassword"
-                                            type="password"
-                                            value={confirmPassword}
-                                            onChange={(event) =>
-                                                setConfirmPassword(
-                                                    event.target.value
-                                                )
-                                            }
-                                            placeholder="Confirm your password"
-                                            autoComplete="new-password"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                id="confirmPassword"
+                                                type={
+                                                    showConfirmPassword
+                                                        ? "text"
+                                                        : "password"
+                                                }
+                                                value={confirmPassword}
+                                                onChange={(event) =>
+                                                    setConfirmPassword(
+                                                        event.target.value
+                                                    )
+                                                }
+                                               
+                                                placeholder="Confirm your password"
+                                                autoComplete="new-password"
+                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowConfirmPassword(
+                                                        (value) => !value
+                                                    )
+                                                }
+                                                aria-label={
+                                                    showConfirmPassword
+                                                        ? "Hide confirm password"
+                                                        : "Show confirm password"
+                                                }
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition hover:text-white"
+                                            >
+                                                {showConfirmPassword ? (
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        className="h-5 w-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M3 3l18 18"
+                                                        />
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M10.58 10.58a2 2 0 102.83 2.83"
+                                                        />
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M9.88 4.24A10.45 10.45 0 0112 4c5.25 0 8.5 5 8.5 5a16.7 16.7 0 01-3.12 3.67M6.61 6.61C4.26 8.11 3.5 9 3.5 9s3.25 5 8.5 5c.73 0 1.42-.08 2.06-.22"
+                                                        />
+                                                    </svg>
+                                                ) : (
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        className="h-5 w-5"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12z"
+                                                        />
+                                                        <circle
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="2.5"
+                                                        />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {error && (

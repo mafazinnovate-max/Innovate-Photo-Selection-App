@@ -12,6 +12,7 @@ import { verifyAuthToken } from "@/lib/auth";
 import RecentEvents from "@/components/admin/recent-events";
 import PastEvents from "@/components/admin/past-events";
 import SubscriptionCard from "@/components/admin/subscription-card";
+import AnimatedStatValue from "@/components/admin/animated-stat-value";
 
 export const dynamic = "force-dynamic";
 
@@ -364,7 +365,7 @@ export default async function DashboardPage() {
           return (
             <div
               key={stat.title}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+              className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-lg shadow-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-zinc-600 hover:bg-zinc-[950] hover:shadow-2xl hover:shadow-black/30"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -373,7 +374,7 @@ export default async function DashboardPage() {
                   </p>
 
                   <p className="mt-2 text-3xl font-bold text-white">
-                    {stat.value}
+                   <AnimatedStatValue value={stat.value} />
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-500">

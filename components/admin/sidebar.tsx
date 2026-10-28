@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import PicknovateLoader from "@/components/admin/picknovate-loader";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -46,6 +47,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
@@ -255,28 +257,15 @@ export default function Sidebar({
     <>
       {/* Main content navigation loader. The sidebar remains visible. */}
       {isNavigating && (
-        <div
-          className="fixed bottom-0 left-0 right-0 top-16 z-30 flex items-center justify-center bg-black lg:left-72 lg:top-0"
-          role="status"
-          aria-label="Loading page"
-        >
-          {logoUrl ? (
-            <Image
-              src="/picknovate-logo.png"
-              alt="Studio logo"
-              width={96}
-              height={96}
-              priority
-              unoptimized
-              className="h-20 w-20 animate-pulse object-contain sm:h-24 sm:w-24"
-            />
-          ) : (
-            <h1 className="animate-pulse text-3xl font-bold tracking-wide text-white">
-              Picnovate
-            </h1>
-          )}
-        </div>
-      )}
+  <div
+    className="fixed bottom-0 left-0 right-0 top-16 z-30 flex items-center justify-center bg-black lg:left-72 lg:top-0"
+    role="status"
+    aria-label="Loading page"
+  >
+    <PicknovateLoader />
+  
+  </div>
+)}
 
       {/* Mobile Header */}
       <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 lg:hidden">
@@ -558,7 +547,7 @@ export default function Sidebar({
         <div className="border-t border-zinc-800 p-4">
       <button
   type="button"
-  onClick={logout}
+  onClick={() => setShowLogoutModal(true)}
   className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 shadow-lg shadow-red-950/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:border-red-400/60 hover:bg-red-500 hover:text-white hover:shadow-[0_12px_30px_rgba(239,68,68,0.25)] active:translate-y-0 active:scale-[0.98]"
 >
   <span className="pointer-events-none absolute inset-y-0 -left-full w-1/2 skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-700 group-hover:left-[120%]" />
@@ -574,6 +563,40 @@ export default function Sidebar({
 </button>
         </div>
       </aside>
+
+      {showLogoutModal && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
+      <h2 className="text-xl font-semibold text-white">
+        Logout Confirmation
+      </h2>
+
+      <p className="mt-2 text-sm text-zinc-400">
+        Are you sure you want to logout?
+      </p>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(false)}
+          className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-900 hover:text-white"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
+
+  
 }
