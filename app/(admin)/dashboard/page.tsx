@@ -12,6 +12,7 @@ import { verifyAuthToken } from "@/lib/auth";
 import RecentEvents from "@/components/admin/recent-events";
 import PastEvents from "@/components/admin/past-events";
 import SubscriptionCard from "@/components/admin/subscription-card";
+import AnimatedStatValue from "@/components/admin/animated-stat-value";
 
 export const dynamic = "force-dynamic";
 
@@ -77,25 +78,25 @@ export default async function DashboardPage() {
     }),
 
     // Latest subscription for this admin's studio
-prisma.subscription.findFirst({
-  where: {
-    studioId,
-  },
-  orderBy: {
-    createdAt: "desc",
-  },
-  select: {
-    id: true,
-    plan: true,
-    status: true,
-    startDate: true,
-    endDate: true,
-    storageLimitGb: true,
-    maxEvents: true,
-    maxCustomers: true,
-    maxImages: true,
-  },
-}),
+    prisma.subscription.findFirst({
+      where: {
+        studioId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        plan: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        storageLimitGb: true,
+        maxEvents: true,
+        maxCustomers: true,
+        maxImages: true,
+      },
+    }),
 
     // Recent active events only
     prisma.event.findMany({
@@ -169,8 +170,7 @@ prisma.subscription.findFirst({
     }),
   ]);
 
-
-    const subscriptionInfo = subscription
+  const subscriptionInfo = subscription
     ? {
         id: subscription.id,
         plan: subscription.plan,
@@ -365,7 +365,7 @@ prisma.subscription.findFirst({
           return (
             <div
               key={stat.title}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+              className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-lg shadow-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-zinc-600 hover:bg-zinc-[950] hover:shadow-2xl hover:shadow-black/30"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -374,7 +374,7 @@ prisma.subscription.findFirst({
                   </p>
 
                   <p className="mt-2 text-3xl font-bold text-white">
-                    {stat.value}
+                   <AnimatedStatValue value={stat.value} />
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-500">
@@ -392,9 +392,9 @@ prisma.subscription.findFirst({
       </div>
 
       {/* Subscription */}
-<div>
-  <SubscriptionCard subscription={subscriptionInfo} />
-</div>
+      <div>
+        <SubscriptionCard subscription={subscriptionInfo} />
+      </div>
 
       {/* Recent Events */}
       <div>
@@ -411,14 +411,27 @@ prisma.subscription.findFirst({
 
           <Link
             href="/events"
-            className="flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white"
+            className="group flex items-center gap-2 text-sm text-zinc-400 transition-colors duration-200 hover:text-white"
           >
             View all
-            <ArrowUpRight className="h-4 w-4" />
+            <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </Link>
         </div>
 
-        <RecentEvents events={recentEvents} />
+        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/30 px-4 py-1 shadow-inner shadow-white/[0.02] sm:px-5">
+          <RecentEvents events={recentEvents} />
+        </div>
+      </div>
+
+      {/* Section Transition */}
+      <div className="relative flex items-center justify-center py-2">
+        <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+
+        <div className="relative rounded-full border border-zinc-800 bg-zinc-950 px-4 py-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">
+            Archived
+          </span>
+        </div>
       </div>
 
       {/* Past Events */}

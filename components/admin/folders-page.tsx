@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createFolder } from "@/actions/create-folder";
@@ -66,6 +67,9 @@ export default function FoldersPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [folders, setFolders] = useState(initialFolders);
   const [isCreating, setIsCreating] = useState(false);
+  const [newlyCreatedFolderId, setNewlyCreatedFolderId] = useState<
+    string | null
+  >(null);
 
   const isNested = event.galleryMode === "bride_groom";
 
@@ -89,6 +93,7 @@ export default function FoldersPage({
   const [isLoading, setIsLoading] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const createdFolderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (event.galleryMode === "single") {
@@ -102,6 +107,27 @@ export default function FoldersPage({
 
     setMaxSelections(currentParent?.maxSelections?.toString() ?? "");
   }, [selectedParent, folders, event.galleryMode, event.maxSelections]);
+
+  useEffect(() => {
+    if (!newlyCreatedFolderId) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (createdFolderRef.current) {
+        createdFolderRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+
+      setNewlyCreatedFolderId(null);
+    }, 50);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [newlyCreatedFolderId, folders]);
 
   useEffect(() => {
     const handleClickOutside = (mouseEvent: MouseEvent) => {
@@ -150,6 +176,7 @@ export default function FoldersPage({
       if (response.success && response.folder) {
         setFolders((prev) => [...prev, response.folder]);
         setFolderName("");
+        setNewlyCreatedFolderId(response.folder.id);
       }
     } catch (error) {
       console.log(error);
@@ -187,17 +214,17 @@ export default function FoldersPage({
    *   Child folders are the actual selectable categories.
    */
 
- const selectableFolders = isNested
-  ? selectedParent
-    ? folders.filter(
-        (folder) => folder.parentId === selectedParent,
-      )
-    : []
-  : folders.filter((folder) => !folder.parentId);
+  const selectableFolders = isNested
+    ? selectedParent
+      ? folders.filter(
+          (folder) => folder.parentId === selectedParent,
+        )
+      : []
+    : folders.filter((folder) => !folder.parentId);
 
-const completedSelectableFolders = selectableFolders.filter(
-  (folder) => folder.selectionStatus === "COMPLETED",
-);
+  const completedSelectableFolders = selectableFolders.filter(
+    (folder) => folder.selectionStatus === "COMPLETED",
+  );
 
   const allCategoriesCompleted =
     selectableFolders.length > 0 &&
@@ -411,6 +438,15 @@ const completedSelectableFolders = selectableFolders.filter(
               placeholder="Folder name"
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+
+                  if (!isCreating) {
+                    handleCreateFolder();
+                  }
+                }
+              }}
               className="w-full min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-zinc-400"
             />
 
@@ -757,6 +793,11 @@ const completedSelectableFolders = selectableFolders.filter(
               return (
                 <div
                   key={folder.id}
+                  ref={
+                    newlyCreatedFolderId === folder.id
+                      ? createdFolderRef
+                      : null
+                  }
                   className="group relative min-h-32 min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                 >
                   <Link
@@ -887,6 +928,11 @@ const completedSelectableFolders = selectableFolders.filter(
                   className="group relative min-w-0"
                 >
                   <div
+                    ref={
+                      newlyCreatedFolderId === folder.id
+                        ? createdFolderRef
+                        : null
+                    }
                     onClick={() =>
                       setSelectedParent(
                         folder.id,
@@ -1002,6 +1048,11 @@ const completedSelectableFolders = selectableFolders.filter(
               return (
                 <div
                   key={folder.id}
+                  ref={
+                    newlyCreatedFolderId === folder.id
+                      ? createdFolderRef
+                      : null
+                  }
                   className="group relative min-h-32 min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                 >
                   <Link

@@ -40,6 +40,8 @@ export const checkEventLimit = async () => {
             },
             select: {
                 maxEvents: true,
+                startDate: true,
+                endDate: true,
             },
         });
 
@@ -54,16 +56,26 @@ export const checkEventLimit = async () => {
         const eventCount = await prisma.event.count({
             where: {
                 studioId: session.studioId,
+                createdAt: {
+                    gte: subscription.startDate,
+                    ...(subscription.endDate
+                        ? {
+                              lte: subscription.endDate,
+                          }
+                        : {}),
+                },
             },
         });
 
         console.log("EVENT LIMIT DEBUG:", {
-    sessionStudioId: session.studioId,
-    maxEvents: subscription.maxEvents,
-    eventCount,
-});
+            sessionStudioId: session.studioId,
+            maxEvents: subscription.maxEvents,
+            subscriptionStartDate: subscription.startDate,
+            subscriptionEndDate: subscription.endDate,
+            eventCount,
+        });
 
-        if (eventCount  >= subscription.maxEvents) {
+        if (eventCount >= subscription.maxEvents) {
             return {
                 success: true,
                 allowed: false,
