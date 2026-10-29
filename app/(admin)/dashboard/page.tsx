@@ -95,6 +95,7 @@ export default async function DashboardPage() {
         maxEvents: true,
         maxCustomers: true,
         maxImages: true,
+        price: true,
       },
     }),
 
@@ -174,6 +175,7 @@ export default async function DashboardPage() {
     ? {
         id: subscription.id,
         plan: subscription.plan,
+        price: subscription.price,
         status: subscription.status,
         startDate: subscription.startDate.toISOString(),
         endDate: subscription.endDate?.toISOString() ?? null,
