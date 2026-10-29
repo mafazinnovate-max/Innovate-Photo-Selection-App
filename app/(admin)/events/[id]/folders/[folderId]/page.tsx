@@ -4,17 +4,14 @@ import UploadDropzone from "@/components/admin/upload-dropzone";
 
 import { prisma } from "@/lib/prisma";
 
-
-
-
 interface FolderDetailPageProps {
   params: Promise<{
     id: string;
     folderId: string;
   }>;
   searchParams: Promise<{
-  imageId?: string;
-}>;
+    imageId?: string;
+  }>;
 }
 
 export default async function FolderDetailPage({
@@ -110,19 +107,19 @@ export default async function FolderDetailPage({
 
       {/* Gallery Grid */}
       {folder.images.length > 0 && (
-    <FolderImagesTabs
-  images={folder.images}
-  initialImageId={imageId}
-  otherFolderImages={event.folders
-    .filter((otherFolder) => otherFolder.id !== folderId)
-    .flatMap((otherFolder) =>
-      otherFolder.images.map((image) => ({
-        id: image.id,
-        fileName: image.fileName,
-        folderName: otherFolder.name,
-      }))
-    )}
-/>
+        <FolderImagesTabs
+          images={folder.images}
+          initialImageId={imageId}
+          otherFolderImages={event.folders
+            .filter((otherFolder) => otherFolder.id !== folderId)
+            .flatMap((otherFolder) =>
+              otherFolder.images.map((image) => ({
+                id: image.id,
+                fileName: image.fileName,
+                folderName: otherFolder.name,
+              }))
+            )}
+        />
       )}
     </div>
   );
