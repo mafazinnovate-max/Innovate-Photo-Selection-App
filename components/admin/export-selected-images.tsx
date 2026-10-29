@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -5,6 +6,152 @@ import { useState } from "react";
 interface ExportSelectedImagesProps {
     selectedImages: string[];
     verifyFileName: string;
+}
+
+type DirectoryHandle = any;
+
+const DB_NAME = "picnovate-folder-permissions";
+const STORE_NAME = "directories";
+const STORAGE_KEY = "saved-source-folders";
+
+function openDirectoryDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getSavedDirectories(): Promise<DirectoryHandle[]> {
+    const db = await openDirectoryDB();
+
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction
+            .objectStore(STORE_NAME)
+            .get(STORAGE_KEY);
+
+        request.onsuccess = () => {
+            resolve(Array.isArray(request.result) ? request.result : []);
+            db.close();
+        };
+
+        request.onerror = () => {
+            db.close();
+            reject(request.error);
+        };
+    });
+}
+
+async function saveDirectory(handle: DirectoryHandle) {
+    const db = await openDirectoryDB();
+
+    try {
+        const directories = await getSavedDirectoriesFromDB(db);
+
+        let alreadySaved = false;
+
+        for (const existing of directories) {
+            try {
+                if (await existing.isSameEntry(handle)) {
+                    alreadySaved = true;
+                    break;
+                }
+            } catch {
+                // Ignore invalid or unavailable saved handles.
+            }
+        }
+
+        if (!alreadySaved) {
+            directories.push(handle);
+
+            await new Promise<void>((resolve, reject) => {
+                const transaction = db.transaction(
+                    STORE_NAME,
+                    "readwrite"
+                );
+
+                transaction.objectStore(STORE_NAME).put(
+                    directories,
+                    STORAGE_KEY
+                );
+
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+                transaction.onabort = () => reject(transaction.error);
+            });
+        }
+    } finally {
+        db.close();
+    }
+}
+
+function getSavedDirectoriesFromDB(
+    db: IDBDatabase
+): Promise<DirectoryHandle[]> {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction.objectStore(STORE_NAME).get(STORAGE_KEY);
+
+        request.onsuccess = () => {
+            resolve(Array.isArray(request.result) ? request.result : []);
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getPermission(handle: DirectoryHandle): Promise<boolean> {
+    let permission = await handle.queryPermission({
+        mode: "readwrite",
+    });
+
+    if (permission !== "granted") {
+        permission = await handle.requestPermission({
+            mode: "readwrite",
+        });
+    }
+
+    return permission === "granted";
+}
+
+async function findSourceDirectory(
+    fileName: string
+): Promise<DirectoryHandle | null> {
+    const directories = await getSavedDirectories();
+
+    for (const directory of directories) {
+        try {
+            // Check whether this folder contains the required original.
+            await directory.getFileHandle(fileName);
+
+            // Reuse the saved folder if permission is still available.
+            if (await getPermission(directory)) {
+                return directory;
+            }
+        } catch (error: any) {
+            if (
+                error?.name === "NotAllowedError" ||
+                error?.name === "SecurityError"
+            ) {
+                // Permission may have been revoked. Try another folder.
+                continue;
+            }
+
+            // This folder does not contain the required image.
+        }
+    }
+
+    return null;
 }
 
 export default function ExportSelectedImages({
@@ -18,7 +165,6 @@ export default function ExportSelectedImages({
 
     const handleExport = async () => {
         try {
-            // Browser support check
             if (
                 typeof window === "undefined" ||
                 !("showDirectoryPicker" in window)
@@ -29,49 +175,67 @@ export default function ExportSelectedImages({
                 return;
             }
 
-            // Selected images check
-            if (!verifyFileName) {
-                alert("No selected images found");
+            if (!selectedImages.length || !verifyFileName) {
+                alert("No selected images found.");
                 return;
             }
 
             setIsExporting(true);
+            setProgress(0);
+            setShowSuccess(false);
 
-            const sourceFolder = await (window as any).showDirectoryPicker({
-                mode: "readwrite",
-            });
+            // First, try to reuse a previously approved source folder.
+            let sourceFolder: DirectoryHandle | null = null;
 
             try {
-                await sourceFolder.getFileHandle(verifyFileName);
-            } catch {
-                alert(
-                    "Wrong folder selected.\n\nPlease choose the original uploaded folder."
-                );
-
-                return;
+                sourceFolder = await findSourceDirectory(verifyFileName);
+            } catch (error) {
+                console.error("Could not check saved folders:", error);
             }
 
-            const permission = await sourceFolder.requestPermission({
-                mode: "readwrite",
-            });
+            // Ask the user to select a folder only when no saved
+            // folder contains this original image.
+            if (!sourceFolder) {
+                const picker = (window as any).showDirectoryPicker;
 
-            if (permission !== "granted") {
-                alert("Folder permission denied.");
-                return;
+                sourceFolder = await picker({
+                    mode: "readwrite",
+                });
+
+                try {
+                    await sourceFolder.getFileHandle(verifyFileName);
+                } catch {
+                    alert(
+                        "Wrong folder selected.\n\nPlease choose the original uploaded folder."
+                    );
+                    return;
+                }
+
+                if (!(await getPermission(sourceFolder))) {
+                    alert("Folder permission denied.");
+                    return;
+                }
+
+                // Remember this folder for future exports.
+                try {
+                    await saveDirectory(sourceFolder);
+                } catch (error) {
+                    console.error(
+                        "Could not remember the source folder:",
+                        error
+                    );
+                }
             }
 
             const selectedFolder =
-                await sourceFolder.getDirectoryHandle(
-                    "Selected Images",
-                    {
-                        create: true,
-                    }
-                );
+                await sourceFolder.getDirectoryHandle("Selected Images", {
+                    create: true,
+                });
 
-            let copiedCount = 0;
+            let successfulCopies = 0;
             const totalFiles = selectedImages.length;
 
-            for (let i = 0; i < selectedImages.length; i++) {
+            for (let i = 0; i < totalFiles; i++) {
                 const fileName = selectedImages[i];
 
                 try {
@@ -89,21 +253,26 @@ export default function ExportSelectedImages({
                         await targetFileHandle.createWritable();
 
                     await writable.write(file);
-
                     await writable.close();
 
-                    copiedCount++;
-
+                    successfulCopies++;
+                } catch (error) {
+                    console.error(`Failed to copy ${fileName}`, error);
+                } finally {
                     setProgress(
                         Math.round(((i + 1) / totalFiles) * 100)
                     );
-                } catch (err) {
-                    console.error(`Failed to copy ${fileName}`, err);
                 }
             }
 
-            setCopiedCount(copiedCount);
+            setCopiedCount(successfulCopies);
             setShowSuccess(true);
+
+            if (successfulCopies !== totalFiles) {
+                alert(
+                    `Export finished, but only ${successfulCopies} of ${totalFiles} images were copied. Check the console for failed files.`
+                );
+            }
 
             setTimeout(() => {
                 setShowSuccess(false);
@@ -113,7 +282,11 @@ export default function ExportSelectedImages({
                 return;
             }
 
-            console.log(error);
+            console.error("Image export failed:", error);
+
+            alert(
+                "Export failed. Please check the selected folder and try again."
+            );
         } finally {
             setIsExporting(false);
         }
@@ -141,9 +314,7 @@ export default function ExportSelectedImages({
                         <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
                             <div
                                 className="h-full bg-white transition-all duration-300"
-                                style={{
-                                    width: `${progress}%`,
-                                }}
+                                style={{ width: `${progress}%` }}
                             />
                         </div>
 
