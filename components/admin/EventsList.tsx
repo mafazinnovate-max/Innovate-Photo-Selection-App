@@ -107,7 +107,7 @@ if (activeTab !== "All") {
 <div className="mb-6 flex justify-end">
     <Link
         href="/events/create"
-        className="rounded-xl bg-white px-5 py-3 font-medium text-black transition hover:opacity-90"
+        className="rounded-xl bg-white px-5 py-3 font-medium text-black transition transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:opacity-95 hover:shadow-lg active:scale-[0.98]"
     >
         Create Event
     </Link>
@@ -135,15 +135,19 @@ if (activeTab !== "All") {
             </div>
 
             {/* Events */}
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filteredEvents.map((event) => (
-                    <EventCard
-                        key={event.id}
-                        event={event}
-                    />
-                ))}
-            </div>
-
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    {filteredEvents.map((event, index) => (
+        <div
+            key={event.id}
+            className="animate-[eventCardEnter_0.5s_ease-out_both]"
+            style={{
+                animationDelay: `${index * 80}ms`,
+            }}
+        >
+            <EventCard event={event} />
+        </div>
+    ))}
+</div>
             {filteredEvents.length === 0 && (
                 <div className="py-16 text-center text-zinc-500">
                     No events found.

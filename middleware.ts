@@ -57,7 +57,7 @@ export async function middleware(req: NextRequest) {
 if (isPublicPage) {
     // If the user opens the landing page while already logged in,
     // take them to the appropriate dashboard.
-   if (pathname === "/" || pathname === "/login") {
+  if (pathname === "/login") {
     const session = await getSession(req);
 
     if (session?.role === "admin") {
