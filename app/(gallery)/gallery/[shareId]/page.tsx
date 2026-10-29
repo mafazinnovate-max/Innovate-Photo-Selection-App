@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   CheckCircle2,
   Clock3,
+  Heart,
 } from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
@@ -29,10 +30,10 @@ export default async function GalleryPage({
   });
 
   const superAdmin = await prisma.superAdmin.findFirst({
-  select: {
-    logoUrl: true,
-  },
-});
+    select: {
+      logoUrl: true,
+    },
+  });
 
   if (!event) {
     return (
@@ -57,10 +58,10 @@ export default async function GalleryPage({
   }
 
   const folders = await prisma.folder.findMany({
-   where: {
-    eventId: event.id,
-    parentId: parentId ?? null,
-},
+    where: {
+      eventId: event.id,
+      parentId: parentId ?? null,
+    },
     select: {
       id: true,
       name: true,
@@ -150,19 +151,19 @@ export default async function GalleryPage({
 
             <div className="relative flex min-h-[280px] flex-col justify-end px-6 py-10 sm:px-8 sm:py-14 md:min-h-[320px]">
               <div className="max-w-2xl">
-                <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-zinc-300 backdrop-blur">
-                  Photo Selection Gallery
+                <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-300 backdrop-blur">
+                  Private Photo Gallery
                 </span>
 
-                <h1 className="mt-4 text-3xl font-bold sm:text-4xl md:text-5xl">
+                <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                   {event.name}
                 </h1>
 
-                <p className="mt-3 text-zinc-300">
-                  Select your favorite memories ✨
+                <p className="mt-4 max-w-xl text-base font-light tracking-wide text-zinc-300 sm:text-lg">
+                  Choose the moments that matter most.
                 </p>
 
-                <p className="mt-5 text-sm text-zinc-400">
+                <p className="mt-6 text-sm text-zinc-400">
                   Client:{" "}
                   <span className="font-medium text-zinc-200">
                     {event.clientName}
@@ -176,21 +177,24 @@ export default async function GalleryPage({
             {maxSelections && (
               <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-xl backdrop-blur-xl">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xl">
-                    📸
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
+                    <Heart
+                      size={19}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-amber-300">
-                      Photo Selection Limit
+                      Your Selection Limit
                     </p>
 
                     <p className="mt-1 text-sm leading-6 text-zinc-200">
-                      You can select up to{" "}
+                      Choose up to{" "}
                       <span className="font-bold text-white">
                         {maxSelections}
                       </span>{" "}
-                      photos.
+                      photos for your selection.
                     </p>
                   </div>
                 </div>
@@ -249,7 +253,7 @@ export default async function GalleryPage({
         {folders.map((folder) => (
           <FolderLink
             key={folder.id}
-           href={`/gallery/${shareId}/folder/${folder.id}`}
+            href={`/gallery/${shareId}/folder/${folder.id}`}
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               <img
@@ -268,7 +272,8 @@ export default async function GalleryPage({
               </h2>
 
               <p className="mt-2 text-sm text-zinc-400">
-                {folder._count.images} Photos
+                {selectedCounts.get(folder.id) ?? 0} /{" "}
+                {folder._count.images} Photos Selected
               </p>
 
               <div className="mt-4">
@@ -296,15 +301,15 @@ export default async function GalleryPage({
             Powered by
           </p>
 
-       {superAdmin?.logoUrl && (
-  <Image
-    src={superAdmin.logoUrl}
-    alt="Picknovate"
-    width={64}
-    height={64}
-    className="h-14 w-14 object-contain opacity-90 sm:h-16 sm:w-16"
-  />
-)}
+          {superAdmin?.logoUrl && (
+            <Image
+              src={superAdmin.logoUrl}
+              alt="Picknovate"
+              width={64}
+              height={64}
+              className="h-14 w-14 object-contain opacity-90 sm:h-16 sm:w-16"
+            />
+          )}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   KeyRound,
   LockKeyhole,
   Mail,
+  Pencil,
   Phone,
   Save,
   Trash2,
@@ -886,6 +887,19 @@ export default function SettingsPage() {
     setSettingsError("");
   };
 
+    const handleSettingsKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (
+      event.key === "Enter" &&
+      isEditingSettings &&
+      !savingSettings
+    ) {
+      event.preventDefault();
+      handleSave();
+    }
+  };
+
   /* -----------------------------
      Save Studio + Admin Settings To DB
   ----------------------------- */
@@ -1065,8 +1079,11 @@ export default function SettingsPage() {
 
   const cropScale = cropSize / REF_SIZE;
 
-  const lockedFieldClass =
-    "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 disabled:cursor-not-allowed disabled:opacity-70";
+ const viewFieldClass =
+  "w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-300 outline-none transition-all duration-200 disabled:cursor-default";
+
+const editFieldClass =
+  "w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-sm text-white outline-none transition-all duration-200 focus:border-white/60 focus:bg-zinc-800 focus:ring-2 focus:ring-white/5";
 
   const passwordFieldClass =
     "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600";
@@ -1093,31 +1110,44 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {!isEditingSettings ? (
-          <button
-            type="button"
-            onClick={handleChangeSettings}
-            disabled={loadingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <LockKeyhole size={18} />
-            Change Settings
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={loadingSettings || savingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saved ? <Check size={18} /> : <Save size={18} />}
+       {!isEditingSettings ? (
+  <button
+    type="button"
+    onClick={handleChangeSettings}
+    disabled={loadingSettings}
+    className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    <LockKeyhole
+      size={18}
+      className="transition-transform duration-200 group-hover:scale-110"
+    />
+    Edit Settings
+  </button>
+) : (
+         <button
+  type="button"
+  onClick={handleSave}
+  disabled={loadingSettings || savingSettings}
+  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {saved ? (
+    <Check
+      size={18}
+      className="transition-transform duration-200 group-hover:scale-110"
+    />
+  ) : (
+    <Save
+      size={18}
+      className="transition-transform duration-200 group-hover:scale-110"
+    />
+  )}
 
-            {savingSettings
-              ? "Saving..."
-              : saved
-                ? "Saved"
-                : "Save Changes"}
-          </button>
+  {savingSettings
+    ? "Saving..."
+    : saved
+      ? "Saved"
+      : "Save Changes"}
+</button>
         )}
       </div>
 
@@ -1154,7 +1184,7 @@ export default function SettingsPage() {
           <p className="mt-1 text-sm text-zinc-500">
             {isEditingSettings
               ? "You can now edit your studio information."
-              : "Studio information is locked. Click Change Settings to edit."}
+              : "Studio information is locked. Click Edit Settings to edit."}
           </p>
         </div>
 
@@ -1176,7 +1206,8 @@ export default function SettingsPage() {
                 setStudioName(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={isEditingSettings ? editFieldClass : viewFieldClass}
               placeholder="Enter studio name"
             />
           </div>
@@ -1200,7 +1231,8 @@ export default function SettingsPage() {
                   setEmail(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="studio@example.com"
               />
             </div>
@@ -1223,7 +1255,8 @@ export default function SettingsPage() {
                   setPhone(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -1247,7 +1280,8 @@ export default function SettingsPage() {
                 setWebsite(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={isEditingSettings ? editFieldClass : viewFieldClass}
               placeholder="https://yourstudio.com"
             />
           </div>
@@ -1269,7 +1303,7 @@ export default function SettingsPage() {
                 setAddress(e.target.value);
                 setSaved(false);
               }}
-              className={`${lockedFieldClass} resize-none`}
+              className={`${isEditingSettings ? editFieldClass : viewFieldClass} resize-none`}
               placeholder="Enter your studio address"
             />
           </div>
@@ -1292,7 +1326,8 @@ export default function SettingsPage() {
                   setCity(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="Enter city"
               />
             </div>
@@ -1314,7 +1349,8 @@ export default function SettingsPage() {
                   setState(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="Enter state"
               />
             </div>
@@ -1337,7 +1373,8 @@ export default function SettingsPage() {
                 setCountry(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={isEditingSettings ? editFieldClass : viewFieldClass}
               placeholder="Enter country"
             />
           </div>
@@ -1354,15 +1391,13 @@ export default function SettingsPage() {
                 </p>
               ) : (
                 <p className="text-sm text-zinc-600">
-                  No studio description has been added by the Super
-                  Admin yet.
+                  No studio description has been provided by the platform administrator yet.
                 </p>
               )}
             </div>
 
             <p className="mt-2 text-xs text-zinc-500">
-              This information is managed by the Super Admin and
-              cannot be changed here.
+              This information is managed by the platform administrator and can only be updated by them.
             </p>
           </div>
         </div>
@@ -1381,7 +1416,7 @@ export default function SettingsPage() {
           <p className="mt-1 text-sm text-zinc-500">
             {isEditingSettings
               ? "You can now edit the contact information associated with this admin account."
-              : "Admin information is locked. Click Change Settings to edit."}
+              : "Admin information is locked. Click Edit Settings to edit."}
           </p>
         </div>
 
@@ -1403,7 +1438,8 @@ export default function SettingsPage() {
                 setAdminName(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={isEditingSettings ? editFieldClass : viewFieldClass}
               placeholder="Enter admin name"
             />
           </div>
@@ -1427,7 +1463,8 @@ export default function SettingsPage() {
                   setAdminEmail(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="admin@example.com"
               />
             </div>
@@ -1450,7 +1487,8 @@ export default function SettingsPage() {
                   setAdminPhone(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={isEditingSettings ? editFieldClass : viewFieldClass}
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -1895,9 +1933,19 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSave}
             disabled={loadingSettings || savingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saved ? <Check size={18} /> : <Save size={18} />}
+            {saved ? (
+  <Check
+    size={18}
+    className="transition-transform duration-200 group-hover:scale-110"
+  />
+) : (
+  <Save
+    size={18}
+    className="transition-transform duration-200 group-hover:scale-110"
+  />
+)}
 
             {savingSettings
               ? "Saving..."

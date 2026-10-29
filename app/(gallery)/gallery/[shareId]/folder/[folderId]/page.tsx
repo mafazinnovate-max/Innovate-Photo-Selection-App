@@ -132,7 +132,8 @@ export default async function FolderPage({
         })
       : await prisma.folder.findMany({
           where: {
-            id: folder.id,
+            eventId: folder.eventId,
+            parentId: null,
           },
           select: {
             id: true,

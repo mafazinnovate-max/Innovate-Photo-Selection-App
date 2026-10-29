@@ -51,12 +51,30 @@ export async function middleware(req: NextRequest) {
 ];
 
     const isPublicPage = publicRoutes.some((route) =>
-        pathname.startsWith(route)
-    );
+    pathname.startsWith(route)
+);
 
-    if (isPublicPage) {
-        return NextResponse.next();
+if (isPublicPage) {
+    // If the user opens the landing page while already logged in,
+    // take them to the appropriate dashboard.
+   if (pathname === "/" || pathname === "/login") {
+    const session = await getSession(req);
+
+    if (session?.role === "admin") {
+        return NextResponse.redirect(
+            new URL("/dashboard", req.url)
+        );
     }
+
+    if (session?.role === "superadmin") {
+        return NextResponse.redirect(
+            new URL("/super-admin/dashboard", req.url)
+        );
+    }
+}
+
+    return NextResponse.next();
+}
 
     /*
      * Public API routes
