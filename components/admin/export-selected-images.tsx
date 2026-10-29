@@ -51,9 +51,15 @@ export default function ExportSelectedImages({
                 return;
             }
 
-            const permission = await sourceFolder.requestPermission({
+            let permission = await sourceFolder.queryPermission({
                 mode: "readwrite",
             });
+
+            if (permission !== "granted") {
+                permission = await sourceFolder.requestPermission({
+                    mode: "readwrite",
+                });
+            }
 
             if (permission !== "granted") {
                 alert("Folder permission denied.");

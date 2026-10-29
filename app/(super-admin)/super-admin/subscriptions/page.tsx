@@ -12,6 +12,7 @@ import {
     ChevronRight,
     Clock3,
     CreditCard,
+    DollarSign,
     Eye,
     MoreHorizontal,
     Pencil,
@@ -327,7 +328,7 @@ export default function SubscriptionsPage() {
             <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-black">
-                        <CreditCard size={21} />
+                        <DollarSign size={21} />
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold text-white">
@@ -359,7 +360,7 @@ export default function SubscriptionsPage() {
                     title="Total Subscriptions"
                     value={totalSubscriptions.toString()}
                     description="All subscription records"
-                    icon={<CreditCard size={19} />}
+                    icon={<DollarSign size={19} />}
                 />
 
                 <SummaryCard
@@ -382,8 +383,8 @@ export default function SubscriptionsPage() {
                     title="Inactive"
                     value={inactiveSubscriptions.toString()}
                     description="Inactive studios or ended plans"
-                    icon={<XCircle size={19} />}
-                    iconClassName="text-zinc-400"
+                    icon={<AlertCircle size={19} />}
+                    iconClassName="text-red-400"
                 />
 
                 <SummaryCard

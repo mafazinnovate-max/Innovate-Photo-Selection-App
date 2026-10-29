@@ -20,8 +20,6 @@ import {
     Plus,
     Search,
     ShieldCheck,
-    Trash2,
-    Users,
     XCircle,
 } from "lucide-react";
 import Image from "next/image";
