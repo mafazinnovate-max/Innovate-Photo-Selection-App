@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 export const updateFolder = async (
     folderId: string,
     name: string,
+    hardDiskName?: string,
 ) => {
     try {
         const folder = await prisma.folder.update({
@@ -14,6 +15,7 @@ export const updateFolder = async (
             },
             data: {
                 name,
+                hardDiskName: hardDiskName ?? null,
             },
         });
 

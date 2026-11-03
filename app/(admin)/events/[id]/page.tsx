@@ -14,18 +14,22 @@ export default async function EventPage({ params }: EventPageProps) {
     where: {
       id,
     },
-    include: {
-      folders: {
-        include: {
-          images: true,
-        },
-      },
+   include: {
+  folders: {
+    where: {
+      deletedAt: null,
     },
+    include: {
+      images: true,
+    },
+  },
+},
   });
 
   const folders = await prisma.folder.findMany({
     where: {
       eventId: id,
+      deletedAt: null
     },
     orderBy: {
       createdAt: "asc",

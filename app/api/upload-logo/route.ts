@@ -105,14 +105,7 @@ export async function POST(request: Request) {
       }
     );
 
-    await prisma.studio.update({
-      where: {
-        id: session.studioId,
-      },
-      data: {
-        logoUrl: result.secure_url,
-      },
-    });
+    // 
 
     return NextResponse.json({
       success: true,
@@ -156,6 +149,11 @@ export async function PUT(request: Request) {
     const positionX = Number(body.positionX);
     const positionY = Number(body.positionY);
 
+    const logoUrl =
+  typeof body.logoUrl === "string" && body.logoUrl.trim()
+    ? body.logoUrl.trim()
+    : null;
+
     if (
       !Number.isFinite(zoom) ||
       !Number.isFinite(positionX) ||
@@ -177,6 +175,7 @@ export async function PUT(request: Request) {
         id: session.studioId,
       },
       data: {
+        logoUrl,
         logoZoom: zoom,
         logoPositionX: positionX,
         logoPositionY: positionY,
@@ -257,6 +256,99 @@ export async function GET() {
       {
         success: false,
         message: "Failed to load studio logo",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    const session = await getAdminSession();
+
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const studio = await prisma.studio.findUnique({
+      where: {
+        id: session.studioId,
+      },
+      select: {
+        logoUrl: true,
+      },
+    });
+
+    if (!studio) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Studio not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    if (studio.logoUrl) {
+      try {
+        const uploadMarker = "/upload/";
+        const uploadIndex = studio.logoUrl.indexOf(uploadMarker);
+
+        if (uploadIndex !== -1) {
+          let publicId = studio.logoUrl.slice(
+            uploadIndex + uploadMarker.length
+          );
+
+          publicId = publicId.replace(/^v\d+\//, "");
+          publicId = publicId.replace(/\.[^/.]+$/, "");
+
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+          });
+        }
+      } catch (cloudinaryError) {
+        console.error(
+          "Cloudinary logo deletion error:",
+          cloudinaryError
+        );
+      }
+    }
+
+    await prisma.studio.update({
+      where: {
+        id: session.studioId,
+      },
+      data: {
+        logoUrl: null,
+        logoZoom: 1,
+        logoPositionX: 0,
+        logoPositionY: 0,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Logo removed successfully",
+    });
+  } catch (error) {
+    console.error("Remove logo error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to remove logo",
       },
       {
         status: 500,

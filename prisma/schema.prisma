@@ -42,6 +42,8 @@ model Folder {
   parentId        String?
   maxSelections   Int?
   selectionStatus FolderSelectionStatus @default(SELECTING)
+  hardDiskName    String?
+  deletedAt       DateTime?
 
   event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images Image[]
@@ -107,6 +109,10 @@ model Studio {
   admins       Admin[]
   events       Event[]
   Subscription Subscription[]
+  documentSettings StudioDocumentSettings?
+  documents        StudioDocument[]
+  externalEvents ExternalEvent[]
+  profile StudioProfile?
 }
 
 model Admin {
@@ -116,8 +122,8 @@ model Admin {
   createdAt    DateTime @default(now())
 
   name     String?
-  email    String?
   phone    String?
+  email    String?
   studioId String
 
   studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
@@ -178,4 +184,132 @@ model playing_with_neon {
 enum FolderSelectionStatus {
   SELECTING
   COMPLETED
+}
+
+
+model StudioDocumentSettings {
+  id             String   @id @default(cuid())
+  studioId       String   @unique
+
+  faqContent      Json?
+  termsContent    Json?
+  policiesContent Json?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model StudioDocument {
+  id             String   @id @default(cuid())
+  studioId       String
+
+  documentType   String
+  clientName     String
+  eventName      String?
+  eventDate      DateTime?
+
+  // Complete form data at the time of document creation
+  documentData   Json
+
+  // Studio details snapshot at the time of creation
+  studioSnapshot Json
+
+  // FAQ, Terms & Conditions and Policies snapshots
+  sectionsSnapshot Json
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+  @@index([studioId, clientName])
+}
+
+model ExternalEvent {
+  id           String   @id @default(cuid())
+  studioId     String
+
+  name         String
+  clientName   String
+  eventType    String
+  phoneNumber  String?
+  email        String?
+  eventDate    DateTime?
+  description  String?
+  hardDiskName String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+}
+
+model StudioProfile {
+  id        String   @id @default(cuid())
+  studioId  String   @unique
+
+  studioName     String
+  logoUrl        String?
+  description    String?
+  shortTagline   String?
+  coverPhotoUrl  String?
+
+  ownerName      String?
+  ownerPhone     String?
+
+  phoneNumber    String?
+  email          String?
+  address        String?
+  location       String?
+
+  instagramUrl   String?
+  websiteUrl     String?
+  facebookUrl    String?
+  youtubeUrl     String?
+  otherLinks     String?
+
+  additionalInfo String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studio          Studio                   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  packages        StudioProfilePackage[]
+  portfolioPhotos StudioProfilePortfolio[]
+}
+
+model StudioProfilePackage {
+  id          String   @id @default(cuid())
+  profileId   String
+
+  name        String
+  description String
+  sortOrder   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortOrder])
+}
+
+model StudioProfilePortfolio {
+  id        String   @id @default(cuid())
+  profileId String
+
+  imageUrl  String
+  publicId  String?
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  profile StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortOrder])
 }
