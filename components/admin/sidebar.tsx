@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   AlertTriangle,
+  UserRound,
 } from "lucide-react";
 
 interface SubscriptionInfo {
@@ -31,6 +32,11 @@ const menuItems = [
     name: "Events",
     href: "/events",
     icon: CalendarDays,
+  },
+  {
+    name: "Profile",
+    href: "/profile",
+    icon: UserRound,
   },
   {
     name: "Settings",
