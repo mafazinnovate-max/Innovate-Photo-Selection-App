@@ -42,6 +42,8 @@ model Folder {
   parentId        String?
   maxSelections   Int?
   selectionStatus FolderSelectionStatus @default(SELECTING)
+  hardDiskName    String?
+  deletedAt       DateTime?
 
   event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   images Image[]
@@ -107,6 +109,8 @@ model Studio {
   admins       Admin[]
   events       Event[]
   Subscription Subscription[]
+  documentSettings StudioDocumentSettings?
+  documents        StudioDocument[]
 }
 
 model Admin {
@@ -116,8 +120,8 @@ model Admin {
   createdAt    DateTime @default(now())
 
   name     String?
-  email    String?
   phone    String?
+  email    String?
   studioId String
 
   studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
@@ -178,4 +182,46 @@ model playing_with_neon {
 enum FolderSelectionStatus {
   SELECTING
   COMPLETED
+}
+
+
+model StudioDocumentSettings {
+  id             String   @id @default(cuid())
+  studioId       String   @unique
+
+  faqContent      Json?
+  termsContent    Json?
+  policiesContent Json?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model StudioDocument {
+  id             String   @id @default(cuid())
+  studioId       String
+
+  documentType   String
+  clientName     String
+  eventName      String?
+  eventDate      DateTime?
+
+  // Complete form data at the time of document creation
+  documentData   Json
+
+  // Studio details snapshot at the time of creation
+  studioSnapshot Json
+
+  // FAQ, Terms & Conditions and Policies snapshots
+  sectionsSnapshot Json
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+  @@index([studioId, clientName])
 }
