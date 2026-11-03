@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   AlertTriangle,
+  UserRound,
   FileText,
 } from "lucide-react";
 
@@ -37,6 +38,11 @@ const menuItems = [
     name: "Contracts & Quotations",
     href: "/contract",
     icon: FileText,
+  },
+  {
+    name: "Profile",
+    href: "/profile",
+    icon: UserRound,
   },
   {
     name: "Settings",

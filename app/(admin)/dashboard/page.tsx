@@ -43,6 +43,7 @@ export default async function DashboardPage() {
     subscription,
     recentEventsData,
     pastEventsData,
+    externalEventsData,
   ] = await Promise.all([
     // Active events only
     prisma.event.count({
@@ -122,6 +123,7 @@ export default async function DashboardPage() {
             name: true,
             parentId: true,
             selectionStatus: true,
+            hardDiskName: true,
             images: {
               select: {
                 isSelected: true,
@@ -160,6 +162,8 @@ export default async function DashboardPage() {
             id: true,
             name: true,
             parentId: true,
+            hardDiskName: true,
+            deletedAt: true,
             images: {
               select: {
                 isSelected: true,
@@ -167,6 +171,29 @@ export default async function DashboardPage() {
             },
           },
         },
+      },
+    }),
+
+        // External Events
+    prisma.externalEvent.findMany({
+      where: {
+        studioId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        clientName: true,
+        eventType: true,
+        description: true,
+        phoneNumber: true,
+        email: true,
+        eventDate: true,
+        createdAt: true,
+        updatedAt: true,
+        hardDiskName: true,
       },
     }),
   ]);
@@ -209,6 +236,7 @@ export default async function DashboardPage() {
         const children = childFolders.map((child) => ({
           id: child.id,
           name: child.name,
+          hardDiskName: child.hardDiskName,
           totalPhotos: child.images.length,
           selectedPhotos: child.images.filter(
             (image) => image.isSelected
@@ -218,6 +246,7 @@ export default async function DashboardPage() {
         return {
           id: parent.id,
           name: parent.name,
+          hardDiskName: parent.hardDiskName,
           totalPhotos: children.reduce(
             (total, child) => total + child.totalPhotos,
             0
@@ -235,16 +264,17 @@ export default async function DashboardPage() {
        * Keep the existing behaviour exactly as it is.
        */
       categories = event.folders
-        .filter((folder) => !folder.parentId)
-        .map((folder) => ({
-          id: folder.id,
-          name: folder.name,
-          totalPhotos: folder.images.length,
-          selectedPhotos: folder.images.filter(
-            (image) => image.isSelected
-          ).length,
-          children: [],
-        }));
+  .filter((folder) => !folder.parentId)
+  .map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    hardDiskName: folder.hardDiskName,
+    totalPhotos: folder.images.length,
+    selectedPhotos: folder.images.filter(
+      (image) => image.isSelected
+    ).length,
+    children: [],
+  }));
     }
 
     const eventTotalPhotos = event.folders.reduce(
@@ -307,17 +337,42 @@ export default async function DashboardPage() {
       name: event.name,
       clientName: event.clientName,
       eventType: event.eventType,
+      source: "picknovate" as const,
       description: event.description,
       phoneNumber: event.phoneNumber,
       email: event.email,
       eventDate: event.eventDate?.toISOString() ?? null,
       createdAt: event.createdAt.toISOString(),
       deletedAt: event.deletedAt?.toISOString() ?? null,
-      galleryMode: event.galleryMode,
-      totalPhotos,
-      selectedPhotos,
+    galleryMode: event.galleryMode,
+folders: event.folders.map((folder) => ({
+  id: folder.id,
+  name: folder.name,
+  parentId: folder.parentId,
+  hardDiskName: folder.hardDiskName,
+  deletedAt: folder.deletedAt?.toISOString() ?? null,
+})),
+totalPhotos,
+selectedPhotos,
     };
   });
+
+  const externalEvents = externalEventsData.map((event) => ({
+  id: event.id,
+  name: event.name,
+  clientName: event.clientName,
+  eventType: event.eventType,
+  description: event.description,
+  phoneNumber: event.phoneNumber,
+  email: event.email,
+  eventDate: event.eventDate?.toISOString() ?? null,
+  createdAt: event.createdAt.toISOString(),
+  deletedAt: null,
+  folders: [],
+  galleryMode: "external",
+  hardDiskName: event.hardDiskName,
+  source: "external" as const,
+}));
 
   const stats = [
     {
@@ -448,7 +503,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <PastEvents events={pastEvents} />
+       <PastEvents events={[...pastEvents, ...externalEvents]} />
       </div>
     </div>
   );

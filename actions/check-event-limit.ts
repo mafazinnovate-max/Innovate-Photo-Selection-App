@@ -67,13 +67,13 @@ export const checkEventLimit = async () => {
             },
         });
 
-        console.log("EVENT LIMIT DEBUG:", {
-            sessionStudioId: session.studioId,
-            maxEvents: subscription.maxEvents,
-            subscriptionStartDate: subscription.startDate,
-            subscriptionEndDate: subscription.endDate,
-            eventCount,
-        });
+        // console.log("EVENT LIMIT DEBUG:", {
+        //     sessionStudioId: session.studioId,
+        //     maxEvents: subscription.maxEvents,
+        //     subscriptionStartDate: subscription.startDate,
+        //     subscriptionEndDate: subscription.endDate,
+        //     eventCount,
+        // });
 
         if (eventCount >= subscription.maxEvents) {
             return {

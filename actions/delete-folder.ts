@@ -40,66 +40,27 @@ export const deleteFolder = async (
                 },
             });
 
-        // All images from parent + children
-        const allImages = [
-            ...folder.images,
-            ...childFolders.flatMap(
-                (folder) => folder.images,
-            ),
-        ];
-
-        // Delete Cloudinary images
-        for (const image of allImages) {
-            if (image.publicId) {
-                try {
-                    await cloudinary.uploader.destroy(
-                        image.publicId,
-                    );
-                } catch (error) {
-                    console.log(
-                        "Cloudinary Delete Error:",
-                        error,
-                    );
-                }
-            }
-        }
-
-        // Delete child folder image records
+               // Soft delete child folders
         if (childFolders.length > 0) {
-            await prisma.image.deleteMany({
-                where: {
-                    folderId: {
-                        in: childFolders.map(
-                            (folder) => folder.id,
-                        ),
-                    },
-                },
-            });
-        }
-
-        // Delete parent folder image records
-        await prisma.image.deleteMany({
-            where: {
-                folderId,
-            },
-        });
-
-        // Delete child folders
-        if (childFolders.length > 0) {
-            await prisma.folder.deleteMany({
+            await prisma.folder.updateMany({
                 where: {
                     parentId: folderId,
                 },
+                data: {
+                    deletedAt: new Date(),
+                },
             });
         }
 
-        // Delete parent folder
-        await prisma.folder.delete({
+        // Soft delete parent folder
+        await prisma.folder.update({
             where: {
                 id: folderId,
             },
+            data: {
+                deletedAt: new Date(),
+            },
         });
-
         revalidatePath("/events");
 
         return {
