@@ -253,6 +253,10 @@ model StudioProfile {
   id        String   @id @default(cuid())
   studioId  String   @unique
 
+  templateKey  String   @default("template-1")
+  publicSlug   String?  @unique
+  isPublished  Boolean  @default(false)
+
   studioName     String
   logoUrl        String?
   description    String?
