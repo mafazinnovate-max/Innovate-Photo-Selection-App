@@ -56,7 +56,7 @@ export default function Template2({
     { label: "Facebook", url: profile.facebookUrl },
     { label: "YouTube", url: profile.youtubeUrl },
     { label: "Website", url: profile.websiteUrl },
-    { label: "Other", url: profile.otherLinks },
+    { label: "Location", url: profile.otherLinks },
   ].filter(
     (item): item is { label: string; url: string } =>
       Boolean(item.url?.trim())
