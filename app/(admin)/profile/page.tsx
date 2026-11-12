@@ -8,10 +8,12 @@ import {
 } from "react";
 
 import PicknovateLoader from "@/components/admin/picknovate-loader";
+import PremiumTemplate from "@/app/studio/templates/premium-template";
 
 type PackageItem = {
   id: string;
   name: string;
+  price: string;
   description: string;
 };
 
@@ -143,6 +145,8 @@ export default function ProfilePage() {
     useState("template-1");
 
     const [savingTemplate, setSavingTemplate] = useState(false);
+
+    const [showPremiumPreview, setShowPremiumPreview] = useState(false);
 
     const [publishing, setPublishing] = useState(false);
 
@@ -429,6 +433,7 @@ setPublicSlug(savedProfile.publicSlug ?? "");
           (item: PackageItem) => ({
             id: item.id,
             name: item.name,
+            price: item.price ?? "",
             description: item.description,
           })
         )
@@ -916,6 +921,7 @@ async function handlePortfolioChange(
           ...profile,
           packages: packages.map((item) => ({
             name: item.name,
+            price: item.price,
             description: item.description,
           })),
           portfolioPhotos: portfolioPhotos.map(
@@ -1130,7 +1136,7 @@ if (loading) {
     </p>
   </div>
 
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     {profileTemplates.map((template) => (
       <button
         key={template.key}
@@ -1161,10 +1167,41 @@ disabled={savingTemplate}
         )}
       </button>
     ))}
+
+      <button
+  type="button"
+ onClick={() =>
+  window.open(
+    "/profile/preview/premium",
+    "_blank",
+    "noopener,noreferrer"
+  )
+}
+  className="relative rounded-xl border border-yellow-500/40 bg-yellow-500/[0.03] p-4 text-left transition hover:border-yellow-400 hover:bg-yellow-500/[0.07]"
+>
+  <span className="absolute right-3 top-3 rounded-full bg-yellow-500 px-2.5 py-1 text-[10px] font-bold tracking-wider text-black">
+    PREMIUM
+  </span>
+
+  <div className="mb-3 flex aspect-video items-center justify-center rounded-lg bg-[#202020]">
+    <span className="text-sm text-gray-400">
+      Premium Template Preview
+    </span>
+  </div>
+
+  <p className="font-medium text-white">Premium Template</p>
+
+  <p className="mt-1 text-xs text-gray-400">
+    Explore our exclusive premium design.
+  </p>
+
+  <p className="mt-3 text-xs font-semibold text-yellow-500">
+    VIEW PREVIEW →
+  </p>
+</button>
+
   </div>
 </section>
-
-
 
       <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
   <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -1826,6 +1863,7 @@ disabled={savingTemplate}
                   {
                     id: `new-${Date.now()}-${Math.random()}`,
                     name: "",
+                    price: "",
                     description: "",
                   },
                 ]);
@@ -1907,6 +1945,37 @@ disabled={savingTemplate}
                         className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700"
                       />
                     </div>
+
+                    <div>
+  <label
+    htmlFor={`package-price-${pkg.id}`}
+    className="mb-2.5 block text-sm font-medium text-zinc-300"
+  >
+    Package Price
+  </label>
+
+  <input
+    id={`package-price-${pkg.id}`}
+    type="text"
+    value={pkg.price}
+    onChange={(event) => {
+      const value = event.target.value;
+
+      setPackages((current) =>
+        current.map((item) =>
+          item.id === pkg.id
+            ? {
+                ...item,
+                price: value,
+              }
+            : item
+        )
+      );
+    }}
+    placeholder="Enter package price (e.g. ₹25,000)"
+    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700"
+  />
+</div>
 
                     <div>
                       <label
@@ -2177,7 +2246,28 @@ disabled={savingTemplate}
           </button>
         </div>
       </form>
+       
 
+        {saving && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+          aria-label="Saving your profile"
+        >
+          <div className="flex w-full max-w-sm flex-col items-center rounded-2xl border border-white/10 bg-[#111] px-8 py-10 text-center shadow-[0_25px_80px_rgba(0,0,0,0.65)]">
+            <div className="mb-6 h-12 w-12 animate-spin rounded-full border-[3px] border-zinc-700 border-t-white" />
+
+            <h2 className="text-lg font-semibold text-white">
+              Saving your profile...
+            </h2>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              Please wait while we save your changes.
+            </p>
+          </div>
+        </div>
+      )}
 
       {showSuccessToast && (
         <div

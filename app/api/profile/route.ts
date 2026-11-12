@@ -185,36 +185,40 @@ export async function POST(request: Request) {
           profileId: savedProfile.id,
         },
       });
-
-      if (packages.length > 0) {
-        await tx.studioProfilePackage.createMany({
-          data: packages
-            .map(
-              (
-                pkg: {
-                  name?: string;
-                  description?: string;
-                },
-                index: number
-              ) => ({
-                profileId: savedProfile.id,
-                name:
-                  typeof pkg.name === "string"
-                    ? pkg.name.trim()
-                    : "",
-                description:
-                  typeof pkg.description === "string"
-                    ? pkg.description.trim()
-                    : "",
-                sortOrder: index,
-              })
-            )
-            .filter(
-              (pkg: { name: string; description: string }) =>
-                pkg.name.length > 0
-            ),
-        });
-      }
+if (packages.length > 0) {
+  await tx.studioProfilePackage.createMany({
+    data: packages
+      .map(
+        (
+          pkg: {
+            name?: string;
+            price?: string;
+            description?: string;
+          },
+          index: number
+        ) => ({
+          profileId: savedProfile.id,
+          name:
+            typeof pkg.name === "string"
+              ? pkg.name.trim()
+              : "",
+          price:
+            typeof pkg.price === "string"
+              ? pkg.price.trim()
+              : "",
+          description:
+            typeof pkg.description === "string"
+              ? pkg.description.trim()
+              : "",
+          sortOrder: index,
+        })
+      )
+      .filter(
+        (pkg: { name: string }) =>
+          pkg.name.length > 0
+      ),
+  });
+}
 
       for (const removedPhoto of removedPortfolioPhotos) {
         await tx.studioProfilePortfolio.delete({
