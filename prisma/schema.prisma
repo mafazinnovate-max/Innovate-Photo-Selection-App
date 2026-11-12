@@ -61,8 +61,34 @@ model Image {
   createdAt      DateTime @default(now())
   fileName       String?
 
+  // Duplicate detection
+  fileHash       String?
+  storageKey     String?  @unique
+
+  // Event reference for duplicate validation
+  eventId        String?
+
+  // R2 optimized image keys
+  optimizedKey   String?
+  thumbnailKey   String?
+
+  // Compression tracking
+  processingStatus   String   @default("COMPLETED")
+  processingAttempts Int     @default(0)
+  processingError    String?
+  processedAt        DateTime?
+
+  // Storage tracking
+  originalSize   BigInt?
+  optimizedSize  BigInt?
+  thumbnailSize  BigInt?
+
   folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   selections Selection[]
+
+  @@index([fileHash])
+  @@index([eventId, processingStatus])
+  @@unique([eventId, fileHash])
 }
 
 model Selection {
@@ -92,6 +118,10 @@ model Studio {
   name          String
   createdAt     DateTime @default(now())
   logoUrl       String?
+  logoStorageKey       String?
+  logoOptimizedKey     String?
+  logoThumbnailKey     String?
+  logoProcessingStatus String @default("COMPLETED")
   logoZoom      Float    @default(1)
   logoPositionX Float    @default(0)
   logoPositionY Float    @default(0)
@@ -263,6 +293,16 @@ model StudioProfile {
   shortTagline   String?
   coverPhotoUrl  String?
 
+  logoStorageKey       String?
+  logoOptimizedKey     String?
+  logoThumbnailKey     String?
+  logoProcessingStatus String @default("COMPLETED")
+
+  coverStorageKey       String?
+  coverOptimizedKey     String?
+  coverThumbnailKey     String?
+  coverProcessingStatus String @default("COMPLETED")
+
   ownerName      String?
   ownerPhone     String?
 
@@ -292,6 +332,7 @@ model StudioProfilePackage {
   profileId   String
 
   name        String
+  price       String   @default("")
   description String
   sortOrder   Int      @default(0)
 
@@ -311,9 +352,39 @@ model StudioProfilePortfolio {
   publicId  String?
   sortOrder Int      @default(0)
 
+  storageKey       String?
+  optimizedKey     String?
+  thumbnailKey     String?
+  processingStatus String @default("COMPLETED")
+  processingAttempts Int @default(0)
+  processingError String?
+  processedAt     DateTime?
+
+  originalSize    BigInt?
+  optimizedSize   BigInt?
+  thumbnailSize  BigInt?
+
   createdAt DateTime @default(now())
 
   profile StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, sortOrder])
+  @@index([profileId, processingStatus])
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  studioId    String
+  employeeId  String
+  fullName    String
+  phone       String
+  email       String?
+  designation String
+  joiningDate DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studioId, employeeId])
+  @@index([studioId, isActive])
 }
