@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Inter } from "next/font/google";
 import { prisma } from "@/lib/prisma";
+import CursorRibbon from "@/components/landingpage/CursorRibbons";
+import MobileNav from "@/components/landingpage/Mobilenav";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -134,10 +136,12 @@ export default async function Home() {
 
     return (
         <main
-            className={`${inter.className} min-h-screen scroll-smooth bg-[#14161A] text-[#F4F1EA] selection:bg-[#FFC93C] selection:text-[#14161A]`}
+            className={`${inter.className} isolate min-h-screen overflow-x-clip scroll-smooth bg-[#14161A] text-[#F4F1EA] selection:bg-[#FFC93C] selection:text-[#14161A]`}
         >
+            <CursorRibbon />
+
             {/* Navigation */}
-            <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 sm:px-8 lg:px-10">
+            <nav className="relative z-40 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 sm:px-8 lg:px-10">
                 <Link href="/" className="flex items-center">
                     {logo}
                 </Link>
@@ -149,31 +153,34 @@ export default async function Home() {
                     <a href="#faqs" className="transition hover:text-white">FAQs</a>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                     <Link
                         href="/login"
-                        className="rounded-lg bg-[#F4F1EA] px-6 py-3 text-xs font-semibold text-[#14161A] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFC93C] sm:px-8"
+                        className="hidden rounded-lg bg-[#F4F1EA] px-6 py-3 text-xs md:block font-semibold text-[#14161A] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFC93C] sm:px-8"
                     >
                         Login
                     </Link>
 
                     <Link
                         href="/signup"
-                        className="rounded-lg bg-[#FFC93C] px-5 py-3 text-xs font-semibold text-[#14161A] transition hover:bg-[#ffd666] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-7"
+                        className="rounded-lg bg-[#FFC93C] px-4 py-3 text-xs font-semibold text-[#14161A] transition hover:bg-[#ffd666] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-7"
                     >
                         Start Free Trial
                     </Link>
+
+                    <MobileNav />
                 </div>
             </nav>
 
+
             {/* Hero */}
-            <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-20 pt-10 sm:px-8 lg:grid-cols-2 lg:px-10 lg:pb-24 lg:pt-12">
+            <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-14 pt-6 sm:px-8 sm:pb-20 sm:pt-10 lg:grid-cols-2 lg:px-10 lg:pb-24 lg:pt-12">
                 <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                         Your creative business, simplified.
                     </p>
 
-                    <h1 className="mt-8 text-6xl font-medium leading-[1.02] tracking-tight sm:text-7xl lg:text-[84px]">
+                    <h1 className="mt-8 text-[clamp(2.25rem,9.5vw,4.5rem)] font-medium leading-[1.05] tracking-tight lg:text-[84px]">
                         Less admin.
                         <br />
                         More creating.
@@ -208,28 +215,28 @@ export default async function Home() {
 
                 <div
                     aria-hidden="true"
-                    className="rounded-[28px] bg-[#25282C] p-8 sm:p-10 lg:ml-auto lg:w-full lg:max-w-[560px]"
+                    className="w-full rounded-3xl bg-[#25282C] p-6 sm:rounded-[28px] sm:p-8 lg:ml-auto lg:max-w-[560px] lg:p-10"
                 >
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                         Your studio, in sync.
                     </p>
 
-                    <p className="mt-6 text-4xl font-normal leading-[1.1] tracking-tight sm:text-[40px]">
+                    <p className="mt-6 text-3xl font-normal leading-[1.1] tracking-tight sm:text-4xl lg:text-[40px]">
                         Space for
                         <br />
                         your best work.
                     </p>
 
-                    <div className="mt-12 space-y-2 pb-2">
-                        <div className="-rotate-[2deg] rounded-xl bg-[#FFC93C] px-5 py-4 text-xl font-normal text-[#14161A]">
+                    <div className="mt-8 space-y-2 pb-2 sm:mt-12">
+                        <div className="-rotate-[2deg] rounded-xl bg-[#FFC93C] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#14161A]">
                             <span className="mr-6 text-[10px] font-semibold">01</span>
                             Select photos
                         </div>
-                        <div className="-rotate-[1.5deg] rounded-xl bg-[#F4F1EA] px-5 py-4 text-xl font-normal text-[#14161A]">
+                        <div className="-rotate-[1.5deg] rounded-xl bg-[#F4F1EA] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#14161A]">
                             <span className="mr-6 text-[10px] font-semibold text-[#14161A]/60">02</span>
                             Run your studio
                         </div>
-                        <div className="rotate-[2deg] rounded-xl bg-[#3A3F2E] px-5 py-4 text-xl font-normal text-[#F4F1EA]/85">
+                        <div className="rotate-[2deg] rounded-xl bg-[#3A3F2E] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#F4F1EA]/85">
                             <span className="mr-6 text-[10px] font-semibold">03</span>
                             Grow your brand
                         </div>
@@ -239,7 +246,7 @@ export default async function Home() {
 
             {/* Essentials */}
             <section id="features" className="scroll-mt-4 border-t border-white/10">
-                <div className="mx-auto w-full max-w-7xl px-6 py-20 sm:px-8 lg:px-10">
+                <div className="mx-auto w-full max-w-7xl px-6 py-14 sm:px-8 sm:py-20 lg:px-10">
                     <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                         <div>
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
@@ -257,16 +264,16 @@ export default async function Home() {
                         </p>
                     </div>
 
-                    <div className="mt-10 grid gap-3 md:h-[490px] md:grid-cols-3 md:grid-rows-[repeat(6,minmax(0,1fr))]">
+                    <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:h-[490px] lg:grid-cols-3 lg:grid-rows-[repeat(6,minmax(0,1fr))]">
                         {/* 01 */}
-                        <div className="flex min-h-[320px] flex-col rounded-2xl bg-[#FFC93C] p-7 text-[#14161A] md:col-start-1 md:row-span-6 md:row-start-1 md:min-h-0">
+                        <div className="flex min-h-[320px] flex-col rounded-2xl bg-[#FFC93C] p-6 sm:col-span-2 sm:p-7 lg:col-span-1 text-[#14161A] lg:col-start-1 lg:row-span-6 lg:row-start-1 lg:min-h-0">
                             <span className="text-[10px] font-semibold">01</span>
-                            <h3 className="mt-4 text-3xl font-normal leading-tight tracking-tight">
+                            <h3 className="mt-4 text-2xl font-normal leading-tight tracking-tight sm:text-3xl">
                                 Smart photo
                                 <br />
                                 selection
                             </h3>
-                            <p className="mt-auto text-4xl font-extrabold leading-[0.95] tracking-tight sm:text-[40px]">
+                            <p className="mt-auto pt-8 text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-4xl lg:text-[40px]">
                                 PICK.
                                 <br />
                                 LOVE.
@@ -275,52 +282,52 @@ export default async function Home() {
                             </p>
                         </div>
 
-                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-6 md:min-h-0 md:col-start-2 md:row-span-3 md:row-start-1">
+                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-5 sm:p-6 lg:min-h-0 lg:col-start-2 lg:row-span-3 lg:row-start-1">
                             <span className="text-[10px] font-semibold text-[#FFC93C]">02</span>
-                            <h3 className="mt-3 text-xl font-normal tracking-tight">
+                            <h3 className="mt-3 text-lg font-normal tracking-tight sm:text-xl">
                                 Projects &amp; files
                             </h3>
-                            <p className="mt-auto text-xs text-[#F4F1EA]/55">
+                            <p className="mt-auto text-sm text-[#F4F1EA]/55 sm:text-xs">
                                 Every client. Every file. In order.
                             </p>
                         </div>
 
-                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-6 md:min-h-0 md:col-start-2 md:row-span-3 md:row-start-4">
+                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-5 sm:p-6 lg:min-h-0 lg:col-start-2 lg:row-span-3 lg:row-start-4">
                             <span className="text-[10px] font-semibold text-[#FFC93C]">03</span>
-                            <h3 className="mt-3 text-xl font-normal tracking-tight">
+                            <h3 className="mt-3 text-lg font-normal tracking-tight sm:text-xl">
                                 Contracts &amp; quotes
                             </h3>
-                            <p className="mt-auto text-xs text-[#F4F1EA]/55">
+                            <p className="mt-auto text-sm text-[#F4F1EA]/55 sm:text-xs">
                                 Professional documents, simplified.
                             </p>
                         </div>
 
-                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-6 md:min-h-0 md:col-start-3 md:row-span-2 md:row-start-1">
+                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-5 sm:p-6 lg:min-h-0 lg:col-start-3 lg:row-span-2 lg:row-start-1">
                             <span className="text-[10px] font-semibold text-[#FFC93C]">04</span>
-                            <h3 className="mt-3 text-xl font-normal tracking-tight">
+                            <h3 className="mt-3 text-lg font-normal tracking-tight sm:text-xl">
                                 Attendance &amp; payslips
                             </h3>
-                            <p className="mt-auto text-xs text-[#F4F1EA]/55">
+                            <p className="mt-auto text-sm text-[#F4F1EA]/55 sm:text-xs">
                                 Keep your team on track.
                             </p>
                         </div>
 
-                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#343A2B] p-6 md:min-h-0 md:col-start-3 md:row-span-2 md:row-start-3">
+                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#343A2B] p-5 sm:p-6 lg:min-h-0 lg:col-start-3 lg:row-span-2 lg:row-start-3">
                             <span className="text-[10px] font-semibold text-[#FFC93C]">05</span>
-                            <h3 className="mt-3 text-xl font-normal tracking-tight">
+                            <h3 className="mt-3 text-lg font-normal tracking-tight sm:text-xl">
                                 Website builder
                             </h3>
-                            <p className="mt-auto text-xs text-[#F4F1EA]/55">
+                            <p className="mt-auto text-sm text-[#F4F1EA]/55 sm:text-xs">
                                 Make your business feel like you.
                             </p>
                         </div>
 
-                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-6 md:min-h-0 md:col-start-3 md:row-span-2 md:row-start-5">
+                        <div className="flex min-h-[150px] flex-col rounded-2xl bg-[#1E2125] p-5 sm:p-6 lg:min-h-0 lg:col-start-3 lg:row-span-2 lg:row-start-5">
                             <span className="text-[10px] font-semibold text-[#FFC93C]">06</span>
-                            <h3 className="mt-3 text-xl font-normal tracking-tight">
+                            <h3 className="mt-3 text-lg font-normal tracking-tight sm:text-xl">
                                 Packages &amp; services
                             </h3>
-                            <p className="mt-auto text-xs text-[#F4F1EA]/55">
+                            <p className="mt-auto text-sm text-[#F4F1EA]/55 sm:text-xs">
                                 Show your value. Share your pricing.
                             </p>
                         </div>
@@ -330,13 +337,13 @@ export default async function Home() {
 
             {/* Website / Make it yours */}
             <section id="website" className="scroll-mt-4 overflow-hidden bg-[#F4F1EA] text-[#14161A]">
-                <div className="mx-auto grid w-full max-w-7xl items-center gap-14 px-6 py-20 sm:px-8 lg:grid-cols-2 lg:px-10">
+                <div className="mx-auto grid w-full max-w-7xl items-center gap-14 px-6 py-14 sm:px-8 sm:py-20 lg:grid-cols-2 lg:px-10">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider">
                             Make it yours
                         </p>
 
-                        <h2 className="mt-8 text-5xl font-normal leading-[1.08] tracking-tight sm:text-6xl">
+                        <h2 className="mt-8 text-[clamp(2.25rem,10vw,3.75rem)] font-normal leading-[1.08] tracking-tight">
                             Your business.
                             <br />
                             Your website.
@@ -360,25 +367,33 @@ export default async function Home() {
                         </p>
                     </div>
 
-                    <div
-                        aria-hidden="true"
-                        className="mx-auto w-full max-w-[560px] rotate-[4deg] rounded-[28px] bg-[#14161A] p-8 text-[#F4F1EA] sm:p-10 lg:ml-auto"
-                    >
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
-                            Your studio
-                        </p>
-                        <div className="mt-4 h-px w-full bg-white/10" />
+                    {/*
+                        One single tilt for the whole card (same as the design):
+                        the label, line, heading and yellow bar all rotate together
+                        with the box, so nothing is counter-rotated or pushed out
+                        of the card.
+                    */}
+                    <div className="mx-auto w-full max-w-[560px] px-2 py-4 sm:px-4 lg:ml-auto lg:mr-0">
+                        <div
+                            aria-hidden="true"
+                            className="flex w-full rotate-[2deg] flex-col rounded-3xl sm:rotate-[3deg] sm:rounded-[28px] bg-[#14161A] p-6 text-[#F4F1EA] shadow-[0_24px_60px_rgba(20,22,26,0.18)] sm:p-10 md:aspect-[1.18/1]"
+                        >
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
+                                Your studio
+                            </p>
+                            <div className="mt-4 h-px w-full bg-white/10" />
 
-                        <p className="mt-8 origin-left -rotate-[3deg] text-4xl font-normal leading-[1.1] tracking-tight sm:text-5xl">
-                            Create
-                            <br />
-                            something
-                            <br />
-                            worth seeing.
-                        </p>
+                            <p className="mt-8 text-3xl font-normal leading-[1.1] tracking-tight sm:text-5xl">
+                                Create
+                                <br />
+                                something
+                                <br />
+                                worth seeing.
+                            </p>
 
-                        <div className="mt-8 rotate-[3deg] rounded-xl bg-[#FFC93C] px-5 py-4 text-xl font-normal text-[#14161A]">
-                            Packages &amp; Services
+                            <div className="mt-8 rounded-xl bg-[#FFC93C] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#14161A] md:mt-auto">
+                                Packages &amp; Services
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -386,7 +401,7 @@ export default async function Home() {
 
             {/* Built around you */}
             <section>
-                <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-20 sm:px-8 lg:grid-cols-2 lg:px-10">
+                <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-14 sm:px-8 sm:py-20 lg:grid-cols-2 lg:px-10">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                             Built around you
@@ -414,7 +429,7 @@ export default async function Home() {
                                 className="grid gap-2 border-t border-white/10 py-7 sm:grid-cols-[1fr_1fr]"
                             >
                                 <p className="font-normal">{title}</p>
-                                <p className="text-xs text-[#F4F1EA]/55">{desc}</p>
+                                <p className="text-sm text-[#F4F1EA]/55 sm:text-xs">{desc}</p>
                             </div>
                         ))}
                     </div>
@@ -431,11 +446,11 @@ export default async function Home() {
                         Your next chapter starts here.
                     </h2>
 
-                    <div className="mt-10 grid gap-3 md:grid-cols-3">
-                        {tiers.map((t) => (
+                    <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {tiers.map((t, i) => (
                             <div
                                 key={t.name}
-                                className={`flex flex-col rounded-2xl p-6 ${
+                                className={`flex flex-col rounded-2xl p-6 sm:p-7 ${i === 2 ? "md:col-span-2 lg:col-span-1" : ""} ${
                                     t.featured
                                         ? "bg-[#FFC93C] text-[#14161A]"
                                         : "bg-[#1E2125] text-[#F4F1EA]"
@@ -469,7 +484,7 @@ export default async function Home() {
                                     <p className="mb-3 text-xs font-semibold">{t.lead}</p>
                                 )}
 
-                                <ul className="mb-10 space-y-3 text-xs">
+                                <ul className="mb-10 space-y-3 text-sm sm:text-xs">
                                     {t.items.map((item) => (
                                         <li key={item}>{item}</li>
                                     ))}
@@ -500,7 +515,7 @@ export default async function Home() {
 
             {/* FAQ */}
             <section id="faqs" className="scroll-mt-4 border-t border-white/10">
-                <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-20 sm:px-8 lg:grid-cols-2 lg:px-10">
+                <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-14 sm:px-8 sm:py-20 lg:grid-cols-2 lg:px-10">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                             Good to know
@@ -511,7 +526,7 @@ export default async function Home() {
                             answers.
                         </h2>
 
-                        <p className="mt-16 text-sm">What is Picknnovate?</p>
+                        <p className="mt-10 text-sm lg:mt-16">What is Picknnovate?</p>
                         <p className="mt-2 max-w-xs text-xs leading-5 text-[#F4F1EA]/55">
                             One platform for your studio, clients, team and online presence.
                         </p>
@@ -529,7 +544,7 @@ export default async function Home() {
                                         +
                                     </span>
                                 </summary>
-                                <p className="pb-5 pr-8 text-xs leading-5 text-[#F4F1EA]/55">
+                                <p className="pb-5 pr-8 text-sm leading-6 sm:text-xs sm:leading-5 text-[#F4F1EA]/55">
                                     {f.a}
                                 </p>
                             </details>
@@ -541,19 +556,19 @@ export default async function Home() {
             {/* CTA */}
             <section>
                 <div className="mx-auto w-full max-w-7xl px-6 pb-16 sm:px-8 lg:px-10">
-                    <div className="flex flex-col justify-between gap-10 rounded-[28px] bg-[#FFC93C] p-8 text-[#14161A] sm:p-12 md:min-h-[300px] md:flex-row md:items-center">
+                    <div className="flex flex-col justify-between gap-10 rounded-3xl bg-[#FFC93C] p-6 text-[#14161A] sm:rounded-[28px] sm:p-12 md:min-h-[300px] lg:flex-row lg:items-center">
                         <div>
                             <p className="text-[10px] font-semibold uppercase tracking-wider">
                                 Less busywork. More possibility.
                             </p>
-                            <h2 className="mt-6 text-5xl font-normal leading-[1.05] tracking-tight sm:text-6xl">
+                            <h2 className="mt-6 text-4xl font-normal leading-[1.05] tracking-tight min-[420px]:text-5xl sm:text-6xl">
                                 Make room
                                 <br />
                                 for creativity.
                             </h2>
                         </div>
 
-                        <div className="flex flex-col items-start gap-6 md:mt-16 md:w-[330px]">
+                        <div className="flex w-full flex-col items-start gap-6 lg:mt-16 lg:w-[330px]">
                             <Link
                                 href="/signup"
                                 className="w-full rounded-lg bg-[#14161A] px-8 py-4 text-center text-xs font-semibold text-[#F4F1EA] transition hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14161A]"
@@ -571,8 +586,8 @@ export default async function Home() {
             {/* Footer */}
             <footer className="border-t border-white/10">
                 <div className="mx-auto w-full max-w-7xl px-6 pt-12 sm:px-8 lg:px-10">
-                    <div className="grid gap-10 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
-                        <div>
+                    <div className="grid grid-cols-2 gap-10 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
+                        <div className="col-span-2 md:col-span-1">
                             {logo}
                             <p className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                                 Your creative business, simplified.
@@ -587,7 +602,7 @@ export default async function Home() {
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#FFC93C]">
                                     {col.title}
                                 </p>
-                                <ul className="mt-5 space-y-3 text-[11px] text-[#F4F1EA]/60">
+                                <ul className="mt-5 space-y-3 text-xs text-[#F4F1EA]/60 sm:text-[11px]">
                                     {col.links.map((l) => (
                                         <li key={l}>
                                             <a href="#" className="transition hover:text-white">
@@ -600,9 +615,9 @@ export default async function Home() {
                         ))}
                     </div>
 
-                    <div className="mt-16 flex flex-col items-center justify-between gap-3 border-t border-white/10 py-6 text-[10px] text-[#F4F1EA]/55 sm:flex-row">
+                    <div className="mt-16 flex flex-col items-center justify-between gap-3 border-t border-white/10 py-6 text-center text-[10px] text-[#F4F1EA]/55 sm:flex-row sm:text-left">
                         <p>© {new Date().getFullYear()} Picknnovate. All Rights Reserved.</p>
-                        <p className="flex items-center gap-8">
+                        <p className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
                             <span>Built with precision for visual creators</span>
                             <span className="flex items-center gap-2">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[#FFC93C]" />
