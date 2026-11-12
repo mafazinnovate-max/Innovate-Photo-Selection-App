@@ -1,4 +1,3 @@
-
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
@@ -778,3 +777,4 @@ export default function Template1({
     </main>
   );
 }
+
