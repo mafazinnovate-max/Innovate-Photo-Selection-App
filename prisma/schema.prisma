@@ -61,8 +61,13 @@ model Image {
   createdAt      DateTime @default(now())
   fileName       String?
 
+  fileHash       String?
+  storageKey     String?  @unique
+
   folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   selections Selection[]
+
+  @@index([fileHash])
 }
 
 model Selection {
@@ -292,6 +297,7 @@ model StudioProfilePackage {
   profileId   String
 
   name        String
+  price       String   @default("")
   description String
   sortOrder   Int      @default(0)
 
@@ -316,4 +322,21 @@ model StudioProfilePortfolio {
   profile StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, sortOrder])
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  studioId    String
+  employeeId  String
+  fullName    String
+  phone       String
+  email       String?
+  designation String
+  joiningDate DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studioId, employeeId])
+  @@index([studioId, isActive])
 }
