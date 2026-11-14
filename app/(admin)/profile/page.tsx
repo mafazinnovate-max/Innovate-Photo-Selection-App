@@ -9,6 +9,7 @@ import {
 
 import PicknovateLoader from "@/components/admin/picknovate-loader";
 import PremiumTemplate from "@/app/studio/templates/premium-template";
+import Image from "next/image";
 
 type PackageItem = {
   id: string;
@@ -54,16 +55,19 @@ const profileTemplates = [
     key: "template-1",
     name: "Template 1",
     description: "Black theme with yellow accents",
+    image: "/template-preview/template1.png"
   },
   {
     key: "template-2",
     name: "Template 2",
     description: "Warm brown and beige theme",
+    image: "/template-preview/template-new2.png"
   },
   {
     key: "template-3",
     name: "Template 3",
     description: "Your third custom design",
+    image: "/template-preview/template3.png"
   },
 ] as const;
 
@@ -1318,11 +1322,17 @@ if (loading) {
               : "border-white/10 bg-white/[0.02] hover:border-white/30"
           }`}
         >
-          <div className="mb-3 flex aspect-video items-center justify-center rounded-lg bg-[#202020]">
-            <span className="text-sm text-gray-400">
-              {template.name} Preview
-            </span>
-          </div>
+        <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg bg-[#202020]">
+
+          <Image
+            src={template.image}
+            alt={`${template.name} website preview`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+
+        </div>
 
           <p className="font-medium text-white">{template.name}</p>
           <p className="mt-1 text-xs text-gray-400">

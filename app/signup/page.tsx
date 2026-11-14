@@ -3,8 +3,31 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import PeekCat from "@/components/signuppage/PeekCat";
+
 
 type Step = 1 | 2;
+
+/* ---------- UI tokens (styling only) ----------
+   bg        #16171b   page
+   card      #23262c   form card
+   field     #1d1f24   inputs
+   border    #3a3d44   input border / #2f3238 card border
+   cream     #f5f1e8   primary text
+   muted     #a9abb0 / #8f9299
+   yellow    #ffc93c   accent (hover #ffd75e)
+*/
+const inputClass =
+    "w-full rounded-[14px] border border-[#3a3d44] bg-[#1d1f24] px-4 py-3.5 text-sm text-[#f5f1e8] outline-none transition placeholder:text-[#8f9299] focus:border-[#ffc93c] focus:ring-2 focus:ring-[#ffc93c]/25";
+
+const labelClass =
+    "mb-2 block text-sm font-semibold text-[#f5f1e8]";
+
+const primaryButtonClass =
+    "w-full rounded-[14px] bg-[#ffc93c] px-5 py-4 text-sm font-bold text-[#16171b] transition hover:bg-[#ffd75e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc93c]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#23262c] disabled:cursor-not-allowed disabled:opacity-50";
+
+const eyeButtonClass =
+    "absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#8f9299] transition hover:text-[#ffc93c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc93c]/50";
 
 export default function SignupPage() {
     const [step, setStep] = useState<Step>(1);
@@ -153,7 +176,8 @@ export default function SignupPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white">
+        <main className="min-h-screen bg-[#16171b] text-[#f5f1e8]">
+            <PeekCat />
             <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8 sm:px-8 lg:px-10">
                 {/* Top */}
                 <div className="flex items-center justify-between">
@@ -165,10 +189,10 @@ export default function SignupPage() {
                             <Image
                                 src={logoUrl}
                                 alt="Picknnovate"
-                                width={64}
-                                height={64}
+                                width={96}
+                                height={96}
                                 priority
-                                className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
+                                className="h-16 w-16 rounded-2xl object-contain sm:h-20 sm:w-20"
                             />
                         )}
                     </Link>
@@ -178,29 +202,29 @@ export default function SignupPage() {
                 <div className="flex flex-1 items-center justify-center py-12">
                     <div className="w-full max-w-md">
                         <div className="mb-8 text-center">
-                            <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-medium tracking-wide text-zinc-300">
+                            <div className="mb-4 inline-flex rounded-full border border-[#3a3d44] bg-[#1d1f24] px-4 py-2 text-xs font-semibold tracking-wide text-[#ffc93c]">
                                 3-Day Free Trial
                             </div>
 
-                            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                            <h1 className="text-3xl font-bold tracking-tight text-[#f5f1e8] sm:text-4xl">
                                 Create your account
                             </h1>
 
-                            <p className="mt-3 text-sm leading-6 text-zinc-500">
+                            <p className="mt-3 text-sm leading-6 text-[#a9abb0]">
                                 Start your photography workflow
                                 with Picknnovate.
                             </p>
                         </div>
 
-                        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+                        <div className="rounded-[28px] border border-[#2f3238] bg-[#23262c] p-6 sm:p-9">
                             {step === 1 ? (
                                 <div className="space-y-5">
                                     <div>
-                                        <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a9abb0]">
                                             Step 1 of 2
                                         </p>
 
-                                        <h2 className="mt-2 text-xl font-semibold">
+                                        <h2 className="mt-2 text-xl font-bold text-[#f5f1e8]">
                                             Studio details
                                         </h2>
                                     </div>
@@ -209,7 +233,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="studioName"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Studio Name
                                         </label>
@@ -224,7 +248,7 @@ export default function SignupPage() {
                                                 )
                                             }
                                             placeholder="Your studio name"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            className={inputClass}
                                         />
                                     </div>
 
@@ -232,7 +256,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="studioEmail"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Studio Email
                                         </label>
@@ -247,13 +271,13 @@ export default function SignupPage() {
                                                 )
                                             }
                                             placeholder="studio@example.com"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            className={inputClass}
                                         />
                                     </div>
 
                                     {/* Admin Name */}
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-zinc-300">
+                                        <label className={labelClass}>
                                             Admin Name
                                         </label>
 
@@ -269,7 +293,7 @@ export default function SignupPage() {
                                                 }
                                                 placeholder="First Name"
                                                 autoComplete="given-name"
-                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                                className={inputClass}
                                             />
 
                                             <input
@@ -283,7 +307,7 @@ export default function SignupPage() {
                                                 }
                                                 placeholder="Second Name"
                                                 autoComplete="family-name"
-                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                                className={inputClass}
                                             />
                                         </div>
                                     </div>
@@ -292,7 +316,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="adminContact"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Admin Contact
                                         </label>
@@ -307,7 +331,7 @@ export default function SignupPage() {
                                                 )
                                             }
                                             placeholder="Phone number"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            className={inputClass}
                                         />
                                     </div>
 
@@ -315,7 +339,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="adminEmail"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Admin Email
                                         </label>
@@ -330,7 +354,7 @@ export default function SignupPage() {
                                                 )
                                             }
                                             placeholder="admin@example.com"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            className={inputClass}
                                         />
                                     </div>
 
@@ -343,7 +367,7 @@ export default function SignupPage() {
                                     <button
                                         type="button"
                                         onClick={handleNext}
-                                        className="w-full rounded-xl bg-white px-5 py-3.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+                                        className={primaryButtonClass}
                                     >
                                         Next
                                     </button>
@@ -354,11 +378,11 @@ export default function SignupPage() {
                                     className="space-y-5"
                                 >
                                     <div>
-                                        <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a9abb0]">
                                             Step 2 of 2
                                         </p>
 
-                                        <h2 className="mt-2 text-xl font-semibold">
+                                        <h2 className="mt-2 text-xl font-bold text-[#f5f1e8]">
                                             Create your login
                                         </h2>
                                     </div>
@@ -367,7 +391,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="username"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Username
                                         </label>
@@ -383,7 +407,7 @@ export default function SignupPage() {
                                             }
                                             placeholder="Choose a username"
                                             autoComplete="username"
-                                            className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                            className={inputClass}
                                         />
                                     </div>
 
@@ -391,7 +415,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="password"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Password
                                         </label>
@@ -412,7 +436,7 @@ export default function SignupPage() {
                                                 }
                                                 placeholder="Create a password"
                                                 autoComplete="new-password"
-                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                                className={`${inputClass} pr-12`}
                                             />
 
                                             <button
@@ -427,7 +451,7 @@ export default function SignupPage() {
                                                         ? "Hide password"
                                                         : "Show password"
                                                 }
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition hover:text-white"
+                                                className={eyeButtonClass}
                                             >
                                                 {showPassword ? (
                                                     <svg
@@ -483,7 +507,7 @@ export default function SignupPage() {
                                     <div>
                                         <label
                                             htmlFor="confirmPassword"
-                                            className="mb-2 block text-sm font-medium text-zinc-300"
+                                            className={labelClass}
                                         >
                                             Confirm Password
                                         </label>
@@ -502,10 +526,9 @@ export default function SignupPage() {
                                                         event.target.value
                                                     )
                                                 }
-                                               
                                                 placeholder="Confirm your password"
                                                 autoComplete="new-password"
-                                                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-500"
+                                                className={`${inputClass} pr-12`}
                                             />
 
                                             <button
@@ -520,7 +543,7 @@ export default function SignupPage() {
                                                         ? "Hide confirm password"
                                                         : "Show confirm password"
                                                 }
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition hover:text-white"
+                                                className={eyeButtonClass}
                                             >
                                                 {showConfirmPassword ? (
                                                     <svg
@@ -587,7 +610,7 @@ export default function SignupPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full rounded-xl bg-white px-5 py-3.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className={primaryButtonClass}
                                     >
                                         {loading
                                             ? "Creating Account..."
@@ -598,7 +621,7 @@ export default function SignupPage() {
                                         type="button"
                                         onClick={handleBack}
                                         disabled={loading}
-                                        className="w-full text-sm text-zinc-500 transition hover:text-white disabled:opacity-50"
+                                        className="w-full text-sm text-[#a9abb0] transition hover:text-[#ffc93c] focus-visible:outline-none focus-visible:text-[#ffc93c] disabled:opacity-50"
                                     >
                                         ← Back
                                     </button>
@@ -607,17 +630,17 @@ export default function SignupPage() {
                         </div>
 
                         {/* Login link BELOW the box */}
-                        <p className="mt-6 text-center text-sm text-zinc-500">
+                        <p className="mt-6 text-center text-sm text-[#a9abb0]">
                             Already have an account?{" "}
                             <Link
                                 href="/login"
-                                className="font-medium text-white transition hover:text-zinc-300"
+                                className="font-semibold text-[#ffc93c] transition hover:underline"
                             >
                                 Login
                             </Link>
                         </p>
 
-                        <p className="mt-4 text-center text-xs leading-5 text-zinc-600">
+                        <p className="mt-4 text-center text-xs leading-5 text-[#8f9299]">
                             3 days free · No commitment
                         </p>
                     </div>
