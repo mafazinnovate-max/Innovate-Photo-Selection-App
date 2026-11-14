@@ -157,7 +157,7 @@ export default function Template1({
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <main className="min-h-screen w-full overflow-x-clip bg-[#171413] text-[#f5ede3]">
+    <main className="min-h-screen w-full overflow-x-clip bg-[#0c0a09] text-[#f7e7ce]">
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap");
 
@@ -201,7 +201,7 @@ export default function Template1({
           bottom: -6px;
           width: 0;
           height: 1px;
-          background: #e4b77d;
+          background: #cfa94a;
           transition: width 250ms ease;
         }
 
@@ -226,7 +226,7 @@ export default function Template1({
       `}</style>
 
       {/* NAVIGATION */}
-      <header className="sticky top-0 z-50 border-b border-[#e6c49b]/15 bg-[#8c5037]/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[#d4b46a]/15 bg-[#7a4e27]/95 backdrop-blur-xl">
         <nav className="mx-auto flex min-h-[68px] max-w-[1500px] items-center justify-between gap-3 px-4 py-3 sm:gap-5 sm:px-8 lg:gap-5 lg:px-12 xl:gap-8 2xl:max-w-[1800px]">
           <a
             href="#home"
@@ -237,21 +237,21 @@ export default function Template1({
               <img
                 src={profile.logoUrl}
                 alt={`${studioName} logo`}
-                className="h-10 w-10 shrink-0 rounded-full border border-[#f2d7b5]/50 bg-[#f5e8d8] object-contain p-1"
+                className="h-10 w-10 shrink-0 rounded-full border border-[#f7e7ce]/50 bg-[#f7e7ce] object-contain p-1"
                 onError={() => setLogoFailed(true)}
               />
             ) : (
-              <span className="editorial-serif flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f2d7b5]/50 text-lg font-semibold">
+              <span className="editorial-serif flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f7e7ce]/50 text-lg font-semibold">
                 {studioName.charAt(0).toUpperCase()}
               </span>
             )}
 
-            <span className="editorial-serif min-w-0 break-words text-base font-semibold leading-tight tracking-wide text-[#fff1df] min-[400px]:text-lg sm:text-xl lg:max-w-[260px] xl:max-w-[380px]">
+            <span className="editorial-serif min-w-0 break-words text-base font-semibold leading-tight tracking-wide text-[#fbefd9] min-[400px]:text-lg sm:text-xl lg:max-w-[260px] xl:max-w-[380px]">
               {studioName}
             </span>
           </a>
 
-          <div className="editorial-sans hidden items-center gap-5 text-[11px] font-medium uppercase tracking-[0.12em] text-[#f4e1cb] lg:flex xl:gap-7 xl:tracking-[0.16em]">
+          <div className="editorial-sans hidden items-center gap-5 text-[11px] font-medium uppercase tracking-[0.12em] text-[#efdcb8] lg:flex xl:gap-7 xl:tracking-[0.16em]">
             {navItems.map((item) => (
               <a
                 key={item.href}
@@ -265,7 +265,7 @@ export default function Template1({
 
           <a
             href="#contact"
-            className="editorial-sans hidden shrink-0 whitespace-nowrap rounded-full border border-[#f1d5b4]/60 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#fff0df] transition-all hover:bg-[#f1d5b4] hover:text-[#503023] lg:inline-flex"
+            className="editorial-sans hidden shrink-0 whitespace-nowrap rounded-full border border-[#f2dfb8]/60 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#fbefd9] transition-all hover:bg-[#f2dfb8] hover:text-[#2b1a12] lg:inline-flex"
           >
             Get in touch
           </a>
@@ -278,7 +278,7 @@ export default function Template1({
             }
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#f1d5b4]/60 text-[#fff0df] transition-colors hover:bg-[#f1d5b4]/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f1d5b4] lg:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#f2dfb8]/60 text-[#fbefd9] transition-colors hover:bg-[#f2dfb8]/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2dfb8] lg:hidden"
           >
             <span className="flex flex-col gap-1" aria-hidden="true">
               <span
@@ -318,7 +318,7 @@ export default function Template1({
                   href={item.href}
                   onClick={closeMenu}
                   tabIndex={menuOpen ? 0 : -1}
-                  className="block border-b border-white/10 py-3.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#f4e1cb] transition-colors hover:text-white"
+                  className="block border-b border-white/10 py-3.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#efdcb8] transition-colors hover:text-white"
                 >
                   {item.label}
                 </a>
@@ -328,7 +328,7 @@ export default function Template1({
                 href="#contact"
                 onClick={closeMenu}
                 tabIndex={menuOpen ? 0 : -1}
-                className="mt-4 inline-flex items-center justify-center rounded-full border border-[#f1d5b4]/60 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#fff0df] transition-all hover:bg-[#f1d5b4] hover:text-[#503023] sm:self-start"
+                className="mt-4 inline-flex items-center justify-center rounded-full border border-[#f2dfb8]/60 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-[#fbefd9] transition-all hover:bg-[#f2dfb8] hover:text-[#2b1a12] sm:self-start"
               >
                 Get in touch
               </a>
@@ -340,7 +340,7 @@ export default function Template1({
       {/* 1. HERO */}
       <section
         id="home"
-        className="editorial-section relative flex min-h-[70vh] items-center overflow-hidden bg-[#171413] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28"
+        className="editorial-section relative flex min-h-[70vh] items-center overflow-hidden bg-[#0c0a09] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28"
       >
         {profile.coverPhotoUrl && !coverFailed && (
           <>
@@ -351,31 +351,31 @@ export default function Template1({
               className="absolute inset-0 h-full w-full object-cover object-center opacity-40"
               onError={() => setCoverFailed(true)}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#171413]/70 via-[#171413]/55 to-[#171413]" />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#171413]/80 via-[#171413]/35 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0c0a09]/70 via-[#0c0a09]/55 to-[#0c0a09]" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0c0a09]/80 via-[#0c0a09]/35 to-transparent" />
           </>
         )}
 
         <div className="relative z-10 mx-auto w-full max-w-[1320px] 2xl:max-w-[1600px]">
           <div className="max-w-[720px] 2xl:max-w-[860px]">
-            <div className="mb-5 h-px w-16 bg-[#c58d61]" />
+            <div className="mb-5 h-px w-16 bg-[#b8923f]" />
 
-            <p className="editorial-sans mb-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#cda77e] min-[400px]:tracking-[0.32em] sm:text-[11px]">
+            <p className="editorial-sans mb-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c9a55a] min-[400px]:tracking-[0.32em] sm:text-[11px]">
               Photography · Stories · Memories
             </p>
 
-            <h1 className="editorial-serif break-words text-4xl font-semibold leading-[1] tracking-tight text-[#f4e5d4] min-[400px]:text-5xl sm:text-6xl lg:text-7xl 2xl:text-8xl">
+            <h1 className="editorial-serif break-words text-4xl font-semibold leading-[1] tracking-tight text-[#f7e7ce] min-[400px]:text-5xl sm:text-6xl lg:text-7xl 2xl:text-8xl">
               {studioName}
             </h1>
 
             {hasText(profile.shortTagline) && (
-              <p className="editorial-serif mt-5 break-words text-xl italic text-[#d8ad84] sm:text-2xl 2xl:text-3xl">
+              <p className="editorial-serif mt-5 break-words text-xl italic text-[#d4b06a] sm:text-2xl 2xl:text-3xl">
                 {profile.shortTagline}
               </p>
             )}
 
             {hasText(profile.description) && (
-              <p className="editorial-sans mt-6 max-w-[560px] break-words text-sm leading-7 text-[#d3c3b4] sm:text-base sm:leading-8 2xl:max-w-[640px] 2xl:text-lg">
+              <p className="editorial-sans mt-6 max-w-[560px] break-words text-sm leading-7 text-[#d9ccb4] sm:text-base sm:leading-8 2xl:max-w-[640px] 2xl:text-lg">
                 {profile.description}
               </p>
             )}
@@ -384,7 +384,7 @@ export default function Template1({
               {packages.length > 0 && (
                 <a
                   href="#packages"
-                  className="editorial-sans inline-flex items-center gap-3 rounded-full bg-[#b47a55] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white transition-all hover:bg-[#cb936b] sm:px-7"
+                  className="editorial-sans inline-flex items-center gap-3 rounded-full bg-[#9a6a36] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white transition-all hover:bg-[#b8844a] sm:px-7"
                 >
                   Explore Packages <span>↗</span>
                 </a>
@@ -393,7 +393,7 @@ export default function Template1({
               {portfolioPhotos.length > 0 && (
                 <a
                   href="#portfolio"
-                  className="editorial-sans text-[11px] font-semibold uppercase tracking-[0.15em] text-[#d8c5b2] hover:text-white"
+                  className="editorial-sans text-[11px] font-semibold uppercase tracking-[0.15em] text-[#e3d3b5] hover:text-white"
                 >
                   View Our Work
                 </a>
@@ -407,21 +407,21 @@ export default function Template1({
       {packages.length > 0 && (
         <section
           id="packages"
-          className="editorial-section bg-[#603e30] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
+          className="editorial-section bg-[#2e1f17] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
         >
           <div className="mx-auto max-w-[1320px] 2xl:max-w-[1600px]">
             <div className="mb-10 grid grid-cols-1 items-end gap-6 md:grid-cols-[0.8fr_1.2fr] lg:mb-14">
               <div className="min-w-0">
-                <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#e0b88e]">
+                <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#d1ae62]">
                   Thoughtfully curated
                 </p>
 
-                <h2 className="editorial-serif break-words text-4xl font-semibold leading-tight text-[#fff0df] sm:text-5xl lg:text-6xl">
+                <h2 className="editorial-serif break-words text-4xl font-semibold leading-tight text-[#fbefd9] sm:text-5xl lg:text-6xl">
                   Our Packages
                 </h2>
               </div>
 
-              <p className="editorial-sans max-w-[500px] text-sm leading-7 text-[#e1cabb] md:justify-self-end">
+              <p className="editorial-sans max-w-[500px] text-sm leading-7 text-[#dccfb6] md:justify-self-end">
                 Every moment deserves to be remembered. Explore our
                 photography packages and find the experience that feels right
                 for your story.
@@ -432,13 +432,13 @@ export default function Template1({
               {packages.map((item, index) => (
                 <article
                   key={item.id}
-                  className="editorial-card flex min-h-[280px] min-w-0 flex-col rounded-[22px] border border-[#f0d1ad]/30 bg-[#e5b982] p-5 text-[#39251d] sm:min-h-[330px] sm:p-7"
+                  className="editorial-card flex min-h-[280px] min-w-0 flex-col rounded-[22px] border border-[#e8cf9c]/30 bg-[#ecd9b0] p-5 text-[#2a1a11] sm:min-h-[330px] sm:p-7"
                 >
                   <div className="mb-7 flex items-center justify-between">
-                    <span className="editorial-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-[#75503a]">
+                    <span className="editorial-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7a5530]">
                       Package {String(index + 1).padStart(2, "0")}
                     </span>
-                    <span className="h-2 w-2 rounded-full bg-[#805238]" />
+                    <span className="h-2 w-2 rounded-full bg-[#8a5a2b]" />
                   </div>
 
                   <h3 className="editorial-serif break-words text-3xl font-semibold leading-tight sm:text-4xl">
@@ -446,19 +446,19 @@ export default function Template1({
                   </h3>
 
                   {hasText(item.price) && (
-                    <p className="editorial-serif mt-4 break-words text-3xl font-semibold text-[#75442d] sm:text-4xl">
+                    <p className="editorial-serif mt-4 break-words text-3xl font-semibold text-[#7d4f24] sm:text-4xl">
                       {item.price}
                     </p>
                   )}
 
-                  <div className="my-6 h-px w-full bg-[#9b704e]/35" />
+                  <div className="my-6 h-px w-full bg-[#9a7a45]/35" />
 
                   {hasText(item.description) ? (
-                    <p className="editorial-sans whitespace-pre-line break-words text-sm leading-7 text-[#59402f]">
+                    <p className="editorial-sans whitespace-pre-line break-words text-sm leading-7 text-[#4e3827]">
                       {item.description}
                     </p>
                   ) : (
-                    <p className="editorial-sans text-sm leading-7 text-[#755b48]">
+                    <p className="editorial-sans text-sm leading-7 text-[#6e5840]">
                       A photography experience thoughtfully designed for your
                       special moments.
                     </p>
@@ -466,7 +466,7 @@ export default function Template1({
 
                   <a
                     href="#contact"
-                    className="editorial-sans mt-auto inline-flex items-center gap-2 pt-8 text-[10px] font-bold uppercase tracking-[0.18em] text-[#593722] hover:text-[#9b5736]"
+                    className="editorial-sans mt-auto inline-flex items-center gap-2 pt-8 text-[10px] font-bold uppercase tracking-[0.18em] text-[#4a2d18] hover:text-[#8a5a2b]"
                   >
                     Enquire about this package ↗
                   </a>
@@ -481,11 +481,11 @@ export default function Template1({
       {hasAbout && (
         <section
           id="about"
-          className="editorial-section bg-[#c4a28d] px-5 py-16 text-[#382820] sm:px-8 sm:py-20 lg:px-12 lg:py-24"
+          className="editorial-section bg-[#d9c3a0] px-5 py-16 text-[#2a1c13] sm:px-8 sm:py-20 lg:px-12 lg:py-24"
         >
           <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-start gap-8 md:grid-cols-[0.8fr_1.2fr] lg:gap-16 2xl:max-w-[1400px]">
             <div className="min-w-0">
-              <p className="editorial-sans mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-[#805a43]">
+              <p className="editorial-sans mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-[#7a5a2c]">
                 A little about us
               </p>
 
@@ -498,31 +498,31 @@ export default function Template1({
 
             <div className="relative min-w-0">
               {hasText(profile.description) && (
-                <p className="editorial-sans whitespace-pre-line break-words text-sm leading-8 text-[#594438] sm:text-base">
+                <p className="editorial-sans whitespace-pre-line break-words text-sm leading-8 text-[#4a392b] sm:text-base">
                   {profile.description}
                 </p>
               )}
 
               {hasText(profile.additionalInfo) && (
-                <p className="editorial-sans mt-4 whitespace-pre-line break-words text-sm leading-8 text-[#594438] sm:text-base">
+                <p className="editorial-sans mt-4 whitespace-pre-line break-words text-sm leading-8 text-[#4a392b] sm:text-base">
                   {profile.additionalInfo}
                 </p>
               )}
 
               {hasText(profile.ownerName) && (
-                <div className="mt-8 border-t border-[#75513d]/35 pt-5">
+                <div className="mt-8 border-t border-[#6b4a26]/35 pt-5">
                   <p className="editorial-serif break-words text-2xl font-semibold">
                     {profile.ownerName}
                   </p>
 
-                  <p className="editorial-sans mt-1 text-[10px] uppercase tracking-[0.2em] text-[#805a43]">
+                  <p className="editorial-sans mt-1 text-[10px] uppercase tracking-[0.2em] text-[#7a5a2c]">
                     Studio Owner
                   </p>
 
                   {hasText(profile.ownerPhone) && ownerPhoneHref && (
                     <a
                       href={ownerPhoneHref}
-                      className="editorial-sans mt-3 inline-block break-words text-sm text-[#594438] hover:text-[#9b5736]"
+                      className="editorial-sans mt-3 inline-block break-words text-sm text-[#4a392b] hover:text-[#8a5a2b]"
                     >
                       {profile.ownerPhone}
                     </a>
@@ -538,19 +538,19 @@ export default function Template1({
       {portfolioPhotos.length > 0 && (
         <section
           id="portfolio"
-          className="editorial-section bg-[#603e30] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
+          className="editorial-section bg-[#2e1f17] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
         >
           <div className="mx-auto max-w-[1500px]">
             <div className="mb-10 flex flex-col items-center text-center">
-              <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#e3bd98]">
+              <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#d1ae62]">
                 A collection of moments
               </p>
 
-              <h2 className="editorial-serif text-4xl font-semibold text-[#fff0df] sm:text-5xl lg:text-6xl">
+              <h2 className="editorial-serif text-4xl font-semibold text-[#fbefd9] sm:text-5xl lg:text-6xl">
                 Our Portfolio
               </h2>
 
-              <p className="editorial-sans mt-3 max-w-[480px] text-sm leading-7 text-[#e1cabb]">
+              <p className="editorial-sans mt-3 max-w-[480px] text-sm leading-7 text-[#dccfb6]">
                 A glimpse into the stories, people and beautiful moments
                 we&apos;ve had the privilege to capture.
               </p>
@@ -562,7 +562,7 @@ export default function Template1({
               {visiblePhotos.map((photo, index) => (
                 <div
                   key={photo.id}
-                  className={`group mb-3 inline-block w-full break-inside-avoid overflow-hidden rounded-xl border border-[#f0d1ad]/15 bg-[#3d2b23] shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:mb-5 sm:rounded-2xl ${
+                  className={`group mb-3 inline-block w-full break-inside-avoid overflow-hidden rounded-xl border border-[#e8cf9c]/15 bg-[#20150f] shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:mb-5 sm:rounded-2xl ${
                     index === 0 || index === 4 ? "sm:mb-6" : ""
                   }`}
                 >
@@ -583,7 +583,7 @@ export default function Template1({
                   type="button"
                   onClick={togglePortfolio}
                   aria-expanded={showAllPortfolio}
-                  className="editorial-sans rounded-full border border-[#e7c5a2]/70 px-8 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#fff0df] transition-all hover:bg-[#e7c5a2] hover:text-[#493126]"
+                  className="editorial-sans rounded-full border border-[#dcc18a]/70 px-8 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#fbefd9] transition-all hover:bg-[#dcc18a] hover:text-[#2a1a11]"
                 >
                   {showAllPortfolio ? "Show Less" : "View More"}
                 </button>
@@ -596,46 +596,46 @@ export default function Template1({
       {/* 5. CONTACT */}
       <section
         id="contact"
-        className="editorial-section bg-[#171413] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
+        className="editorial-section bg-[#0c0a09] px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"
       >
         <div className="mx-auto max-w-[1200px] 2xl:max-w-[1400px]">
           <div className="mb-12 text-center">
-            <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#c3946d]">
+            <p className="editorial-sans mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#bf9b52]">
               Let us create something memorable
             </p>
 
-            <h2 className="editorial-serif break-words text-4xl font-semibold text-[#f4e5d4] sm:text-5xl lg:text-6xl">
+            <h2 className="editorial-serif break-words text-4xl font-semibold text-[#f7e7ce] sm:text-5xl lg:text-6xl">
               Let&apos;s Connect
             </h2>
 
-            <p className="editorial-sans mx-auto mt-4 max-w-[520px] text-sm leading-7 text-[#bcaea2]">
+            <p className="editorial-sans mx-auto mt-4 max-w-[520px] text-sm leading-7 text-[#bdb09a]">
               Have a special moment coming up? We&apos;d love to hear from
               you. Reach out and let&apos;s talk about your ideas.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 border-y border-[#9b755c]/40 py-9 md:grid-cols-2 md:gap-12">
+          <div className="grid grid-cols-1 gap-8 border-y border-[#8a6a3a]/40 py-9 md:grid-cols-2 md:gap-12">
             <div className="min-w-0">
-              <h3 className="editorial-serif mb-6 text-2xl font-semibold text-[#e9c49f]">
+              <h3 className="editorial-serif mb-6 text-2xl font-semibold text-[#dcbc78]">
                 Studio Information
               </h3>
 
               <div className="space-y-5">
                 {hasText(profile.phoneNumber) && (
                   <div>
-                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a58a75]">
+                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a08c6a]">
                       Phone
                     </p>
 
                     {phoneHref ? (
                       <a
                         href={phoneHref}
-                        className="editorial-sans break-words text-sm text-[#eee0d2] hover:text-[#d5a77c]"
+                        className="editorial-sans break-words text-sm text-[#f1e4cc] hover:text-[#c9a557]"
                       >
                         {profile.phoneNumber}
                       </a>
                     ) : (
-                      <p className="editorial-sans break-words text-sm text-[#eee0d2]">
+                      <p className="editorial-sans break-words text-sm text-[#f1e4cc]">
                         {profile.phoneNumber}
                       </p>
                     )}
@@ -644,13 +644,13 @@ export default function Template1({
 
                 {hasText(profile.email) && (
                   <div>
-                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a58a75]">
+                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a08c6a]">
                       Email
                     </p>
 
                     <a
                       href={`mailto:${profile.email}`}
-                      className="editorial-sans break-all text-sm text-[#eee0d2] hover:text-[#d5a77c]"
+                      className="editorial-sans break-all text-sm text-[#f1e4cc] hover:text-[#c9a557]"
                     >
                       {profile.email}
                     </a>
@@ -659,11 +659,11 @@ export default function Template1({
 
                 {hasText(profile.address) && (
                   <div>
-                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a58a75]">
+                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a08c6a]">
                       Address
                     </p>
 
-                    <p className="editorial-sans whitespace-pre-line break-words text-sm leading-7 text-[#eee0d2]">
+                    <p className="editorial-sans whitespace-pre-line break-words text-sm leading-7 text-[#f1e4cc]">
                       {profile.address}
                     </p>
                   </div>
@@ -671,11 +671,11 @@ export default function Template1({
 
                 {hasText(profile.location) && (
                   <div>
-                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a58a75]">
+                    <p className="editorial-sans mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a08c6a]">
                       Location
                     </p>
 
-                    <p className="editorial-sans break-words text-sm text-[#eee0d2]">
+                    <p className="editorial-sans break-words text-sm text-[#f1e4cc]">
                       {profile.location}
                     </p>
                   </div>
@@ -686,7 +686,7 @@ export default function Template1({
                     href={mapHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="editorial-sans inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#d5a77c] hover:text-white"
+                    className="editorial-sans inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#c9a557] hover:text-white"
                   >
                     View location on map ↗
                   </a>
@@ -695,7 +695,7 @@ export default function Template1({
             </div>
 
             <div className="min-w-0">
-              <h3 className="editorial-serif mb-6 text-2xl font-semibold text-[#e9c49f]">
+              <h3 className="editorial-serif mb-6 text-2xl font-semibold text-[#dcbc78]">
                 Find Us Online
               </h3>
 
@@ -713,10 +713,10 @@ export default function Template1({
                       href={item.href!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="editorial-sans flex min-h-[58px] min-w-0 items-center justify-between border border-[#80604c]/60 px-4 text-xs font-medium text-[#e8d7c8] transition-all hover:border-[#d5a77c] hover:bg-[#6b4635]/35 hover:text-white"
+                      className="editorial-sans flex min-h-[58px] min-w-0 items-center justify-between border border-[#7a5d35]/60 px-4 text-xs font-medium text-[#eadcc2] transition-all hover:border-[#c9a557] hover:bg-[#4a3220]/35 hover:text-white"
                     >
                       {item.label}
-                      <span className="text-[#d5a77c]">↗</span>
+                      <span className="text-[#c9a557]">↗</span>
                     </a>
                   ))}
               </div>
@@ -725,14 +725,14 @@ export default function Template1({
                 !websiteHref &&
                 !facebookHref &&
                 !youtubeHref && (
-                  <p className="editorial-sans text-sm leading-7 text-[#bcaea2]">
+                  <p className="editorial-sans text-sm leading-7 text-[#bdb09a]">
                     Social media links will appear here when added to the
                     studio profile.
                   </p>
                 )}
 
               {hasText(profile.otherLinks) && !otherHref && (
-                <p className="editorial-sans mt-5 break-all text-xs leading-6 text-[#bcaea2]">
+                <p className="editorial-sans mt-5 break-all text-xs leading-6 text-[#bdb09a]">
                   {profile.otherLinks}
                 </p>
               )}
@@ -741,12 +741,12 @@ export default function Template1({
 
           <div className="mt-10 flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
             <div className="min-w-0">
-              <p className="editorial-serif break-words text-2xl font-semibold text-[#e9c49f]">
+              <p className="editorial-serif break-words text-2xl font-semibold text-[#dcbc78]">
                 {studioName}
               </p>
 
               {hasText(profile.shortTagline) && (
-                <p className="editorial-sans mt-1 break-words text-xs text-[#a99585]">
+                <p className="editorial-sans mt-1 break-words text-xs text-[#a89878]">
                   {profile.shortTagline}
                 </p>
               )}
@@ -754,7 +754,7 @@ export default function Template1({
 
             <a
               href="#home"
-              className="editorial-sans shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d5a77c] hover:text-white"
+              className="editorial-sans shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c9a557] hover:text-white"
             >
               Back to top ↑
             </a>
@@ -763,13 +763,13 @@ export default function Template1({
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#a17a60]/30 bg-[#171413] px-5 py-6 sm:px-8 lg:px-12">
-        <div className="editorial-sans mx-auto flex max-w-[1500px] flex-col items-center justify-between gap-3 text-center text-[10px] tracking-[0.08em] text-[#958477] sm:flex-row sm:text-left 2xl:max-w-[1800px]">
+      <footer className="border-t border-[#8f6f3f]/30 bg-[#0c0a09] px-5 py-6 sm:px-8 lg:px-12">
+        <div className="editorial-sans mx-auto flex max-w-[1500px] flex-col items-center justify-between gap-3 text-center text-[10px] tracking-[0.08em] text-[#968868] sm:flex-row sm:text-left 2xl:max-w-[1800px]">
           <p className="break-words">
             © {new Date().getFullYear()} {studioName}. All rights reserved.
           </p>
 
-          <a href="#home" className="hover:text-[#d5a77c]">
+          <a href="#home" className="hover:text-[#c9a557]">
             Made for memories.
           </a>
         </div>
@@ -777,4 +777,3 @@ export default function Template1({
     </main>
   );
 }
-
