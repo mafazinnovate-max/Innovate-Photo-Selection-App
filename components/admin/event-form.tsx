@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createEvent } from "@/actions/create-event";
@@ -749,8 +748,8 @@ export default function EventForm({
                     onClick={handleSubmit}
                     disabled={isSubmitting}
                     className={`rounded-xl px-6 py-3 font-medium transition ${isSubmitting
-                            ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
-                            : "bg-white text-black hover:opacity-90"
+                        ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
+                        : "bg-white text-black hover:opacity-90"
                         }`}
                 >
                     {isSubmitting ? (
