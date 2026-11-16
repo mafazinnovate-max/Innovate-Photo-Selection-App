@@ -1,14 +1,13 @@
 import StudioBranding from "@/components/gallery/studio-branding";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
-import {
-  CheckCircle2,
-  Clock3,
-  Heart,
-} from "lucide-react";
+import { CheckCircle2, Clock3, Heart, } from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import FolderLink from "@/components/gallery/folder-link";
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 interface GalleryPageProps {
   params: Promise<{ shareId: string }>;
@@ -75,6 +74,9 @@ export default async function GalleryPage({
         take: 1,
         select: {
           imageUrl: true,
+          storageKey: true,
+          optimizedKey: true,
+          thumbnailKey: true,
         },
       },
     },
@@ -82,6 +84,59 @@ export default async function GalleryPage({
       createdAt: "desc",
     },
   });
+
+  // Generate R2 thumbnail URLs for folder cards
+  const foldersWithSignedUrls = await Promise.all(
+    folders.map(async (folder) => {
+      const image = folder.images[0];
+
+      if (!image) {
+        return {
+          ...folder,
+          previewImageUrl: null,
+        };
+      }
+
+      const thumbnailKey =
+        image.thumbnailKey ||
+        image.optimizedKey ||
+        image.storageKey;
+
+      // Legacy image fallback
+      if (!thumbnailKey) {
+        return {
+          ...folder,
+          previewImageUrl: image.imageUrl,
+        };
+      }
+
+      try {
+        const previewImageUrl = await getSignedUrl(
+          r2,
+          new GetObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: thumbnailKey,
+          }),
+          { expiresIn: 3600 }
+        );
+
+        return {
+          ...folder,
+          previewImageUrl,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to generate folder thumbnail URL for ${folder.id}:`,
+          error
+        );
+
+        return {
+          ...folder,
+          previewImageUrl: null,
+        };
+      }
+    })
+  );
 
   const selectedImages = await prisma.image.findMany({
     where: {
@@ -127,93 +182,93 @@ export default async function GalleryPage({
       {/* Studio branding */}
       <StudioBranding studio={event.studio} />
 
-     {/* Event Header */}
-<div className="relative mx-5 mt-8 max-w-7xl overflow-hidden rounded-3xl border border-amber-400/10 bg-zinc-950 shadow-2xl shadow-black/40 xl:mx-auto">
-  {/* Cover Image */}
-  {event.coverImageUrl && (
-    <>
-      <img
-        src={event.coverImageUrl}
-        alt={event.name}
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{
-          objectPosition: `center ${50 + event.coverPosition}%`,
-        }}
-      />
+      {/* Event Header */}
+      <div className="relative mx-5 mt-8 max-w-7xl overflow-hidden rounded-3xl border border-amber-400/10 bg-zinc-950 shadow-2xl shadow-black/40 xl:mx-auto">
+        {/* Cover Image */}
+        {event.coverImageUrl && (
+          <>
+            <img
+              src={event.coverImageUrl}
+              alt={event.name}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{
+                objectPosition: `center ${50 + event.coverPosition}%`,
+              }}
+            />
 
-      {/* Cinematic overlays */}
-      <div className="absolute inset-0 bg-black/30" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+            {/* Cinematic overlays */}
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
 
 
-      {/* Subtle gold atmosphere */}
-      <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
-    </>
-  )}
+            {/* Subtle gold atmosphere */}
+            <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
+          </>
+        )}
 
-  <div className="relative flex min-h-[420px] flex-col justify-end px-6 py-8 sm:min-h-[460px] sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-12 lg:py-12">
-    <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-      {/* Event Information */}
-      <div className="min-w-0 max-w-3xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-black/35 px-3 py-1.5 backdrop-blur-md">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.8)]" />
-          <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-amber-200">
-            Private Photo Gallery
-          </span>
-        </div>
-
-        <h1 className="mt-5 break-words text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
-          {event.name}
-        </h1>
-
-        <p className="mt-4 max-w-xl text-sm leading-6 tracking-wide text-zinc-300 sm:text-base sm:leading-7">
-          Choose the moments that matter most.
-        </p>
-
-     <div className="mt-6">
-  <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
-    Client
-  </p>
-
-  <p className="mt-1.5 break-words text-sm font-medium text-zinc-200 sm:text-base">
-    {event.clientName}
-  </p>
-</div>
-      </div>
-
-      {/* Selection Limit */}
-      {maxSelections && (
-        <div className="w-full shrink-0 lg:max-w-[300px]">
-          <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
-                <Heart
-                  size={18}
-                  strokeWidth={1.8}
-                />
+        <div className="relative flex min-h-[420px] flex-col justify-end px-6 py-8 sm:min-h-[460px] sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-12 lg:py-12">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            {/* Event Information */}
+            <div className="min-w-0 max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-black/35 px-3 py-1.5 backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.8)]" />
+                <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-amber-200">
+                  Private Photo Gallery
+                </span>
               </div>
 
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
-                  Selection Limit
+              <h1 className="mt-5 break-words text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
+                {event.name}
+              </h1>
+
+              <p className="mt-4 max-w-xl text-sm leading-6 tracking-wide text-zinc-300 sm:text-base sm:leading-7">
+                Choose the moments that matter most.
+              </p>
+
+              <div className="mt-6">
+                <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+                  Client
                 </p>
 
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  Choose up to{" "}
-                  <span className="font-semibold text-white">
-                    {maxSelections}
-                  </span>{" "}
-                  photos for your selection.
+                <p className="mt-1.5 break-words text-sm font-medium text-zinc-200 sm:text-base">
+                  {event.clientName}
                 </p>
               </div>
             </div>
+
+            {/* Selection Limit */}
+            {maxSelections && (
+              <div className="w-full shrink-0 lg:max-w-[300px]">
+                <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
+                      <Heart
+                        size={18}
+                        strokeWidth={1.8}
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
+                        Selection Limit
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-zinc-300">
+                        Choose up to{" "}
+                        <span className="font-semibold text-white">
+                          {maxSelections}
+                        </span>{" "}
+                        photos for your selection.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </div>
-  </div>
-</div>
+      </div>
 
       {/* Selection Summary */}
       <div className="mx-auto mt-10 max-w-7xl px-5">
@@ -252,29 +307,28 @@ export default async function GalleryPage({
             {folders.map((folder, index) => (
               <div
                 key={folder.id}
-                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${
-                  index !== 0 ? "border-t border-white/5" : ""
-                }`}
+                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
+                  }`}
               >
                 <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-  <div className="min-w-0 max-w-full">
-    <p className="break-words text-sm font-medium text-zinc-200 sm:truncate">
-      {folder.name}
-    </p>
-  </div>
+                  <div className="min-w-0 max-w-full">
+                    <p className="break-words text-sm font-medium text-zinc-200 sm:truncate">
+                      {folder.name}
+                    </p>
+                  </div>
 
-  {folder.selectionStatus === "COMPLETED" ? (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-green-300">
-      <CheckCircle2 size={12} strokeWidth={1.8} />
-      Selection Complete
-    </span>
-  ) : (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/15 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-amber-300">
-      <Clock3 size={12} strokeWidth={1.8} />
-      Selection in Progress
-    </span>
-  )}
-</div>
+                  {folder.selectionStatus === "COMPLETED" ? (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-green-300">
+                      <CheckCircle2 size={12} strokeWidth={1.8} />
+                      Selection Complete
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/15 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-amber-300">
+                      <Clock3 size={12} strokeWidth={1.8} />
+                      Selection in Progress
+                    </span>
+                  )}
+                </div>
 
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold text-white">
@@ -294,7 +348,7 @@ export default async function GalleryPage({
 
       {/* Folder Grid */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4">
-        {folders.map((folder) => (
+        {foldersWithSignedUrls.map((folder) => (
           <FolderLink
             key={folder.id}
             href={`/gallery/${shareId}/folder/${folder.id}`}
@@ -302,7 +356,7 @@ export default async function GalleryPage({
             <div className="relative aspect-[4/3] overflow-hidden">
               <img
                 src={
-                  folder.images[0]?.imageUrl ||
+                  folder.previewImageUrl ||
                   "https://placehold.co/600x400/111/FFF?text=No+Image"
                 }
                 alt={folder.name}
@@ -353,9 +407,9 @@ export default async function GalleryPage({
             <Image
               src={superAdmin.logoUrl}
               alt="Picknovate"
-               width={140}
-               height={140}
-               className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
+              width={140}
+              height={140}
+              className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
             />
           )}
         </div>

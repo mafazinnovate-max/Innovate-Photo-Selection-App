@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 interface GalleryImage {
   id: string;
   imageUrl: string;
+  thumbnailUrl: string;
   fileName: string | null;
   isSelected: boolean;
   comment: string | null;
@@ -494,7 +495,7 @@ export default function ClientFolderPage({
           if (
             firstEntry.isIntersecting &&
             visibleCount <
-              filteredImages.length
+            filteredImages.length
           ) {
             setVisibleCount(
               (prev) => prev + 20,
@@ -949,7 +950,7 @@ export default function ClientFolderPage({
 
     return Math.sqrt(
       dx * dx +
-        dy * dy,
+      dy * dy,
     );
   };
 
@@ -989,8 +990,8 @@ export default function ClientFolderPage({
 
       const nextImage =
         images[
-          (currentIndex + 1) %
-            images.length
+        (currentIndex + 1) %
+        images.length
         ];
 
       setActiveImage(
@@ -1076,16 +1077,16 @@ export default function ClientFolderPage({
 
     const nextImage =
       images[
-        (currentIndex + 1) %
-          images.length
+      (currentIndex + 1) %
+      images.length
       ];
 
     const prevImage =
       images[
-        (currentIndex -
-          1 +
-          images.length) %
-          images.length
+      (currentIndex -
+        1 +
+        images.length) %
+      images.length
       ];
 
     [nextImage, prevImage].forEach(
@@ -1306,19 +1307,17 @@ export default function ClientFolderPage({
             {/* Category Status */}
             <div
               ref={categoryStatusRef}
-              className={`rounded-2xl border p-4 sm:p-5 ${
-                isCompleted
+              className={`rounded-2xl border p-4 sm:p-5 ${isCompleted
                   ? "border-green-500/30 bg-green-500/10"
                   : "border-amber-500/30 bg-amber-500/10"
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                    isCompleted
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isCompleted
                       ? "bg-green-500/15 text-green-400"
                       : "bg-amber-500/15 text-amber-300"
-                  }`}
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock size={18} />
@@ -1329,11 +1328,10 @@ export default function ClientFolderPage({
 
                 <div className="min-w-0 flex-1">
                   <h2
-                    className={`text-sm font-semibold sm:text-base ${
-                      isCompleted
+                    className={`text-sm font-semibold sm:text-base ${isCompleted
                         ? "text-green-300"
                         : "text-amber-300"
-                    }`}
+                      }`}
                   >
                     {isCompleted
                       ? "Selection Complete"
@@ -1414,11 +1412,10 @@ export default function ClientFolderPage({
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        isCompleted
+                      className={`h-1.5 w-1.5 rounded-full ${isCompleted
                           ? "bg-green-400"
                           : "bg-amber-400"
-                      }`}
+                        }`}
                     />
 
                     <span className="text-xs text-zinc-500">
@@ -1537,19 +1534,17 @@ export default function ClientFolderPage({
                         (prev) => !prev,
                       )
                     }
-                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
-                      showSelectedOnly
+                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showSelectedOnly
                         ? "border-white bg-white text-black shadow-lg shadow-white/5"
                         : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
-                    }`}
+                      }`}
                   >
                     <div className="min-w-0">
                       <p
-                        className={`text-xs font-semibold ${
-                          showSelectedOnly
+                        className={`text-xs font-semibold ${showSelectedOnly
                             ? "text-black"
                             : "text-zinc-200"
-                        }`}
+                          }`}
                       >
                         {showSelectedOnly
                           ? "Show All Photos"
@@ -1557,11 +1552,10 @@ export default function ClientFolderPage({
                       </p>
 
                       <p
-                        className={`mt-0.5 text-[10px] ${
-                          showSelectedOnly
+                        className={`mt-0.5 text-[10px] ${showSelectedOnly
                             ? "text-zinc-600"
                             : "text-zinc-500"
-                        }`}
+                          }`}
                       >
                         {showSelectedOnly
                           ? "View the complete gallery"
@@ -1570,11 +1564,10 @@ export default function ClientFolderPage({
                     </div>
 
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${
-                        showSelectedOnly
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showSelectedOnly
                           ? "bg-black/10 text-black"
                           : "bg-white/5 text-zinc-400"
-                      }`}
+                        }`}
                     >
                       {showSelectedOnly ? "◉" : "○"}
                     </span>
@@ -1582,11 +1575,10 @@ export default function ClientFolderPage({
 
                   {/* Selection Count in This Category */}
                   <div
-                    className={`flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
-                      maxSelections !== null
+                    className={`flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 ${maxSelections !== null
                         ? "border-amber-500/20 bg-amber-500/[0.06]"
                         : "border-white/10 bg-zinc-900/60"
-                    }`}
+                      }`}
                   >
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-zinc-200">
@@ -1599,11 +1591,10 @@ export default function ClientFolderPage({
                     </div>
 
                     <span
-                      className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
-                        maxSelections !== null
+                      className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${maxSelections !== null
                           ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
                           : "border-white/10 bg-white/5 text-zinc-200"
-                      }`}
+                        }`}
                     >
                       {selectedImages.length}
                     </span>
@@ -1616,19 +1607,17 @@ export default function ClientFolderPage({
                         (prev) => !prev,
                       )
                     }
-                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
-                      showCommentedOnly
+                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showCommentedOnly
                         ? "border-white bg-white text-black shadow-lg shadow-white/5"
                         : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
-                    }`}
+                      }`}
                   >
                     <div className="min-w-0">
                       <p
-                        className={`text-xs font-semibold ${
-                          showCommentedOnly
+                        className={`text-xs font-semibold ${showCommentedOnly
                             ? "text-black"
                             : "text-zinc-200"
-                        }`}
+                          }`}
                       >
                         {showCommentedOnly
                           ? "Show All Photos"
@@ -1636,11 +1625,10 @@ export default function ClientFolderPage({
                       </p>
 
                       <p
-                        className={`mt-0.5 text-[10px] ${
-                          showCommentedOnly
+                        className={`mt-0.5 text-[10px] ${showCommentedOnly
                             ? "text-zinc-600"
                             : "text-zinc-500"
-                        }`}
+                          }`}
                       >
                         {showCommentedOnly
                           ? "View the complete gallery"
@@ -1649,11 +1637,10 @@ export default function ClientFolderPage({
                     </div>
 
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${
-                        showCommentedOnly
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showCommentedOnly
                           ? "bg-black/10 text-black"
                           : "bg-white/5 text-zinc-400"
-                      }`}
+                        }`}
                     >
                       {showCommentedOnly ? "●" : "○"}
                     </span>
@@ -1697,11 +1684,10 @@ export default function ClientFolderPage({
               </p>
 
               <p
-                className={`text-sm font-semibold leading-5 ${
-                  isCompleted
+                className={`text-sm font-semibold leading-5 ${isCompleted
                     ? "text-green-300"
                     : "text-amber-300"
-                }`}
+                  }`}
               >
                 {isCompleted
                   ? "Selection Complete"
@@ -1762,17 +1748,14 @@ export default function ClientFolderPage({
                     image.id,
                   )
                 }
-                className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${
-                  isSelected
+                className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${isSelected
                     ? "border-white"
                     : "border-zinc-800"
-                }`}
+                  }`}
               >
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <Image
-                    src={
-                      image.imageUrl
-                    }
+                    src={image.thumbnailUrl}
                     alt="Wedding"
                     fill
                     unoptimized
@@ -1794,13 +1777,12 @@ export default function ClientFolderPage({
                       image.id,
                     );
                   }}
-                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
-                    isCompleted
+                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isCompleted
                       ? "cursor-not-allowed bg-black/70 text-zinc-500"
                       : isSelected
                         ? "bg-white text-black"
                         : "bg-black/60 text-white backdrop-blur"
-                  }`}
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock
@@ -1832,7 +1814,7 @@ export default function ClientFolderPage({
                     }
                     value={
                       comments[
-                        image.id
+                      image.id
                       ] || ""
                     }
                     onClick={(e) =>
@@ -1844,11 +1826,10 @@ export default function ClientFolderPage({
                         e.target.value,
                       );
                     }}
-                    className={`mt-2 w-full rounded-lg border px-3 py-2 text-xs text-white outline-none backdrop-blur placeholder:text-zinc-500 ${
-                      isCompleted
+                    className={`mt-2 w-full rounded-lg border px-3 py-2 text-xs text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
                         ? "cursor-not-allowed border-zinc-800 bg-black/60 text-zinc-500"
                         : "border-zinc-700 bg-black/40"
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -1863,10 +1844,10 @@ export default function ClientFolderPage({
       >
         {visibleCount <
           filteredImages.length && (
-          <p className="text-sm text-zinc-500">
-            Loading more photos...
-          </p>
-        )}
+            <p className="text-sm text-zinc-500">
+              Loading more photos...
+            </p>
+          )}
       </div>
 
       {/* =====================================================
@@ -2140,15 +2121,14 @@ export default function ClientFolderPage({
                 style={{
                   transform: `
                     translateX(
-                      ${
-                        slideDirection ===
-                        "left"
-                          ? "-40px"
-                          : slideDirection ===
-                              "right"
-                            ? "40px"
-                            : "0px"
-                      }
+                      ${slideDirection ===
+                      "left"
+                      ? "-40px"
+                      : slideDirection ===
+                        "right"
+                        ? "40px"
+                        : "0px"
+                    }
                     )
                     scale(${zoom})
                   `,
@@ -2204,7 +2184,7 @@ export default function ClientFolderPage({
                   }
                   value={
                     comments[
-                      currentImage.id
+                    currentImage.id
                     ] || ""
                   }
                   onChange={(e) => {
@@ -2237,11 +2217,10 @@ export default function ClientFolderPage({
                         );
                       }, 800);
                   }}
-                  className={`max-h-28 min-h-[52px] flex-1 resize-none rounded-2xl border px-4 py-3 text-sm text-white outline-none backdrop-blur placeholder:text-zinc-500 ${
-                    isCompleted
+                  className={`max-h-28 min-h-[52px] flex-1 resize-none rounded-2xl border px-4 py-3 text-sm text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
                       ? "cursor-not-allowed border-zinc-800 bg-zinc-900/80 text-zinc-500"
                       : "border-zinc-700 bg-zinc-900/80"
-                  }`}
+                    }`}
                 />
 
                 <button
@@ -2253,23 +2232,22 @@ export default function ClientFolderPage({
                       currentImage.id,
                     )
                   }
-                  className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${
-                    isCompleted
+                  className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${isCompleted
                       ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
                       : selectedImages.includes(
-                            currentImage.id,
-                          )
+                        currentImage.id,
+                      )
                         ? "bg-white text-black"
                         : "bg-zinc-800 text-white"
-                  }`}
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock
                       size={17}
                     />
                   ) : selectedImages.includes(
-                      currentImage.id,
-                    ) ? (
+                    currentImage.id,
+                  ) ? (
                     getSelectionNumber(
                       currentImage.id,
                     )
@@ -2287,15 +2265,14 @@ export default function ClientFolderPage({
           ===================================================== */}
 
       <div
-        className={`fixed left-4 z-[200] ${
-          activeImage !==
+        className={`fixed left-4 z-[200] ${activeImage !==
             null &&
-          currentImage
+            currentImage
             ? "bottom-24"
             : hasUnsavedChanges
               ? "bottom-20 md:bottom-4"
               : "bottom-4"
-        }`}
+          }`}
       >
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-2 py-1 text-xs text-white backdrop-blur-md shadow-lg">
           <div className="flex items-center gap-1">

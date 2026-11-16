@@ -1,20 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import {
-    ArrowRight,
-    CheckCircle2,
-    Clock3,
-    Loader2,
-    MoreVertical,
-    Pencil,
-    Trash2,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import PicknovateLoader from "./picknovate-loader";
 import { useRouter } from "next/navigation";
 import { deleteEvent } from "@/actions/delete-event";
-
 
 export default function EventCard({ event }: any) {
     const [openMenu, setOpenMenu] = useState(false);
@@ -59,11 +50,10 @@ export default function EventCard({ event }: any) {
 
     return (
         <div
-            className={`group relative min-h-[240px] overflow-hidden rounded-2xl border border-zinc-800 transition-all duration-300 ${
-                !showDeleteModal
-                    ? "hover:-translate-y-1 hover:border-zinc-600 hover:shadow-2xl"
-                    : ""
-            }`}
+            className={`group relative min-h-[240px] overflow-hidden rounded-2xl border border-zinc-800 transition-all duration-300 ${!showDeleteModal
+                ? "hover:-translate-y-1 hover:border-zinc-600 hover:shadow-2xl"
+                : ""
+                }`}
         >
             <Link
                 href={`/events/${event.id}`}
@@ -73,15 +63,13 @@ export default function EventCard({ event }: any) {
                     <img
                         src={event.coverImageUrl}
                         alt={event.name}
-                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ${
-                            !showDeleteModal
-                                ? "group-hover:scale-105"
-                                : ""
-                        }`}
+                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ${!showDeleteModal
+                            ? "group-hover:scale-105"
+                            : ""
+                            }`}
                         style={{
-                            objectPosition: `center ${
-                                50 + event.coverPosition
-                            }%`,
+                            objectPosition: `center ${50 + event.coverPosition
+                                }%`,
                         }}
                     />
                 ) : (
@@ -100,11 +88,10 @@ export default function EventCard({ event }: any) {
 
                         <ArrowRight
                             size={18}
-                            className={`translate-x-0 opacity-0 transition-all duration-300 ${
-                                !showDeleteModal
-                                    ? "group-hover:translate-x-2 group-hover:opacity-100"
-                                    : ""
-                            }`}
+                            className={`translate-x-0 opacity-0 transition-all duration-300 ${!showDeleteModal
+                                ? "group-hover:translate-x-2 group-hover:opacity-100"
+                                : ""
+                                }`}
                         />
                     </div>
 
@@ -122,12 +109,12 @@ export default function EventCard({ event }: any) {
                             Date:{" "}
                             {event.eventDate
                                 ? new Date(
-                                      event.eventDate
-                                  ).toLocaleDateString("en-GB", {
-                                      day: "2-digit",
-                                      month: "long",
-                                      year: "numeric",
-                                  })
+                                    event.eventDate
+                                ).toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "long",
+                                    year: "numeric",
+                                })
                                 : "No Date"}
                         </p>
 
@@ -139,15 +126,14 @@ export default function EventCard({ event }: any) {
                                         (parent: any) => (
                                             <span
                                                 key={parent.id}
-                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                    parent.status ===
+                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${parent.status ===
                                                     "COMPLETED"
-                                                        ? "bg-emerald-500/15 text-emerald-400"
-                                                        : "bg-amber-500/10 text-amber-300"
-                                                }`}
+                                                    ? "bg-emerald-500/15 text-emerald-400"
+                                                    : "bg-amber-500/10 text-amber-300"
+                                                    }`}
                                             >
                                                 {parent.status ===
-                                                "COMPLETED" ? (
+                                                    "COMPLETED" ? (
                                                     <CheckCircle2 size={12} />
                                                 ) : (
                                                     <Clock3 size={12} />
@@ -156,7 +142,7 @@ export default function EventCard({ event }: any) {
                                                 <span>
                                                     {parent.name}:{" "}
                                                     {parent.status ===
-                                                    "COMPLETED"
+                                                        "COMPLETED"
                                                         ? "Completed"
                                                         : "Selecting"}
                                                 </span>
@@ -174,11 +160,10 @@ export default function EventCard({ event }: any) {
                 {/* Overall Event Status */}
                 {event.selectionStatus && (
                     <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold animate-[statusBadgeEnter_0.35s_ease-out_both] ${
-                             event.selectionStatus === "COMPLETED"
-                                ? "bg-emerald-500/15 text-emerald-400"
-                                : "bg-amber-500/10 text-amber-300"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold animate-[statusBadgeEnter_0.35s_ease-out_both] ${event.selectionStatus === "COMPLETED"
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-amber-500/10 text-amber-300"
+                            }`}
                     >
                         {event.selectionStatus === "COMPLETED" ? (
                             <CheckCircle2 size={13} />
@@ -322,12 +307,12 @@ export default function EventCard({ event }: any) {
                 </div>
             )}
 
-          {/* Navigation Loading */}
-{isNavigating && (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <PicknovateLoader />
-    </div>
-)}
+            {/* Navigation Loading */}
+            {isNavigating && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <PicknovateLoader />
+                </div>
+            )}
         </div>
     );
 }
