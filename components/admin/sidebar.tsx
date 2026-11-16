@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -298,12 +297,12 @@ export default function Sidebar({
         >
           {logoLoaded && logoUrl ? (
             <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 shadow-md">
-              <Image
+              <img
                 src={logoUrl}
                 alt="Studio logo"
                 width={44}
                 height={44}
-                priority
+                draggable={false}
                 className="h-full w-full object-contain"
                 style={{
                   padding: `${mobilePadding}px`,
@@ -349,12 +348,12 @@ export default function Sidebar({
           >
             {logoLoaded && logoUrl ? (
               <div className="relative h-24 w-24 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 shadow-xl transition duration-300 group-hover:border-zinc-500 group-hover:shadow-2xl">
-                <Image
+                <img
                   src={logoUrl}
                   alt="Studio logo"
                   width={96}
                   height={96}
-                  priority
+                  draggable={false}
                   className="h-full w-full object-contain"
                   style={{
                     padding: `${desktopPadding}px`,
@@ -396,7 +395,7 @@ export default function Sidebar({
         </div>
 
         {/* Navigation */}
-       <div className="flex-1 overflow-y-auto p-4 pt-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex-1 overflow-y-auto p-4 pt-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <nav className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -607,6 +606,4 @@ export default function Sidebar({
       )}
     </>
   );
-
-
 }

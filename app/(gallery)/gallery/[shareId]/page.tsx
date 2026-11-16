@@ -44,20 +44,28 @@ export default async function GalleryPage({
 
   let coverImageSrc: string | null = null;
 
-if (event.coverImageKey) {
-  try {
-    coverImageSrc = await getSignedUrl(
-      r2,
-      new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: event.coverImageKey,
-      }),
-      { expiresIn: 3600 }
-    );
-  } catch (error) {
-    console.error("Failed to generate event cover URL:", error);
+  if (event.coverImageKey) {
+    try {
+      coverImageSrc = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: event.coverImageKey,
+        }),
+        { expiresIn: 3600 }
+      );
+    } catch (error) {
+      console.error("Failed to generate event cover URL:", error);
+    }
   }
-}
+
+  if (!event.studio) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        Studio not found
+      </div>
+    );
+  }
 
   const hasAccess = await hasGalleryAccess(
     shareId,
@@ -72,6 +80,33 @@ if (event.coverImageKey) {
       />
     );
   }
+
+  // Generate R2 signed URL for Studio Logo
+  let studioLogoUrl = event.studio.logoUrl;
+
+  const studioLogoKey =
+    event.studio.logoOptimizedKey ||
+    event.studio.logoStorageKey;
+
+  if (studioLogoKey) {
+    try {
+      studioLogoUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: studioLogoKey,
+        }),
+        { expiresIn: 3600 }
+      );
+    } catch (error) {
+      console.error("Failed to generate studio logo URL:", error);
+    }
+  }
+
+  const studioBrandingData = {
+    ...event.studio,
+    logoUrl: studioLogoUrl,
+  };
 
   const folders = await prisma.folder.findMany({
     where: {
@@ -197,7 +232,7 @@ if (event.coverImageKey) {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Studio branding */}
-      <StudioBranding studio={event.studio} />
+      <StudioBranding studio={studioBrandingData} />
 
       {/* Event Header */}
       <div className="relative mx-5 mt-8 max-w-7xl overflow-hidden rounded-3xl border border-amber-400/10 bg-zinc-950 shadow-2xl shadow-black/40 xl:mx-auto">

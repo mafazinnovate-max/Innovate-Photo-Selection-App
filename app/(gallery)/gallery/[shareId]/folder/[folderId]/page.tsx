@@ -54,6 +54,8 @@ export default async function FolderPage({
             select: {
               name: true,
               logoUrl: true,
+              logoStorageKey: true,
+              logoOptimizedKey: true,
               logoZoom: true,
               logoPositionX: true,
               logoPositionY: true,
@@ -87,6 +89,38 @@ export default async function FolderPage({
 
   if (!folder) {
     return <div>Folder not found</div>;
+  }
+
+  // Generate private R2 signed URL for Studio Logo
+  let studioBrandingData = folder.event.studio;
+
+  if (studioBrandingData) {
+    const studioLogoKey =
+      studioBrandingData.logoOptimizedKey ||
+      studioBrandingData.logoStorageKey;
+
+    if (studioLogoKey) {
+      try {
+        const studioLogoUrl = await getSignedUrl(
+          r2,
+          new GetObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: studioLogoKey,
+          }),
+          { expiresIn: 3600 }
+        );
+
+        studioBrandingData = {
+          ...studioBrandingData,
+          logoUrl: studioLogoUrl,
+        };
+      } catch (error) {
+        console.error(
+          "Failed to generate Studio logo URL:",
+          error
+        );
+      }
+    }
   }
 
   // Generate private R2 signed URLs for client gallery
@@ -236,7 +270,7 @@ export default async function FolderPage({
       parentId={folder.parentId}
       selectionSummary={selectionSummary}
       selectionStatus={folder.selectionStatus}
-      studio={folder.event.studio}
+      studio={studioBrandingData}
     />
   );
 }

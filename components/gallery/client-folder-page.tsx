@@ -1,17 +1,9 @@
-
 "use client";
 
 import { completeCategory } from "@/actions/complete-category";
 import { reopenCategory } from "@/actions/reopen-category";
 import { saveSelections } from "@/actions/save-selections";
-import {
-  ArrowLeft,
-  Check,
-  LocateFixedIcon,
-  Lock,
-  PhoneCall,
-  Unlock,
-} from "lucide-react";
+import { ArrowLeft, Check, LocateFixedIcon, Lock, PhoneCall, Unlock, } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -1209,12 +1201,12 @@ export default function ClientFolderPage({
                       `,
                     }}
                   >
-                    <Image
+                    <img
                       src={studio.logoUrl}
                       alt={studio.name}
                       width={176}
                       height={176}
-                      priority
+                      draggable={false}
                       className="h-[176px] w-[176px] max-w-none object-contain"
                     />
                   </div>
@@ -1308,15 +1300,15 @@ export default function ClientFolderPage({
             <div
               ref={categoryStatusRef}
               className={`rounded-2xl border p-4 sm:p-5 ${isCompleted
-                  ? "border-green-500/30 bg-green-500/10"
-                  : "border-amber-500/30 bg-amber-500/10"
+                ? "border-green-500/30 bg-green-500/10"
+                : "border-amber-500/30 bg-amber-500/10"
                 }`}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isCompleted
-                      ? "bg-green-500/15 text-green-400"
-                      : "bg-amber-500/15 text-amber-300"
+                    ? "bg-green-500/15 text-green-400"
+                    : "bg-amber-500/15 text-amber-300"
                     }`}
                 >
                   {isCompleted ? (
@@ -1329,8 +1321,8 @@ export default function ClientFolderPage({
                 <div className="min-w-0 flex-1">
                   <h2
                     className={`text-sm font-semibold sm:text-base ${isCompleted
-                        ? "text-green-300"
-                        : "text-amber-300"
+                      ? "text-green-300"
+                      : "text-amber-300"
                       }`}
                   >
                     {isCompleted
@@ -1413,8 +1405,8 @@ export default function ClientFolderPage({
                   <div className="flex items-center gap-2">
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${isCompleted
-                          ? "bg-green-400"
-                          : "bg-amber-400"
+                        ? "bg-green-400"
+                        : "bg-amber-400"
                         }`}
                     />
 
@@ -1535,15 +1527,15 @@ export default function ClientFolderPage({
                       )
                     }
                     className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showSelectedOnly
-                        ? "border-white bg-white text-black shadow-lg shadow-white/5"
-                        : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
+                      ? "border-white bg-white text-black shadow-lg shadow-white/5"
+                      : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
                       }`}
                   >
                     <div className="min-w-0">
                       <p
                         className={`text-xs font-semibold ${showSelectedOnly
-                            ? "text-black"
-                            : "text-zinc-200"
+                          ? "text-black"
+                          : "text-zinc-200"
                           }`}
                       >
                         {showSelectedOnly
@@ -1553,8 +1545,8 @@ export default function ClientFolderPage({
 
                       <p
                         className={`mt-0.5 text-[10px] ${showSelectedOnly
-                            ? "text-zinc-600"
-                            : "text-zinc-500"
+                          ? "text-zinc-600"
+                          : "text-zinc-500"
                           }`}
                       >
                         {showSelectedOnly
@@ -1565,8 +1557,8 @@ export default function ClientFolderPage({
 
                     <span
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showSelectedOnly
-                          ? "bg-black/10 text-black"
-                          : "bg-white/5 text-zinc-400"
+                        ? "bg-black/10 text-black"
+                        : "bg-white/5 text-zinc-400"
                         }`}
                     >
                       {showSelectedOnly ? "◉" : "○"}
@@ -1576,8 +1568,8 @@ export default function ClientFolderPage({
                   {/* Selection Count in This Category */}
                   <div
                     className={`flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 ${maxSelections !== null
-                        ? "border-amber-500/20 bg-amber-500/[0.06]"
-                        : "border-white/10 bg-zinc-900/60"
+                      ? "border-amber-500/20 bg-amber-500/[0.06]"
+                      : "border-white/10 bg-zinc-900/60"
                       }`}
                   >
                     <div className="min-w-0">
@@ -1592,8 +1584,8 @@ export default function ClientFolderPage({
 
                     <span
                       className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${maxSelections !== null
-                          ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
-                          : "border-white/10 bg-white/5 text-zinc-200"
+                        ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                        : "border-white/10 bg-white/5 text-zinc-200"
                         }`}
                     >
                       {selectedImages.length}
@@ -1608,15 +1600,15 @@ export default function ClientFolderPage({
                       )
                     }
                     className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showCommentedOnly
-                        ? "border-white bg-white text-black shadow-lg shadow-white/5"
-                        : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
+                      ? "border-white bg-white text-black shadow-lg shadow-white/5"
+                      : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
                       }`}
                   >
                     <div className="min-w-0">
                       <p
                         className={`text-xs font-semibold ${showCommentedOnly
-                            ? "text-black"
-                            : "text-zinc-200"
+                          ? "text-black"
+                          : "text-zinc-200"
                           }`}
                       >
                         {showCommentedOnly
@@ -1626,8 +1618,8 @@ export default function ClientFolderPage({
 
                       <p
                         className={`mt-0.5 text-[10px] ${showCommentedOnly
-                            ? "text-zinc-600"
-                            : "text-zinc-500"
+                          ? "text-zinc-600"
+                          : "text-zinc-500"
                           }`}
                       >
                         {showCommentedOnly
@@ -1638,8 +1630,8 @@ export default function ClientFolderPage({
 
                     <span
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showCommentedOnly
-                          ? "bg-black/10 text-black"
-                          : "bg-white/5 text-zinc-400"
+                        ? "bg-black/10 text-black"
+                        : "bg-white/5 text-zinc-400"
                         }`}
                     >
                       {showCommentedOnly ? "●" : "○"}
@@ -1685,8 +1677,8 @@ export default function ClientFolderPage({
 
               <p
                 className={`text-sm font-semibold leading-5 ${isCompleted
-                    ? "text-green-300"
-                    : "text-amber-300"
+                  ? "text-green-300"
+                  : "text-amber-300"
                   }`}
               >
                 {isCompleted
@@ -1749,8 +1741,8 @@ export default function ClientFolderPage({
                   )
                 }
                 className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${isSelected
-                    ? "border-white"
-                    : "border-zinc-800"
+                  ? "border-white"
+                  : "border-zinc-800"
                   }`}
               >
                 <div className="relative aspect-[3/4] overflow-hidden">
@@ -1778,10 +1770,10 @@ export default function ClientFolderPage({
                     );
                   }}
                   className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isCompleted
-                      ? "cursor-not-allowed bg-black/70 text-zinc-500"
-                      : isSelected
-                        ? "bg-white text-black"
-                        : "bg-black/60 text-white backdrop-blur"
+                    ? "cursor-not-allowed bg-black/70 text-zinc-500"
+                    : isSelected
+                      ? "bg-white text-black"
+                      : "bg-black/60 text-white backdrop-blur"
                     }`}
                 >
                   {isCompleted ? (
@@ -1827,8 +1819,8 @@ export default function ClientFolderPage({
                       );
                     }}
                     className={`mt-2 w-full rounded-lg border px-3 py-2 text-xs text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
-                        ? "cursor-not-allowed border-zinc-800 bg-black/60 text-zinc-500"
-                        : "border-zinc-700 bg-black/40"
+                      ? "cursor-not-allowed border-zinc-800 bg-black/60 text-zinc-500"
+                      : "border-zinc-700 bg-black/40"
                       }`}
                   />
                 </div>
@@ -2218,8 +2210,8 @@ export default function ClientFolderPage({
                       }, 800);
                   }}
                   className={`max-h-28 min-h-[52px] flex-1 resize-none rounded-2xl border px-4 py-3 text-sm text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
-                      ? "cursor-not-allowed border-zinc-800 bg-zinc-900/80 text-zinc-500"
-                      : "border-zinc-700 bg-zinc-900/80"
+                    ? "cursor-not-allowed border-zinc-800 bg-zinc-900/80 text-zinc-500"
+                    : "border-zinc-700 bg-zinc-900/80"
                     }`}
                 />
 
@@ -2233,12 +2225,12 @@ export default function ClientFolderPage({
                     )
                   }
                   className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${isCompleted
-                      ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-                      : selectedImages.includes(
-                        currentImage.id,
-                      )
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 text-white"
+                    ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
+                    : selectedImages.includes(
+                      currentImage.id,
+                    )
+                      ? "bg-white text-black"
+                      : "bg-zinc-800 text-white"
                     }`}
                 >
                   {isCompleted ? (
@@ -2266,12 +2258,12 @@ export default function ClientFolderPage({
 
       <div
         className={`fixed left-4 z-[200] ${activeImage !==
-            null &&
-            currentImage
-            ? "bottom-24"
-            : hasUnsavedChanges
-              ? "bottom-20 md:bottom-4"
-              : "bottom-4"
+          null &&
+          currentImage
+          ? "bottom-24"
+          : hasUnsavedChanges
+            ? "bottom-20 md:bottom-4"
+            : "bottom-4"
           }`}
       >
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-2 py-1 text-xs text-white backdrop-blur-md shadow-lg">
