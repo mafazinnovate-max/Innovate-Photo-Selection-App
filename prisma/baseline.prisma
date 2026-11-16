@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id                 String          @id @default(cuid())
+  name               String
+  clientName         String
+  eventType          String
+  shareId            String          @unique
+  accessCode         String
+  createdAt          DateTime        @default(now())
+  description        String?
+  coverImagePublicId String?
+  coverImageUrl      String?
+  coverPosition      Int             @default(0)
+  eventDate          DateTime?
+  phoneNumber        String?
+  email              String?
+  galleryMode        String          @default("single")
+  maxSelections      Int?
+  accessCodeVersion  Int             @default(1)
+  studioId           String?
+  deletedAt          DateTime?
+  studio             Studio?         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  folders            Folder[]
+  galleryAccesses    GalleryAccess[]
+}
+
+model Folder {
+  id              String                @id @default(cuid())
+  name            String
+  eventId         String
+  createdAt       DateTime              @default(now())
+  type            String                @default("general")
+  parentId        String?
+  maxSelections   Int?
+  selectionStatus FolderSelectionStatus @default(SELECTING)
+  hardDiskName    String?
+  deletedAt       DateTime?
+  event           Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  images          Image[]
+}
+
+model Image {
+  id                  String      @id @default(cuid())
+  imageUrl            String
+  publicId            String?
+  folderId            String
+  isSelected          Boolean     @default(false)
+  selectionOrder      Int?
+  status              Boolean     @default(false)
+  comment             String?
+  createdAt           DateTime    @default(now())
+  fileName            String?
+  fileHash            String?
+  storageKey          String?     @unique
+  eventId             String?
+  optimizedKey        String?
+  thumbnailKey        String?
+  processingStatus    String      @default("COMPLETED")
+  processingAttempts  Int         @default(0)
+  processingError     String?
+  processedAt         DateTime?
+  originalSize        BigInt?
+  optimizedSize       BigInt?
+  thumbnailSize       BigInt?
+  processingStartedAt DateTime?
+  folder              Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  selections          Selection[]
+
+  @@unique([eventId, fileHash])
+  @@index([fileHash])
+  @@index([eventId, processingStatus])
+}
+
+model Selection {
+  id        String   @id @default(cuid())
+  imageId   String
+  comment   String?
+  createdAt DateTime @default(now())
+  image     Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model GalleryAccess {
+  id            String   @id
+  eventId       String
+  parentId      String?
+  deviceId      String
+  accessVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, parentId, deviceId, accessVersion])
+}
+
+model Studio {
+  id                   String                  @id @default(cuid())
+  name                 String
+  createdAt            DateTime                @default(now())
+  logoUrl              String?
+  email                String?
+  phone                String?
+  address              String?
+  city                 String?
+  state                String?
+  country              String                  @default("India")
+  website              String?
+  description          String?
+  internalNotes        String?
+  isActive             Boolean                 @default(true)
+  logoPositionX        Float                   @default(0)
+  logoPositionY        Float                   @default(0)
+  logoZoom             Float                   @default(1)
+  logoStorageKey       String?
+  logoOptimizedKey     String?
+  logoThumbnailKey     String?
+  logoProcessingStatus String                  @default("COMPLETED")
+  admins               Admin[]
+  events               Event[]
+  externalEvents       ExternalEvent[]
+  documents            StudioDocument[]
+  documentSettings     StudioDocumentSettings?
+  profile              StudioProfile?
+  Subscription         Subscription[]
+}
+
+model Admin {
+  id           String      @id @default(cuid())
+  username     String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  studioId     String
+  name         String?
+  email        String?
+  phone        String?
+  studio       Studio      @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  authSecret   AuthSecret?
+}
+
+model SuperAdmin {
+  id                  String      @id @default(cuid())
+  username            String      @unique
+  passwordHash        String
+  createdAt           DateTime    @default(now())
+  email               String?     @unique
+  logoUrl             String?
+  name                String?
+  passwordResetExpiry DateTime?
+  passwordResetToken  String?     @unique
+  passwordUpdatedAt   DateTime?
+  updatedAt           DateTime    @default(now()) @updatedAt
+  authSecret          AuthSecret?
+}
+
+model AuthSecret {
+  id           String      @id @default(cuid())
+  secret       String      @unique
+  createdAt    DateTime    @default(now())
+  adminId      String?     @unique
+  superAdminId String?     @unique
+  admin        Admin?      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id             String    @id
+  plan           String    @default("Basic")
+  status         String    @default("Active")
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  storageLimitGb Int       @default(100)
+  maxEvents      Int       @default(50)
+  maxCustomers   Int       @default(500)
+  maxImages      Int       @default(100000)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  studioId       String
+  price          Int       @default(0)
+  Studio         Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+model StudioDocumentSettings {
+  id              String   @id @default(cuid())
+  studioId        String   @unique
+  faqContent      Json?
+  termsContent    Json?
+  policiesContent Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  studio          Studio   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+}
+
+model StudioDocument {
+  id               String    @id @default(cuid())
+  studioId         String
+  documentType     String
+  clientName       String
+  eventName        String?
+  eventDate        DateTime?
+  documentData     Json
+  studioSnapshot   Json
+  sectionsSnapshot Json
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  studio           Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+  @@index([studioId, clientName])
+}
+
+model ExternalEvent {
+  id           String    @id @default(cuid())
+  studioId     String
+  name         String
+  clientName   String
+  eventType    String
+  phoneNumber  String?
+  email        String?
+  eventDate    DateTime?
+  description  String?
+  hardDiskName String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  studio       Studio    @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId, createdAt])
+}
+
+model StudioProfile {
+  id                    String                   @id @default(cuid())
+  studioId              String                   @unique
+  studioName            String
+  logoUrl               String?
+  description           String?
+  shortTagline          String?
+  coverPhotoUrl         String?
+  ownerName             String?
+  ownerPhone            String?
+  phoneNumber           String?
+  email                 String?
+  address               String?
+  location              String?
+  instagramUrl          String?
+  websiteUrl            String?
+  facebookUrl           String?
+  youtubeUrl            String?
+  otherLinks            String?
+  additionalInfo        String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  templateKey           String                   @default("template-1")
+  publicSlug            String?                  @unique
+  isPublished           Boolean                  @default(false)
+  logoStorageKey        String?
+  logoOptimizedKey      String?
+  logoThumbnailKey      String?
+  logoProcessingStatus  String                   @default("COMPLETED")
+  coverStorageKey       String?
+  coverOptimizedKey     String?
+  coverThumbnailKey     String?
+  coverProcessingStatus String                   @default("COMPLETED")
+  studio                Studio                   @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  packages              StudioProfilePackage[]
+  portfolioPhotos       StudioProfilePortfolio[]
+}
+
+model StudioProfilePackage {
+  id          String        @id @default(cuid())
+  profileId   String
+  name        String
+  description String
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  price       String        @default("")
+  profile     StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortOrder])
+}
+
+model StudioProfilePortfolio {
+  id                 String        @id @default(cuid())
+  profileId          String
+  imageUrl           String
+  publicId           String?
+  sortOrder          Int           @default(0)
+  createdAt          DateTime      @default(now())
+  storageKey         String?
+  optimizedKey       String?
+  thumbnailKey       String?
+  processingStatus   String        @default("COMPLETED")
+  processingAttempts Int           @default(0)
+  processingError    String?
+  processedAt        DateTime?
+  originalSize       BigInt?
+  optimizedSize      BigInt?
+  thumbnailSize      BigInt?
+  profile            StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortOrder])
+  @@index([profileId, processingStatus])
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  studioId    String
+  employeeId  String
+  fullName    String
+  phone       String
+  email       String?
+  designation String
+  joiningDate DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studioId, employeeId])
+  @@index([studioId, isActive])
+}
+
+enum FolderSelectionStatus {
+  SELECTING
+  COMPLETED
+}
+
+

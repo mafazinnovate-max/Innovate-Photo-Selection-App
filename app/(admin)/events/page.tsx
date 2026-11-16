@@ -2,8 +2,32 @@ import EventsList from "@/components/admin/EventsList";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { verifyAuthToken } from "@/lib/auth";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
+
+async function getEventCoverUrl(
+  coverImageKey: string | null,
+  legacyCoverImageUrl: string | null,
+) {
+  if (!coverImageKey) return legacyCoverImageUrl;
+
+  try {
+    return await getSignedUrl(
+      r2,
+      new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: coverImageKey,
+      }),
+      { expiresIn: 3600 },
+    );
+  } catch (error) {
+    console.error("Event cover signed URL error:", error);
+    return legacyCoverImageUrl;
+  }
+}
 
 export default async function EventsPage() {
   const cookieStore = await cookies();
@@ -37,124 +61,104 @@ export default async function EventsPage() {
     },
   });
 
-  const serializedEvents = events.map(({ folders, ...event }) => {
-    /*
-     * SINGLE MODE
-     * --------------------------------
-     * Keep the existing behavior exactly as it was.
-     *
-     * Top-level folders are selectable categories.
-     */
-    if (event.galleryMode !== "bride_groom") {
-      const selectableFolders = folders.filter(
+  const serializedEvents = await Promise.all(
+    events.map(async ({ folders, ...event }) => {
+      const coverImageUrl = await getEventCoverUrl(
+        event.coverImageKey,
+        event.coverImageUrl,
+      );
+
+      /*
+       * SINGLE MODE
+       */
+      if (event.galleryMode !== "bride_groom") {
+        const selectableFolders = folders.filter(
+          (folder) => !folder.parentId,
+        );
+
+        const completedSelectableFolders = selectableFolders.filter(
+          (folder) => folder.selectionStatus === "COMPLETED",
+        );
+
+        const allCategoriesCompleted =
+          selectableFolders.length > 0 &&
+          completedSelectableFolders.length ===
+          selectableFolders.length;
+
+        const selectionStatus =
+          selectableFolders.length === 0
+            ? null
+            : allCategoriesCompleted
+              ? "COMPLETED"
+              : "SELECTING";
+
+        return {
+          ...event,
+          coverImageUrl,
+          createdAt: event.createdAt.toISOString(),
+          eventDate: event.eventDate?.toISOString() ?? null,
+          selectionStatus,
+          parentStatuses: [],
+        };
+      }
+
+      /*
+       * BRIDE & GROOM MODE
+       */
+      const parentFolders = folders.filter(
         (folder) => !folder.parentId,
       );
 
-      const completedSelectableFolders = selectableFolders.filter(
-        (folder) => folder.selectionStatus === "COMPLETED",
-      );
+      const parentStatuses = parentFolders.map((parent) => {
+        const childFolders = folders.filter(
+          (folder) => folder.parentId === parent.id,
+        );
 
-      const allCategoriesCompleted =
-        selectableFolders.length > 0 &&
-        completedSelectableFolders.length ===
-          selectableFolders.length;
+        const completedChildFolders = childFolders.filter(
+          (folder) => folder.selectionStatus === "COMPLETED",
+        );
+
+        const allChildFoldersCompleted =
+          childFolders.length > 0 &&
+          completedChildFolders.length === childFolders.length;
+
+        return {
+          id: parent.id,
+          name: parent.name,
+          status:
+            childFolders.length === 0
+              ? "SELECTING"
+              : allChildFoldersCompleted
+                ? "COMPLETED"
+                : "SELECTING",
+          completedCount: completedChildFolders.length,
+          totalCount: childFolders.length,
+        };
+      });
+
+      const allParentsCompleted =
+        parentStatuses.length > 0 &&
+        parentStatuses.every(
+          (parent) => parent.status === "COMPLETED",
+        );
 
       const selectionStatus =
-        selectableFolders.length === 0
+        parentFolders.length === 0
           ? null
-          : allCategoriesCompleted
+          : allParentsCompleted
             ? "COMPLETED"
             : "SELECTING";
 
       return {
         ...event,
+        coverImageUrl,
         createdAt: event.createdAt.toISOString(),
         eventDate: event.eventDate?.toISOString() ?? null,
         selectionStatus,
-        parentStatuses: [],
+        parentStatuses,
       };
-    }
-
-    /*
-     * BRIDE & GROOM MODE
-     * --------------------------------
-     * Parent folders are containers.
-     * Their child folders are the selectable categories.
-     *
-     * We calculate each parent independently.
-     *
-     * Example:
-     *
-     * Bride
-     *   ├── Wedding       COMPLETED
-     *   └── Reception     COMPLETED
-     *
-     * Groom
-     *   ├── Wedding       COMPLETED
-     *   └── Reception     SELECTING
-     *
-     * Bride  -> COMPLETED
-     * Groom  -> SELECTING
-     * Event  -> SELECTING
-     */
-
-    const parentFolders = folders.filter(
-      (folder) => !folder.parentId,
-    );
-
-    const parentStatuses = parentFolders.map((parent) => {
-      const childFolders = folders.filter(
-        (folder) => folder.parentId === parent.id,
-      );
-
-      const completedChildFolders = childFolders.filter(
-        (folder) => folder.selectionStatus === "COMPLETED",
-      );
-
-      const allChildFoldersCompleted =
-        childFolders.length > 0 &&
-        completedChildFolders.length === childFolders.length;
-
-      return {
-        id: parent.id,
-        name: parent.name,
-        status:
-          childFolders.length === 0
-            ? "SELECTING"
-            : allChildFoldersCompleted
-              ? "COMPLETED"
-              : "SELECTING",
-        completedCount: completedChildFolders.length,
-        totalCount: childFolders.length,
-      };
-    });
-
-    /*
-     * The overall event is completed ONLY when
-     * every parent has at least one child folder
-     * and every child's selection is completed.
-     */
-    const allParentsCompleted =
-      parentStatuses.length > 0 &&
-      parentStatuses.every(
-        (parent) => parent.status === "COMPLETED",
-      );
-
-    const selectionStatus =
-      parentFolders.length === 0
-        ? null
-        : allParentsCompleted
-          ? "COMPLETED"
-          : "SELECTING";
-
-    return {
-      ...event,
-      createdAt: event.createdAt.toISOString(),
-      eventDate: event.eventDate?.toISOString() ?? null,
-      selectionStatus,
-      parentStatuses,
-    };
-  });
+    }),
+  );
 
   return (
     <div>

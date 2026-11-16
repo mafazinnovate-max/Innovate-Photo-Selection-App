@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-
-
-
 async function getSession(req: NextRequest) {
     const token = req.cookies.get("auth-token")?.value;
 
@@ -43,46 +40,46 @@ export async function middleware(req: NextRequest) {
     /*
      * Public pages
      */
-   const publicRoutes = [
-    "/",
-    "/login",
-    "/signup",
-    "/gallery",
-];
+    const publicRoutes = [
+        "/",
+        "/login",
+        "/signup",
+        "/gallery",
+    ];
 
     const isPublicPage = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-);
+        pathname.startsWith(route)
+    );
 
-if (isPublicPage) {
-    // If the user opens the landing page while already logged in,
-    // take them to the appropriate dashboard.
-  if (pathname === "/login") {
-    const session = await getSession(req);
+    if (isPublicPage) {
+        // If the user opens the landing page while already logged in,
+        // take them to the appropriate dashboard.
+        if (pathname === "/login") {
+            const session = await getSession(req);
 
-    if (session?.role === "admin") {
-        return NextResponse.redirect(
-            new URL("/dashboard", req.url)
-        );
+            if (session?.role === "admin") {
+                return NextResponse.redirect(
+                    new URL("/dashboard", req.url)
+                );
+            }
+
+            if (session?.role === "superadmin") {
+                return NextResponse.redirect(
+                    new URL("/super-admin/dashboard", req.url)
+                );
+            }
+        }
+
+        return NextResponse.next();
     }
-
-    if (session?.role === "superadmin") {
-        return NextResponse.redirect(
-            new URL("/super-admin/dashboard", req.url)
-        );
-    }
-}
-
-    return NextResponse.next();
-}
 
     /*
      * Public API routes
      */
-   const publicApiRoutes = [
-    "/api/login",
-    "/api/signup",
-];
+    const publicApiRoutes = [
+        "/api/login",
+        "/api/signup",
+    ];
 
     const isPublicApi = publicApiRoutes.some((route) =>
         pathname.startsWith(route)

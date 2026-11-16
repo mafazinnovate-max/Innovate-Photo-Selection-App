@@ -4,7 +4,6 @@
 import { createEvent } from "@/actions/create-event";
 import { checkEventLimit } from "@/actions/check-event-limit";
 import { updateEvent } from "@/actions/update-event";
-import imageCompression from "browser-image-compression";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +24,15 @@ interface EventFormProps {
         coverPosition: number;
     };
 }
+
+const MAX_COVER_SIZE = 40 * 1024 * 1024;
+
+const ALLOWED_CONTENT_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/avif",
+];
 
 export default function EventForm({
     mode,
@@ -110,9 +118,7 @@ export default function EventForm({
     );
 
     const [isDragging, setIsDragging] = useState(false);
-
     const [startY, setStartY] = useState(0);
-
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const defaultEventTypes = [
@@ -136,40 +142,16 @@ export default function EventForm({
         isDefaultType ? "" : initialData?.eventType ?? ""
     );
 
-    const compressImage = async (file: File) => {
-        try {
-            console.log(
-                "Original:",
-                (file.size / 1024).toFixed(2),
-                "KB",
-            );
+    // Revoke temporary preview URLs when the component unmounts.
+    const previewUrlRef = useRef<string | null>(null);
 
-            if (file.size <= 400 * 1024) {
-                console.log("Compression Skipped");
-                return file;
+    useEffect(() => {
+        return () => {
+            if (previewUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRef.current);
             }
-
-            const compressedFile = await imageCompression(
-                file,
-                {
-                    maxSizeMB: 0.4,
-                    maxWidthOrHeight: 1600,
-                    useWebWorker: true,
-                },
-            );
-
-            console.log(
-                "Compressed:",
-                (compressedFile.size / 1024).toFixed(2),
-                "KB",
-            );
-
-            return compressedFile;
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
-    };
+        };
+    }, []);
 
     const finalEventType =
         eventType === "Other" ? customEventType : eventType;
@@ -193,6 +175,79 @@ export default function EventForm({
         window.setTimeout(() => {
             element.focus();
         }, 400);
+    };
+
+    // Direct upload to R2, then finalize and compress on the server.
+    const uploadCoverImage = async (file: File): Promise<string> => {
+        // 1. Request a temporary R2 upload URL
+        const presignResponse = await fetch(
+            "/api/event-cover/presign",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    fileName: file.name,
+                    contentType: file.type,
+                    fileSize: file.size,
+                }),
+            }
+        );
+
+        const presignResult = await presignResponse.json();
+
+        if (!presignResponse.ok || !presignResult.success) {
+            throw new Error(
+                presignResult.message || "Unable to prepare cover upload"
+            );
+        }
+
+        // 2. Upload original file directly to R2
+        const uploadResponse = await fetch(
+            presignResult.uploadUrl,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": file.type,
+                },
+                body: file,
+            }
+        );
+
+        if (!uploadResponse.ok) {
+            throw new Error("Cover image upload to storage failed");
+        }
+
+        // 3. Finalize upload and create optimized WebP
+        const finalizeResponse = await fetch(
+            "/api/event-cover/finalize",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    storageKey: presignResult.storageKey,
+                    fileSize: file.size,
+                    contentType: file.type,
+                }),
+            }
+        );
+
+        const finalizeResult = await finalizeResponse.json();
+
+        if (!finalizeResponse.ok || !finalizeResult.success) {
+            throw new Error(
+                finalizeResult.message || "Cover image processing failed"
+            );
+        }
+
+        if (!finalizeResult.coverImageKey) {
+            throw new Error("Processed cover image key is missing");
+        }
+
+        return finalizeResult.coverImageKey;
     };
 
     const handleSubmit = async () => {
@@ -240,42 +295,11 @@ export default function EventForm({
         try {
             setIsSubmitting(true);
 
-            let coverImageUrl =
-                initialData?.coverImageUrl ?? "";
-            let coverImagePublicId = "";
+            let coverImageKey: string | undefined;
 
+            // Upload only when a new cover image is selected.
             if (coverImage) {
-                const formData = new FormData();
-
-                formData.append(
-                    "file",
-                    coverImage
-                );
-
-                formData.append(
-                    "fileName",
-                    coverImage.name
-                );
-
-                const uploadResponse = await fetch(
-                    "/api/upload",
-                    {
-                        method: "POST",
-                        body: formData,
-                    }
-                );
-
-                const uploadResult =
-                    await uploadResponse.json();
-
-                if (!uploadResult.success) {
-                    throw new Error(
-                        "Cover image upload failed",
-                    );
-                }
-
-                coverImageUrl = uploadResult.url;
-                coverImagePublicId = uploadResult.publicId;
+                coverImageKey = await uploadCoverImage(coverImage);
             }
 
             if (mode === "create") {
@@ -288,8 +312,7 @@ export default function EventForm({
                     phoneNumber,
                     email,
                     galleryMode,
-                    coverImageUrl,
-                    coverImagePublicId,
+                    coverImageKey,
                     coverPosition,
                 });
 
@@ -300,6 +323,7 @@ export default function EventForm({
                     return;
                 }
 
+                alert(response.message || "Unable to create event.");
                 setIsSubmitting(false);
             } else {
                 const response = await updateEvent({
@@ -312,7 +336,8 @@ export default function EventForm({
                     phoneNumber,
                     email,
                     galleryMode,
-                    coverImageUrl,
+                    coverImageUrl: initialData?.coverImageUrl,
+                    coverImageKey,
                     coverPosition,
                 });
 
@@ -323,11 +348,18 @@ export default function EventForm({
                     return;
                 }
 
+                alert(response.message || "Unable to update event.");
                 setIsSubmitting(false);
             }
         } catch (error) {
-            console.log(error);
-            alert("Something went wrong");
+            console.error("Event form submission error:", error);
+
+            alert(
+                error instanceof Error
+                    ? error.message
+                    : "Something went wrong"
+            );
+
             setIsSubmitting(false);
         }
     };
@@ -604,36 +636,58 @@ export default function EventForm({
                     <input
                         ref={coverImageRef}
                         type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
+                        accept="image/jpeg,image/png,image/webp,image/avif"
+                        onChange={(e) => {
                             const file = e.target.files?.[0];
 
                             if (!file) return;
 
-                            setValidationError(null);
-
-                            try {
-                                const compressedFile =
-                                    await compressImage(file);
-
-                                setCoverImage(compressedFile);
-
-                                setCoverPreview(
-                                    URL.createObjectURL(compressedFile),
+                            if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
+                                setValidationError(
+                                    "Please select a valid JPG, PNG, WebP or AVIF image."
                                 );
-                            } catch (error) {
-                                console.log(error);
-                                alert("Image compression failed");
+                                e.target.value = "";
+                                return;
                             }
+
+                            if (file.size > MAX_COVER_SIZE) {
+                                setValidationError(
+                                    "Cover image must be 40MB or smaller."
+                                );
+                                e.target.value = "";
+                                return;
+                            }
+
+                            setValidationError(null);
+                            setCoverImage(file);
+
+                            if (previewUrlRef.current) {
+                                URL.revokeObjectURL(previewUrlRef.current);
+                            }
+
+                            const previewUrl = URL.createObjectURL(file);
+                            previewUrlRef.current = previewUrl;
+                            setCoverPreview(previewUrl);
                         }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+                    <p className="mt-2 text-xs text-zinc-500">
+                        JPG, PNG, WebP or AVIF. Maximum file size: 40MB.
+                    </p>
 
                     {validationError === "Please select a cover image." && (
                         <p className="mt-2 text-xs font-medium text-red-400">
                             {validationError}
                         </p>
                     )}
+
+                    {validationError?.includes("Cover image") ||
+                        validationError?.includes("valid JPG") ? (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    ) : null}
 
                     {coverPreview && (
                         <div className="mt-4">
@@ -643,12 +697,8 @@ export default function EventForm({
                                     setIsDragging(true);
                                     setStartY(e.clientY);
                                 }}
-                                onMouseUp={() =>
-                                    setIsDragging(false)
-                                }
-                                onMouseLeave={() =>
-                                    setIsDragging(false)
-                                }
+                                onMouseUp={() => setIsDragging(false)}
+                                onMouseLeave={() => setIsDragging(false)}
                                 onMouseMove={(e) => {
                                     if (!isDragging) return;
 
@@ -669,15 +719,13 @@ export default function EventForm({
                                     draggable={false}
                                     className="absolute h-full w-full select-none object-cover"
                                     style={{
-                                        objectPosition: `center ${50 + coverPosition
-                                            }%`,
+                                        objectPosition: `center ${50 + coverPosition}%`,
                                     }}
                                 />
                             </div>
 
                             <p className="mt-2 text-xs text-zinc-500">
-                                Drag image to adjust cover
-                                position
+                                Drag image to adjust cover position
                             </p>
                         </div>
                     )}
@@ -692,9 +740,7 @@ export default function EventForm({
                         rows={4}
                         placeholder="Optional event notes..."
                         value={description}
-                        onChange={(e) =>
-                            setDescription(e.target.value)
-                        }
+                        onChange={(e) => setDescription(e.target.value)}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
                 </div>
@@ -703,8 +749,8 @@ export default function EventForm({
                     onClick={handleSubmit}
                     disabled={isSubmitting}
                     className={`rounded-xl px-6 py-3 font-medium transition ${isSubmitting
-                        ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
-                        : "bg-white text-black hover:opacity-90"
+                            ? "cursor-not-allowed bg-zinc-700 text-zinc-400"
+                            : "bg-white text-black hover:opacity-90"
                         }`}
                 >
                     {isSubmitting ? (
