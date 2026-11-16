@@ -40,27 +40,66 @@ export const deleteFolder = async (
                 },
             });
 
-               // Soft delete child folders
+        // All images from parent + children
+        const allImages = [
+            ...folder.images,
+            ...childFolders.flatMap(
+                (folder) => folder.images,
+            ),
+        ];
+
+        // Delete Cloudinary images
+        for (const image of allImages) {
+            if (image.publicId) {
+                try {
+                    await cloudinary.uploader.destroy(
+                        image.publicId,
+                    );
+                } catch (error) {
+                    console.log(
+                        "Cloudinary Delete Error:",
+                        error,
+                    );
+                }
+            }
+        }
+
+        // Delete child folder image records
         if (childFolders.length > 0) {
-            await prisma.folder.updateMany({
+            await prisma.image.deleteMany({
                 where: {
-                    parentId: folderId,
-                },
-                data: {
-                    deletedAt: new Date(),
+                    folderId: {
+                        in: childFolders.map(
+                            (folder) => folder.id,
+                        ),
+                    },
                 },
             });
         }
 
-        // Soft delete parent folder
-        await prisma.folder.update({
+        // Delete parent folder image records
+        await prisma.image.deleteMany({
+            where: {
+                folderId,
+            },
+        });
+
+        // Delete child folders
+        if (childFolders.length > 0) {
+            await prisma.folder.deleteMany({
+                where: {
+                    parentId: folderId,
+                },
+            });
+        }
+
+        // Delete parent folder
+        await prisma.folder.delete({
             where: {
                 id: folderId,
             },
-            data: {
-                deletedAt: new Date(),
-            },
         });
+
         revalidatePath("/events");
 
         return {

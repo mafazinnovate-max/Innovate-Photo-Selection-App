@@ -1,57 +1,25 @@
-
 "use client";
 
+import { uploadImage } from "@/actions/upload-image";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
+import imageCompression from "browser-image-compression";
 
 interface UploadFile {
   file: File;
   preview: string;
   progress: number;
-  status:
-  | "pending"
-  | "uploading"
-  | "processing"
-  | "completed"
-  | "duplicate"
-  | "error";
+  status: | "pending" | "uploading" | "processing" | "completed" | "error";
   uploadedUrl?: string;
-  errorMessage?: string;
 }
 
 interface UploadDropzoneProps {
   folderId: string;
-  hasProcessingImages: boolean;
 }
 
-interface PresignResponse {
-  success?: boolean;
-  duplicate?: boolean;
-  uploadUrl?: string;
-  storageKey?: string;
-  message?: string;
-  error?: string;
-}
-
-interface FinalizeResponse {
-  success?: boolean;
-  duplicate?: boolean;
-  message?: string;
-  error?: string;
-}
-
-export default function UploadDropzone({
-  folderId,
-  hasProcessingImages,
-}: UploadDropzoneProps) {
+export default function UploadDropzone({ folderId }: UploadDropzoneProps) {
   const router = useRouter();
 
   const [files, setFiles] = useState<UploadFile[]>([]);
@@ -61,303 +29,228 @@ export default function UploadDropzone({
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  const filesRef = useRef<UploadFile[]>([]);
-
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
-
-  // Revoke remaining preview URLs when the component unmounts.
-  useEffect(() => {
-    return () => {
-      filesRef.current.forEach((item) => {
-        URL.revokeObjectURL(item.preview);
-      });
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!hasProcessingImages) return;
-
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [hasProcessingImages, router]);
-
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const mappedFiles: UploadFile[] = acceptedFiles.map((file) => ({
+    const mappedFiles = acceptedFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
       progress: 0,
-      status: "pending",
+      status: "pending" as const,
     }));
 
     setFiles((prev) => [...prev, ...mappedFiles]);
   }, []);
 
   const removeFile = (index: number) => {
-    setFiles((prev) => {
-      const item = prev[index];
-
-      if (item) {
-        URL.revokeObjectURL(item.preview);
-      }
-
-      return prev.filter((_, i) => i !== index);
-    });
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const getFileHash = async (file: File): Promise<string> => {
-    const fileBuffer = await file.arrayBuffer();
-
-    const hashBuffer = await crypto.subtle.digest(
-      "SHA-256",
-      fileBuffer
-    );
-
-    return Array.from(new Uint8Array(hashBuffer))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-  };
-
-  const updateFile = (
-    index: number,
-    updates: Partial<UploadFile>
-  ) => {
-    setFiles((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, ...updates } : item
-      )
-    );
-  };
-
-  // Direct browser-to-R2 upload with actual progress.
-  const uploadToR2 = (
-    uploadUrl: string,
+  const compressImage = async (
     file: File,
-    onProgress: (progress: number) => void
-  ): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
+  ): Promise<File> => {
+    if (file.size <= 1024 * 1024) {
+      return file;
+    }
 
-      xhr.open("PUT", uploadUrl);
-
-      xhr.setRequestHeader("Content-Type", file.type);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round(
-            (event.loaded / event.total) * 95
-          );
-
-          onProgress(Math.min(progress, 95));
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          reject(
-            new Error(
-              `R2 upload failed. HTTP status: ${xhr.status}`
-            )
-          );
-        }
-      };
-
-      xhr.onerror = () => {
-        reject(new Error("Network error during R2 upload."));
-      };
-
-      xhr.ontimeout = () => {
-        reject(new Error("R2 upload timed out. Please retry."));
-      };
-
-      xhr.onabort = () => {
-        reject(new Error("R2 upload was cancelled."));
-      };
-
-      xhr.timeout = 10 * 60 * 1000;
-
-      xhr.send(file);
+    return imageCompression(file, {
+      maxSizeMB: 1.5,
+      maxWidthOrHeight: 1920,
+      initialQuality: 0.8,
+      useWebWorker: true,
     });
   };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [],
+    },
+  });
 
   const uploadSingleFile = async (
     fileItem: UploadFile,
-    index: number
-  ): Promise<boolean> => {
+    i: number,
+  ) => {
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
-      const file = fileItem.file;
-
-      updateFile(index, {
-        status: "uploading",
-        progress: 0,
-        errorMessage: undefined,
-      });
-
-      // Validate image format.
-      if (
-        !file.type.startsWith("image/") ||
-        file.type === "image/svg+xml"
-      ) {
-        throw new Error("Only supported image files can be uploaded.");
-      }
-
-      // 1. Calculate SHA-256 hash.
-      const fileHash = await getFileHash(file);
-
-      // 2. Request a presigned R2 upload URL.
-      const presignResponse = await fetch("/api/upload/presign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          folderId,
-          fileName: file.name,
-          contentType: file.type,
-          fileSize: file.size,
-          fileHash,
-        }),
-      });
-
-      const presignData =
-        (await presignResponse.json()) as PresignResponse;
-
-      if (!presignResponse.ok || !presignData.success) {
-        throw new Error(
-          presignData.message ||
-          presignData.error ||
-          "Unable to prepare image upload."
-        );
-      }
-
-      // 3. Duplicate already exists in this event.
-      if (presignData.duplicate) {
-        updateFile(index, {
-          status: "duplicate",
-          progress: 100,
-          uploadedUrl: "duplicate",
-        });
-
-        setUploadedCount((prev) => prev + 1);
-
-        return true;
-      }
-
-      if (!presignData.uploadUrl || !presignData.storageKey) {
-        throw new Error("Invalid R2 upload response.");
-      }
-
-      // 4. Upload original file directly to R2.
-      await uploadToR2(
-        presignData.uploadUrl,
-        file,
-        (progress) => {
-          updateFile(index, {
-            progress,
-          });
-        }
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "uploading",
+              progress: 5,
+            }
+            : item,
+        ),
       );
 
-      updateFile(index, {
-        status: "processing",
-        progress: 98,
-      });
+      progressInterval = setInterval(() => {
+        setFiles((prev) =>
+          prev.map((item, index) => {
+            if (index !== i) return item;
 
-      // 5. Finalize upload and create database record.
-      const finalizeResponse = await fetch(
-        "/api/upload/finalize",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            folderId,
-            fileName: file.name,
-            storageKey: presignData.storageKey,
-            fileHash,
-            fileSize: file.size,
-            contentType: file.type,
+            if (item.progress >= 90) return item;
+
+            return {
+              ...item,
+              progress: Math.min(
+                item.progress +
+                Math.floor(Math.random() * 8) +
+                2,
+                90,
+              ),
+            };
           }),
-        }
+        );
+      }, 300);
+
+      const compressedFile =
+        await compressImage(
+          fileItem.file
+        );
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "file",
+        compressedFile
       );
 
-      const finalizeData =
-        (await finalizeResponse.json()) as FinalizeResponse;
+      formData.append(
+        "fileName",
+        fileItem.file.name
+      );
 
-      if (!finalizeResponse.ok || !finalizeData.success) {
+      formData.append(
+        "folderId",
+        folderId
+      );
+
+      const uploadResponse =
+        await fetch(
+          "/api/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+      const response =
+        await uploadResponse.json();
+
+      if (!response.success || !response.url) {
         throw new Error(
-          finalizeData.message ||
-          finalizeData.error ||
-          "Unable to finalize image upload."
+          response.error || "Upload failed",
         );
       }
 
-      // Duplicate detected during finalization.
-      if (finalizeData.duplicate) {
-        updateFile(index, {
-          status: "duplicate",
-          progress: 100,
-          uploadedUrl: "duplicate",
+      if (!response.skipped) {
+        await uploadImage({
+          imageUrl: response.url,
+          publicId: response.publicId,
+          fileName: response.fileName,
+          folderId,
         });
-
-        setUploadedCount((prev) => prev + 1);
-
-        return true;
       }
-
-      // Original uploaded and database record created.
-      // Background compression will be handled separately.
-      updateFile(index, {
-        status: "processing",
-        progress: 100,
-        uploadedUrl: presignData.storageKey,
-      });
 
       setUploadedCount((prev) => prev + 1);
 
-      return true;
-    } catch (error) {
-      console.error(
-        `Upload failed for ${fileItem.file.name}:`,
-        error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "completed",
+              progress: 100,
+              uploadedUrl: response.url,
+            }
+            : item,
+        ),
       );
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Upload failed. Please try again.";
-
-      updateFile(index, {
-        status: "error",
-        errorMessage: message,
-      });
+    } catch (error) {
+      console.log(error);
 
       setFailedCount((prev) => prev + 1);
 
-      return false;
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+
+      setFiles((prev) =>
+        prev.map((item, index) =>
+          index === i
+            ? {
+              ...item,
+              status: "error",
+            }
+            : item,
+        ),
+      );
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } =
-    useDropzone({
-      onDrop,
-      disabled: isUploading,
-      accept: {
-        "image/*": [],
-      },
-    });
+  // const uploadAll = async () => {
+  //   const CONCURRENT_UPLOADS = 5;
+
+  //   if (isUploading) return;
+
+  //   setIsUploading(true);
+  //   setUploadedCount(0);
+  //   setFailedCount(0);
+  //   setTotalCount(files.length);
+
+  //   try {
+  //     for (
+  //       let i = 0;
+  //       i < files.length;
+  //       i += CONCURRENT_UPLOADS
+  //     ) {
+  //       const batch = files.slice(
+  //         i,
+  //         i + CONCURRENT_UPLOADS,
+  //       );
+
+  //       await Promise.all(
+  //         batch.map((fileItem, batchIndex) =>
+  //           uploadSingleFile(
+  //             fileItem,
+  //             i + batchIndex,
+  //           ),
+  //         ),
+  //       );
+  //     }
+
+  //     await new Promise((resolve) =>
+  //       setTimeout(resolve, 1500),
+  //     );
+
+  //     setFiles((prev) =>
+  //       prev.filter(
+  //         (file) => file.status === "error"
+  //       )
+  //     );
+  //     // setUploadedCount(0);
+  //     // setTotalCount(0);
+
+  //     startTransition(() => {
+  //       router.refresh();
+  //     });
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
 
   const uploadAll = async () => {
     const CONCURRENT_UPLOADS = 10;
 
-    if (isUploading || files.length === 0) return;
+    if (isUploading) return;
 
     setIsUploading(true);
     setUploadedCount(0);
@@ -370,51 +263,33 @@ export default function UploadDropzone({
         index,
       }));
 
-      const successfulIndexes = new Set<number>();
-
       const workers = Array.from(
-        {
-          length: Math.min(CONCURRENT_UPLOADS, queue.length),
-        },
+        { length: CONCURRENT_UPLOADS },
         async () => {
           while (queue.length > 0) {
             const item = queue.shift();
 
             if (!item) break;
 
-            const success = await uploadSingleFile(
+            await uploadSingleFile(
               item.file,
-              item.index
+              item.index,
             );
-
-            if (success) {
-              successfulIndexes.add(item.index);
-            }
           }
-        }
+        },
       );
 
       await Promise.all(workers);
 
-      // Give the user a moment to see the final statuses.
       await new Promise((resolve) =>
-        setTimeout(resolve, 1500)
+        setTimeout(resolve, 1500),
       );
 
-      // Remove successful uploads from the queue.
-      setFiles((prev) => {
-        const remaining = prev.filter(
-          (_, index) => !successfulIndexes.has(index)
-        );
-
-        prev.forEach((item, index) => {
-          if (successfulIndexes.has(index)) {
-            URL.revokeObjectURL(item.preview);
-          }
-        });
-
-        return remaining;
-      });
+      setFiles((prev) =>
+        prev.filter(
+          (file) => file.status === "error",
+        ),
+      );
 
       startTransition(() => {
         router.refresh();
@@ -424,11 +299,9 @@ export default function UploadDropzone({
     }
   };
 
-  const completedCount = uploadedCount + failedCount;
-
   const overallProgress =
     totalCount > 0
-      ? Math.round((completedCount / totalCount) * 100)
+      ? Math.round((uploadedCount / totalCount) * 100)
       : 0;
 
   return (
@@ -439,9 +312,6 @@ export default function UploadDropzone({
         className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${isDragActive
           ? "border-white bg-zinc-800"
           : "border-zinc-700 bg-zinc-900"
-          } ${isUploading
-            ? "cursor-not-allowed opacity-50"
-            : ""
           }`}
       >
         <input
@@ -450,9 +320,7 @@ export default function UploadDropzone({
         />
 
         <div className="text-center">
-          <h2 className="text-xl font-semibold">
-            Drag & Drop Images
-          </h2>
+          <h2 className="text-xl font-semibold">Drag & Drop Images</h2>
 
           <p className="mt-2 text-sm text-zinc-400">
             Upload wedding preview images
@@ -460,7 +328,6 @@ export default function UploadDropzone({
         </div>
       </div>
 
-      {/* Upload Progress */}
       {isUploading && (
         <div className="my-6 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
           <div className="mb-2 flex items-center justify-between">
@@ -491,8 +358,8 @@ export default function UploadDropzone({
           </div>
 
           <p className="mt-2 text-xs text-zinc-400">
-            {completedCount === totalCount
-              ? "Upload Finished ✓"
+            {uploadedCount === totalCount
+              ? "Upload Completed ✓"
               : `${overallProgress}% Completed`}
           </p>
         </div>
@@ -502,23 +369,23 @@ export default function UploadDropzone({
       {files.length > 0 && (
         <div className="mt-8">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-semibold">
-              Upload Queue
-            </h3>
+            <h3 className="text-xl font-semibold">Upload Queue</h3>
 
             <button
               onClick={uploadAll}
               disabled={isUploading}
               className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isUploading ? "Uploading..." : "Upload All"}
+              {isUploading
+                ? "Uploading..."
+                : "Upload All"}
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
             {files.map((item, index) => (
               <div
-                key={`${item.file.name}-${index}`}
+                key={index}
                 className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
               >
                 {/* Preview */}
@@ -527,7 +394,6 @@ export default function UploadDropzone({
                     src={item.preview}
                     alt="Preview"
                     fill
-                    unoptimized
                     className="object-cover"
                   />
                 </div>
@@ -548,54 +414,43 @@ export default function UploadDropzone({
                       />
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between gap-2 text-xs text-zinc-400">
+                    <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
                       <span>{item.progress}%</span>
 
                       <span
                         className={
                           item.status === "completed"
                             ? "text-green-400"
-                            : item.status === "duplicate"
-                              ? "text-amber-400"
-                              : item.status === "error"
-                                ? "text-red-400"
-                                : "text-zinc-400"
+                            : item.status === "error"
+                              ? "text-red-400"
+                              : "text-zinc-400"
                         }
                       >
-                        {item.status === "pending"
-                          ? "Pending"
-                          : item.status === "uploading"
-                            ? "Uploading..."
-                            : item.status === "processing"
-                              ? "Processing..."
-                              : item.status === "completed"
-                                ? "Completed"
-                                : item.status === "duplicate"
-                                  ? "Already Exists"
-                                  : "Failed"}
+                        {
+                          item.status === "pending"
+                            ? "Pending"
+                            : item.status === "uploading"
+                              ? "Uploading..."
+                              : item.status === "processing"
+                                ? "Processing..."
+                                : item.status === "completed"
+                                  ? "Completed"
+                                  : "Failed"
+                        }
                       </span>
                     </div>
-
-                    {item.errorMessage && (
-                      <p className="mt-2 break-words text-xs text-red-400">
-                        {item.errorMessage}
-                      </p>
-                    )}
                   </div>
 
                   <button
                     disabled={isUploading}
                     onClick={() => removeFile(index)}
-                    className="mt-3 w-full rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-3 w-full rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Remove
                   </button>
-
                   {item.uploadedUrl && (
                     <p className="mt-2 truncate text-xs text-green-400">
-                      {item.status === "duplicate"
-                        ? "Duplicate skipped"
-                        : "Uploaded Successfully"}
+                      Uploaded Successfully
                     </p>
                   )}
                 </div>
@@ -605,7 +460,6 @@ export default function UploadDropzone({
         </div>
       )}
 
-      {/* Refresh Overlay */}
       {isRefreshing && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
