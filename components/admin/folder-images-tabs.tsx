@@ -17,14 +17,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 interface FolderImage {
   id: string;
   imageUrl: string;
-  thumbnailUrl: string;
   publicId: string | null;
   fileName: string | null;
   isSelected: boolean;
   comment: string | null;
   selectionOrder: number | null;
   status: boolean;
-  processingStatus: string;
 }
 
 interface Props {
@@ -47,25 +45,25 @@ export default function FolderImagesTabs({
 
   const imageGridRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!initialImageId) return;
+useEffect(() => {
+  if (!initialImageId) return;
 
-    const frame = requestAnimationFrame(() => {
-      const grid = imageGridRef.current;
-      if (!grid) return;
+  const frame = requestAnimationFrame(() => {
+    const grid = imageGridRef.current;
+    if (!grid) return;
 
-      const target = Array.from(
-        grid.querySelectorAll<HTMLElement>("[data-image-id]")
-      ).find((element) => element.dataset.imageId === initialImageId);
+    const target = Array.from(
+      grid.querySelectorAll<HTMLElement>("[data-image-id]")
+    ).find((element) => element.dataset.imageId === initialImageId);
 
-      target?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    target?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
     });
+  });
 
-    return () => cancelAnimationFrame(frame);
-  }, [initialImageId, images]);
+  return () => cancelAnimationFrame(frame);
+}, [initialImageId, images]);
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [localImages, setLocalImages] = useState(images);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -91,30 +89,30 @@ export default function FolderImagesTabs({
   };
 
   const filteredImages = useMemo(() => {
-    let result = localImages;
+  let result = localImages;
 
-    switch (activeTab) {
-      case "selected":
-        result = result.filter((img) => img.isSelected);
-        break;
+  switch (activeTab) {
+    case "selected":
+      result = result.filter((img) => img.isSelected);
+      break;
 
-      case "commented":
-        result = result.filter(
-          (img) => img.comment && img.comment.trim().length > 0
-        );
-        break;
-    }
-
-    const search = filenameSearch.trim().toLowerCase();
-
-    if (search) {
-      result = result.filter((img) =>
-        img.fileName?.toLowerCase().includes(search)
+    case "commented":
+      result = result.filter(
+        (img) => img.comment && img.comment.trim().length > 0
       );
-    }
+      break;
+  }
 
-    return result;
-  }, [activeTab, localImages, filenameSearch]);
+  const search = filenameSearch.trim().toLowerCase();
+
+  if (search) {
+    result = result.filter((img) =>
+      img.fileName?.toLowerCase().includes(search)
+    );
+  }
+
+  return result;
+}, [activeTab, localImages, filenameSearch]);
 
   const lightboxIndex = filteredImages.findIndex(
     (img) => img.id === lightboxImageId
@@ -282,86 +280,89 @@ export default function FolderImagesTabs({
   return (
     <div>
 
-      {/* CATEGORY PHOTO SEARCH */}
-      <div className="mb-6">
-        <input
-          type="search"
-          value={filenameSearch}
-          onChange={(e) => setFilenameSearch(e.target.value)}
-          placeholder="Search photos in this category..."
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none focus:border-zinc-300 sm:max-w-xl"
-        />
+{/* CATEGORY PHOTO SEARCH */}
+<div className="mb-6">
+  <input
+    type="search"
+    value={filenameSearch}
+    onChange={(e) => setFilenameSearch(e.target.value)}
+    placeholder="Search photos in this category..."
+    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none focus:border-zinc-300 sm:max-w-xl"
+  />
 
-        {filenameSearch.trim() !== "" && filteredImages.length === 0 && (
-          <div className="mt-3 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
-            {otherFolderImages.some((image) =>
-              image.fileName
-                ?.toLowerCase()
-                .includes(filenameSearch.trim().toLowerCase())
-            ) ? (
-              <>
-                <p className="text-sm font-medium text-zinc-200">
-                  This image belongs to another category.
-                </p>
+  {filenameSearch.trim() !== "" && filteredImages.length === 0 && (
+    <div className="mt-3 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
+      {otherFolderImages.some((image) =>
+        image.fileName
+          ?.toLowerCase()
+          .includes(filenameSearch.trim().toLowerCase())
+      ) ? (
+        <>
+          <p className="text-sm font-medium text-zinc-200">
+            This image belongs to another category.
+          </p>
 
-                <div className="mt-2 space-y-2">
-                  {Array.from(
-                    new Map(
-                      otherFolderImages
-                        .filter((image) =>
-                          image.fileName
-                            ?.toLowerCase()
-                            .includes(filenameSearch.trim().toLowerCase())
-                        )
-                        .map((image) => [image.folderName, image])
-                    ).keys()
-                  ).map((folderName) => (
-                    <p
-                      key={folderName}
-                      className="text-sm text-zinc-400"
-                    >
-                      Category: <span className="font-medium text-white">{folderName}</span>
-                    </p>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-zinc-400">
-                No matching photos found in this category or other categories.
+          <div className="mt-2 space-y-2">
+            {Array.from(
+              new Map(
+                otherFolderImages
+                  .filter((image) =>
+                    image.fileName
+                      ?.toLowerCase()
+                      .includes(filenameSearch.trim().toLowerCase())
+                  )
+                  .map((image) => [image.folderName, image])
+              ).keys()
+            ).map((folderName) => (
+              <p
+                key={folderName}
+                className="text-sm text-zinc-400"
+              >
+                Category: <span className="font-medium text-white">{folderName}</span>
               </p>
-            )}
+            ))}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <p className="text-sm text-zinc-400">
+          No matching photos found in this category or other categories.
+        </p>
+      )}
+    </div>
+  )}
+</div>
 
       {/* Tabs */}
       <div className="mb-6 flex flex-wrap gap-2">
         <button
           onClick={() => setActiveTab("all")}
-          className={`rounded-xl px-4 py-2 text-sm ${activeTab === "all"
-            ? "bg-white text-black"
-            : "bg-zinc-900 text-white"
-            }`}
+          className={`rounded-xl px-4 py-2 text-sm ${
+            activeTab === "all"
+              ? "bg-white text-black"
+              : "bg-zinc-900 text-white"
+          }`}
         >
           All ({localImages.length})
         </button>
 
         <button
           onClick={() => setActiveTab("selected")}
-          className={`rounded-xl px-4 py-2 text-sm ${activeTab === "selected"
-            ? "bg-white text-black"
-            : "bg-zinc-900 text-white"
-            }`}
+          className={`rounded-xl px-4 py-2 text-sm ${
+            activeTab === "selected"
+              ? "bg-white text-black"
+              : "bg-zinc-900 text-white"
+          }`}
         >
           Selected ({localImages.filter((i) => i.isSelected).length})
         </button>
 
         <button
           onClick={() => setActiveTab("commented")}
-          className={`rounded-xl px-4 py-2 text-sm ${activeTab === "commented"
-            ? "bg-white text-black"
-            : "bg-zinc-900 text-white"
-            }`}
+          className={`rounded-xl px-4 py-2 text-sm ${
+            activeTab === "commented"
+              ? "bg-white text-black"
+              : "bg-zinc-900 text-white"
+          }`}
         >
           Commented (
           {
@@ -374,10 +375,11 @@ export default function FolderImagesTabs({
 
         <button
           onClick={() => setActiveTab("filenames")}
-          className={`rounded-xl px-4 py-2 text-sm ${activeTab === "filenames"
-            ? "bg-white text-black"
-            : "bg-zinc-900 text-white"
-            }`}
+          className={`rounded-xl px-4 py-2 text-sm ${
+            activeTab === "filenames"
+              ? "bg-white text-black"
+              : "bg-zinc-900 text-white"
+          }`}
         >
           Selected File Names
         </button>
@@ -411,13 +413,13 @@ export default function FolderImagesTabs({
       {activeTab === "filenames" ? (
         <div className="space-y-3">
           {localImages
-            .filter(
-              (img) =>
-                img.isSelected &&
-                img.fileName
-                  ?.toLowerCase()
-                  .includes(filenameSearch.trim().toLowerCase())
-            )
+  .filter(
+    (img) =>
+      img.isSelected &&
+      img.fileName
+        ?.toLowerCase()
+        .includes(filenameSearch.trim().toLowerCase())
+  )
             .sort(
               (a, b) =>
                 (a.selectionOrder || 0) - (b.selectionOrder || 0)
@@ -428,10 +430,11 @@ export default function FolderImagesTabs({
                 onClick={() =>
                   handleStatusToggle(img.id, img.status)
                 }
-                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 transition-all duration-200 ${img.status
-                  ? "border-green-500 bg-green-500/15"
-                  : "border-zinc-800 bg-zinc-900"
-                  }`}
+                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 transition-all duration-200 ${
+                  img.status
+                    ? "border-green-500 bg-green-500/15"
+                    : "border-zinc-800 bg-zinc-900"
+                }`}
               >
                 <div className="min-w-0">
                   <p className="break-words font-medium">
@@ -446,10 +449,11 @@ export default function FolderImagesTabs({
                 </div>
 
                 <div
-                  className={`shrink-0 rounded-lg px-3 py-1 text-xs font-medium ${img.status
-                    ? "bg-green-500 text-black"
-                    : "bg-zinc-700 text-white"
-                    }`}
+                  className={`shrink-0 rounded-lg px-3 py-1 text-xs font-medium ${
+                    img.status
+                      ? "bg-green-500 text-black"
+                      : "bg-zinc-700 text-white"
+                  }`}
                 >
                   {img.status ? "Completed" : "Pending"}
                 </div>
@@ -459,19 +463,20 @@ export default function FolderImagesTabs({
       ) : (
         <>
           {/* Photo Grid */}
-          <div
-            ref={imageGridRef}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
-          >
+         <div
+  ref={imageGridRef}
+  className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+>
             {filteredImages.map((image) => (
-              <div
-                key={image.id}
-                data-image-id={image.id}
-                className={`group min-w-0 overflow-hidden rounded-2xl border bg-zinc-900 transition-all duration-500 ${image.id === initialImageId
-                  ? "border-zinc-300 ring-4 ring-zinc-300/100"
-                  : "border-zinc-800"
-                  }`}
-              >
+  <div
+    key={image.id}
+    data-image-id={image.id}
+    className={`group min-w-0 overflow-hidden rounded-2xl border bg-zinc-900 transition-all duration-500 ${
+      image.id === initialImageId
+        ? "border-zinc-300 ring-4 ring-zinc-300/100"
+        : "border-zinc-800"
+    }`}
+  >
                 <div className="relative aspect-[3/4] overflow-hidden">
                   {/* Open photo in Lightbox */}
                   <button
@@ -481,7 +486,7 @@ export default function FolderImagesTabs({
                     className="absolute inset-0 z-10 h-full w-full cursor-zoom-in"
                   >
                     <img
-                      src={image.thumbnailUrl}
+                      src={image.imageUrl}
                       alt={image.fileName || "Wedding photo"}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
@@ -497,10 +502,11 @@ export default function FolderImagesTabs({
                           : "Select photo"
                       }
                       onClick={() => toggleImageSelection(image.id)}
-                      className={`absolute left-3 top-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-200 ${selectedImages.includes(image.id)
-                        ? "border-white bg-white text-black"
-                        : "border-white/30 bg-black/40 text-transparent hover:border-white"
-                        }`}
+                      className={`absolute left-3 top-3 z-30 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur-sm transition-all duration-200 ${
+                        selectedImages.includes(image.id)
+                          ? "border-white bg-white text-black"
+                          : "border-white/30 bg-black/40 text-transparent hover:border-white"
+                      }`}
                     >
                       ✓
                     </button>
@@ -540,27 +546,6 @@ export default function FolderImagesTabs({
                   <p className="truncate text-sm text-zinc-300">
                     {image.fileName || "Untitled"}
                   </p>
-
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-md px-2 py-1 text-xs font-medium ${image.processingStatus === "COMPLETED"
-                        ? "bg-green-500/15 text-green-400"
-                        : image.processingStatus === "FAILED"
-                          ? "bg-red-500/15 text-red-400"
-                          : image.processingStatus === "PROCESSING"
-                            ? "bg-blue-500/15 text-blue-400"
-                            : "bg-amber-500/15 text-amber-400"
-                        }`}
-                    >
-                      {image.processingStatus === "COMPLETED"
-                        ? "Ready"
-                        : image.processingStatus === "FAILED"
-                          ? "Processing Failed"
-                          : image.processingStatus === "PROCESSING"
-                            ? "Compressing..."
-                            : "Waiting for Compression"}
-                    </span>
-                  </div>
 
                   {image.isSelected && (
                     <div className="inline-block rounded-lg bg-green-500/20 px-2 py-1 text-xs text-green-400">
@@ -633,29 +618,29 @@ export default function FolderImagesTabs({
             />
 
             <div className="max-w-full text-center">
-              {/* Selected status */}
-              <div className="mb-2">
-                {lightboxImage.isSelected ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
-                    ✓ Selected
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-400">
-                    Not Selected
-                  </span>
-                )}
-              </div>
+  {/* Selected status */}
+  <div className="mb-2">
+    {lightboxImage.isSelected ? (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400">
+        ✓ Selected
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-400">
+        Not Selected
+      </span>
+    )}
+  </div>
 
-              {/* File name */}
-              <p className="break-words text-sm text-zinc-200">
-                {lightboxImage.fileName || "Untitled"}
-              </p>
+  {/* File name */}
+  <p className="break-words text-sm text-zinc-200">
+    {lightboxImage.fileName || "Untitled"}
+  </p>
 
-              {/* Position */}
-              <p className="mt-1 text-xs text-zinc-500">
-                {lightboxIndex + 1} / {filteredImages.length}
-              </p>
-            </div>
+  {/* Position */}
+  <p className="mt-1 text-xs text-zinc-500">
+    {lightboxIndex + 1} / {filteredImages.length}
+  </p>
+</div>
           </div>
 
           {/* Next */}

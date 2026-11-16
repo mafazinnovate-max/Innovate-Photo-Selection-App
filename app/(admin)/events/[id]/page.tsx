@@ -1,8 +1,5 @@
 import FoldersPage from "@/components/admin/folders-page";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { r2, R2_BUCKET_NAME } from "@/lib/r2";
 
 interface EventPageProps {
   params: Promise<{
@@ -19,9 +16,6 @@ export default async function EventPage({ params }: EventPageProps) {
     },
     include: {
       folders: {
-        where: {
-          deletedAt: null,
-        },
         include: {
           images: true,
         },
@@ -29,14 +23,9 @@ export default async function EventPage({ params }: EventPageProps) {
     },
   });
 
-  if (!event) {
-    return <div className="p-10 text-white">Event not found</div>;
-  }
-
   const folders = await prisma.folder.findMany({
     where: {
       eventId: id,
-      deletedAt: null,
     },
     orderBy: {
       createdAt: "asc",
@@ -46,22 +35,11 @@ export default async function EventPage({ params }: EventPageProps) {
     },
   });
 
-  let coverImageUrl = event.coverImageUrl;
-
-  if (event.coverImageKey) {
-    try {
-      coverImageUrl = await getSignedUrl(
-        r2,
-        new GetObjectCommand({
-          Bucket: R2_BUCKET_NAME,
-          Key: event.coverImageKey,
-        }),
-        { expiresIn: 3600 },
-      );
-    } catch (error) {
-      console.error("Event cover signed URL error:", error);
-    }
+  if (!event) {
+    return <div className="p-10 text-white">Event not found</div>;
   }
+
+  // const totalFolders = event.folders.length;
 
   const totalImages = event.folders.reduce(
     (acc, folder) => acc + folder.images.length,
@@ -85,12 +63,12 @@ export default async function EventPage({ params }: EventPageProps) {
 
       {/* Event Card */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        {/* Folder Grid */}
         <FoldersPage
           eventId={id}
           initialFolders={folders}
           event={{
             ...event,
-            coverImageUrl,
             shareId: event.shareId,
             eventDate: event.eventDate?.toISOString() ?? null,
             galleryMode: event.galleryMode as "single" | "bride_groom",
@@ -110,6 +88,21 @@ export default async function EventPage({ params }: EventPageProps) {
 
             <h3 className="mt-2 text-2xl font-bold">{selectedImages}</h3>
           </div>
+
+          {/* <div>
+            <Link
+              href={`/gallery/${event.shareId}`}
+              target="_blank"
+              className="group inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-black transition-all"
+            >
+              Open Client Gallery
+
+              <ArrowRight
+                size={18}
+                className="translate-x-0 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100"
+              />
+            </Link>
+          </div> */}
         </div>
       </div>
     </div>

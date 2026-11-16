@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createFolder } from "@/actions/create-folder";
@@ -30,7 +29,6 @@ interface Folder {
   parentId?: string | null;
   maxSelections?: number | null;
   selectionStatus?: SelectionStatus;
-  hardDiskName?: string | null;
   images?: {
     id: string;
     fileName: string | null;
@@ -65,13 +63,9 @@ export default function FoldersPage({
   event,
 }: FoldersPageProps) {
   const [folderName, setFolderName] = useState("");
-  const [hardDiskName, setHardDiskName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [folders, setFolders] = useState(initialFolders);
   const [isCreating, setIsCreating] = useState(false);
-  const [newlyCreatedFolderId, setNewlyCreatedFolderId] = useState<
-    string | null
-  >(null);
 
   const isNested = event.galleryMode === "bride_groom";
 
@@ -80,12 +74,10 @@ export default function FoldersPage({
   const [accessCode, setAccessCode] = useState(event.accessCode);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [editName, setEditName] = useState("");
-  const [editHardDiskName, setEditHardDiskName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -97,7 +89,6 @@ export default function FoldersPage({
   const [isLoading, setIsLoading] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const createdFolderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (event.galleryMode === "single") {
@@ -111,27 +102,6 @@ export default function FoldersPage({
 
     setMaxSelections(currentParent?.maxSelections?.toString() ?? "");
   }, [selectedParent, folders, event.galleryMode, event.maxSelections]);
-
-  useEffect(() => {
-    if (!newlyCreatedFolderId) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      if (createdFolderRef.current) {
-        createdFolderRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-
-      setNewlyCreatedFolderId(null);
-    }, 50);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [newlyCreatedFolderId, folders]);
 
   useEffect(() => {
     const handleClickOutside = (mouseEvent: MouseEvent) => {
@@ -169,22 +139,18 @@ export default function FoldersPage({
       setIsCreating(true);
 
       const response = await createFolder({
-  name: folderName,
-  eventId,
-  type: "general",
-  parentId: isNested
-    ? selectedParent ?? undefined
-    : undefined,
-  hardDiskName: hardDiskName || undefined,
-});
+        name: folderName,
+        eventId,
+        type: "general",
+        parentId: isNested
+          ? selectedParent ?? undefined
+          : undefined,
+      });
 
- if (response.success && response.folder) {
-  setFolders((prev) => [...prev, response.folder]);
-  setFolderName("");
-  setHardDiskName("");
-  setShowCreateModal(false);
-  setNewlyCreatedFolderId(response.folder.id);
-}
+      if (response.success && response.folder) {
+        setFolders((prev) => [...prev, response.folder]);
+        setFolderName("");
+      }
     } catch (error) {
       console.log(error);
     } finally {
@@ -221,17 +187,17 @@ export default function FoldersPage({
    *   Child folders are the actual selectable categories.
    */
 
-  const selectableFolders = isNested
-    ? selectedParent
-      ? folders.filter(
-          (folder) => folder.parentId === selectedParent,
-        )
-      : []
-    : folders.filter((folder) => !folder.parentId);
+ const selectableFolders = isNested
+  ? selectedParent
+    ? folders.filter(
+        (folder) => folder.parentId === selectedParent,
+      )
+    : []
+  : folders.filter((folder) => !folder.parentId);
 
-  const completedSelectableFolders = selectableFolders.filter(
-    (folder) => folder.selectionStatus === "COMPLETED",
-  );
+const completedSelectableFolders = selectableFolders.filter(
+  (folder) => folder.selectionStatus === "COMPLETED",
+);
 
   const allCategoriesCompleted =
     selectableFolders.length > 0 &&
@@ -276,13 +242,12 @@ export default function FoldersPage({
     }
   };
 
- const handleOpenEdit = (folder: Folder) => {
-  setSelectedFolder(folder);
-  setEditName(folder.name);
-  setEditHardDiskName(folder.hardDiskName ?? "");
-  setShowEditModal(true);
-  setOpenMenu(null);
-};
+  const handleOpenEdit = (folder: Folder) => {
+    setSelectedFolder(folder);
+    setEditName(folder.name);
+    setShowEditModal(true);
+    setOpenMenu(null);
+  };
 
   const handleOpenDelete = (folder: Folder) => {
     setSelectedFolder(folder);
@@ -299,7 +264,6 @@ export default function FoldersPage({
       const res = await updateFolder(
         selectedFolder.id,
         editName,
-        editHardDiskName,
       );
 
       if (res.success && res.folder) {
@@ -309,7 +273,6 @@ export default function FoldersPage({
               ? {
                   ...folder,
                   name: res.folder.name,
-                  hardDiskName: res.folder.hardDiskName,
                 }
               : folder,
           ),
@@ -318,7 +281,6 @@ export default function FoldersPage({
         setShowEditModal(false);
         setSelectedFolder(null);
         setEditName("");
-        setEditHardDiskName("");
       }
     } catch (error) {
       console.log(error);
@@ -443,29 +405,25 @@ export default function FoldersPage({
             </p>
           </div>
 
-     <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row md:w-auto">
-  <Link
-    href={`/events/${eventId}/edit`}
-    className="group inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-medium text-zinc-100 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg active:scale-[0.98] sm:w-auto"
-  >
-    <Pencil
-      size={17}
-      className="transition-transform duration-200 group-hover:-rotate-6"
-    />
-    Edit Event
-  </Link>
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row md:w-auto">
+            <input
+              type="text"
+              placeholder="Folder name"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              className="w-full min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-zinc-400"
+            />
 
-  <button
-    onClick={() => {
-      setFolderName("");
-      setHardDiskName("");
-      setShowCreateModal(true);
-    }}
-    className="w-full whitespace-nowrap rounded-xl bg-white px-5 py-3 font-medium text-black transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-zinc-200 hover:shadow-lg active:scale-[0.98] sm:w-auto"
-  >
-    Create Folder
-  </button>
-</div>
+            <button
+              onClick={handleCreateFolder}
+              disabled={isCreating}
+              className="shrink-0 whitespace-nowrap rounded-xl bg-white px-5 py-3 font-medium text-black"
+            >
+              {isCreating
+                ? "Creating..."
+                : "Create Folder"}
+            </button>
+          </div>
         </div>
 
         {/* EVENT INFO */}
@@ -799,11 +757,6 @@ export default function FoldersPage({
               return (
                 <div
                   key={folder.id}
-                  ref={
-                    newlyCreatedFolderId === folder.id
-                      ? createdFolderRef
-                      : null
-                  }
                   className="group relative min-h-32 min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                 >
                   <Link
@@ -816,16 +769,12 @@ export default function FoldersPage({
                     <div className="flex min-w-0 justify-between gap-2">
                       <div className="min-w-0">
                         <h2 className="break-words text-xl font-semibold">
-  {folder.name}
-</h2>
+                          {folder.name}
+                        </h2>
 
-<p className="mt-1 break-words text-xs text-zinc-500">
-  Hard Disk Name: {folder.hardDiskName || "Not specified"}
-</p>
-
-<p className="text-sm text-zinc-400">
-  Open Gallery
-</p>
+                        <p className="text-sm text-zinc-400">
+                          Open Gallery
+                        </p>
                       </div>
 
                       <ArrowRight
@@ -938,11 +887,6 @@ export default function FoldersPage({
                   className="group relative min-w-0"
                 >
                   <div
-                    ref={
-                      newlyCreatedFolderId === folder.id
-                        ? createdFolderRef
-                        : null
-                    }
                     onClick={() =>
                       setSelectedParent(
                         folder.id,
@@ -951,17 +895,11 @@ export default function FoldersPage({
                     className="min-h-32 min-w-0 cursor-pointer rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                   >
                     <div className="flex min-w-0 justify-between gap-2">
-                     <div className="min-w-0">
-  <h2 className="break-words text-xl font-semibold">
-    {folder.name}
-  </h2>
+                      <h2 className="min-w-0 break-words text-xl font-semibold">
+                        {folder.name}
+                      </h2>
 
-  <p className="mt-1 break-words text-xs text-zinc-500">
-    Hard Disk Name: {folder.hardDiskName || "Not specified"}
-  </p>
-</div>
-
-<ArrowRight
+                      <ArrowRight
                         size={18}
                         className="shrink-0 opacity-0 transition-all group-hover:translate-x-2 group-hover:opacity-100"
                       />
@@ -1064,11 +1002,6 @@ export default function FoldersPage({
               return (
                 <div
                   key={folder.id}
-                  ref={
-                    newlyCreatedFolderId === folder.id
-                      ? createdFolderRef
-                      : null
-                  }
                   className="group relative min-h-32 min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
                 >
                   <Link
@@ -1080,17 +1013,13 @@ export default function FoldersPage({
                   >
                     <div className="flex min-w-0 justify-between gap-2">
                       <div className="min-w-0">
-                      <h2 className="break-words text-xl font-semibold">
-  {folder.name}
-</h2>
+                        <h2 className="break-words text-xl font-semibold">
+                          {folder.name}
+                        </h2>
 
-<p className="mt-1 break-words text-xs text-zinc-500">
-  Hard Disk Name: {folder.hardDiskName || "Not specified"}
-</p>
-
-<p className="text-sm text-zinc-400">
-  Open Gallery
-</p>
+                        <p className="text-sm text-zinc-400">
+                          Open Gallery
+                        </p>
                       </div>
 
                       <ArrowRight
@@ -1179,79 +1108,6 @@ export default function FoldersPage({
         )}
       </div>
 
-
-
-      {/* CREATE FOLDER MODAL */}
-{showCreateModal && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/80 p-3 sm:p-5"
-    onClick={() => {
-      if (!isCreating) {
-        setShowCreateModal(false);
-      }
-    }}
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="my-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:rounded-3xl sm:p-6"
-    >
-      <h2 className="break-words text-xl font-bold sm:text-2xl">
-        Create Folder
-      </h2>
-
-      <div className="mt-5 space-y-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-white">
-            Folder Name
-          </label>
-
-          <input
-            type="text"
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            placeholder="Enter folder name"
-            disabled={isCreating}
-            className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-zinc-400 disabled:opacity-50"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-white">
-            Hard Disk Name
-          </label>
-
-          <input
-            type="text"
-            value={hardDiskName}
-            onChange={(e) => setHardDiskName(e.target.value)}
-            placeholder="Enter hard disk name"
-            disabled={isCreating}
-            className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-zinc-400 disabled:opacity-50"
-          />
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button
-          onClick={() => setShowCreateModal(false)}
-          disabled={isCreating}
-          className="w-full flex-1 rounded-xl border border-zinc-700 px-4 py-3 disabled:opacity-50"
-        >
-          Cancel
-        </button>
-
-        <button
-          onClick={handleCreateFolder}
-          disabled={isCreating || !folderName.trim()}
-          className="w-full flex-1 rounded-xl bg-white px-4 py-3 text-black disabled:opacity-50"
-        >
-          {isCreating ? "Creating..." : "Create Folder"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
       {/* EDIT MODAL */}
       {showEditModal && selectedFolder && (
         <div
@@ -1270,36 +1126,13 @@ export default function FoldersPage({
               Edit Folder
             </h2>
 
-          <div className="mt-5 space-y-4">
-  <div>
-    <label className="mb-2 block text-sm font-medium text-white">
-      Folder Name
-    </label>
-
-    <input
-      value={editName}
-      onChange={(e) =>
-        setEditName(e.target.value)
-      }
-      className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-zinc-400"
-    />
-  </div>
-
-  <div>
-    <label className="mb-2 block text-sm font-medium text-white">
-      Hard Disk Name
-    </label>
-
-    <input
-      value={editHardDiskName}
-      onChange={(e) =>
-        setEditHardDiskName(e.target.value)
-      }
-      placeholder="Enter hard disk name"
-      className="w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-zinc-400"
-    />
-  </div>
-</div>
+            <input
+              value={editName}
+              onChange={(e) =>
+                setEditName(e.target.value)
+              }
+              className="mt-5 w-full min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3"
+            />
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button

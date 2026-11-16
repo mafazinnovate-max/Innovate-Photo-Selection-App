@@ -3,10 +3,6 @@ import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import { prisma } from "@/lib/prisma";
 
-import { r2, R2_BUCKET_NAME } from "@/lib/r2";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 interface SelectionCategory {
   folderId: string;
   folderName: string;
@@ -73,10 +69,6 @@ export default async function FolderPage({
           fileName: true,
           isSelected: true,
           comment: true,
-
-          storageKey: true,
-          optimizedKey: true,
-          thumbnailKey: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -88,68 +80,6 @@ export default async function FolderPage({
   if (!folder) {
     return <div>Folder not found</div>;
   }
-
-  // Generate private R2 signed URLs for client gallery
-  const imagesWithSignedUrls = await Promise.all(
-    folder.images.map(async (image) => {
-      const fullImageKey = image.optimizedKey || image.storageKey;
-
-      const thumbnailKey =
-        image.thumbnailKey ||
-        image.optimizedKey ||
-        image.storageKey;
-
-      // Legacy images fallback
-      if (!fullImageKey) {
-        return {
-          ...image,
-          imageUrl: image.imageUrl,
-          thumbnailUrl: image.imageUrl,
-        };
-      }
-
-      try {
-        const [fullImageUrl, thumbnailUrl] = await Promise.all([
-          getSignedUrl(
-            r2,
-            new GetObjectCommand({
-              Bucket: R2_BUCKET_NAME,
-              Key: fullImageKey,
-            }),
-            { expiresIn: 3600 }
-          ),
-
-          thumbnailKey
-            ? getSignedUrl(
-              r2,
-              new GetObjectCommand({
-                Bucket: R2_BUCKET_NAME,
-                Key: thumbnailKey,
-              }),
-              { expiresIn: 3600 }
-            )
-            : Promise.resolve(image.imageUrl),
-        ]);
-
-        return {
-          ...image,
-          imageUrl: fullImageUrl,
-          thumbnailUrl,
-        };
-      } catch (error) {
-        console.error(
-          `Failed to generate client image URLs for ${image.id}:`,
-          error
-        );
-
-        return {
-          ...image,
-          imageUrl: "",
-          thumbnailUrl: "",
-        };
-      }
-    })
-  );
 
   let maxSelections: number | null = null;
 
@@ -183,41 +113,40 @@ export default async function FolderPage({
   const categoryFolders =
     folder.event.galleryMode === "bride_groom" && folder.parentId
       ? await prisma.folder.findMany({
-        where: {
-          eventId: folder.eventId,
-          parentId: folder.parentId,
-        },
-        select: {
-          id: true,
-          name: true,
-          images: {
-            where: {
-              isSelected: true,
-            },
-            select: {
-              id: true,
+          where: {
+            eventId: folder.eventId,
+            parentId: folder.parentId,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
             },
           },
-        },
-      })
+        })
       : await prisma.folder.findMany({
-        where: {
-          eventId: folder.eventId,
-          parentId: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          images: {
-            where: {
-              isSelected: true,
-            },
-            select: {
-              id: true,
+          where: {
+            id: folder.id,
+          },
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: {
+                isSelected: true,
+              },
+              select: {
+                id: true,
+              },
             },
           },
-        },
-      });
+        });
 
   const selectionSummary: SelectionCategory[] =
     categoryFolders.map((category) => ({
@@ -228,7 +157,7 @@ export default async function FolderPage({
 
   return (
     <ClientFolderPage
-      images={imagesWithSignedUrls}
+      images={folder.images}
       folderName={folder.name}
       folderId={folder.id}
       shareId={shareId}

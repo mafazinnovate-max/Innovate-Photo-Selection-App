@@ -224,7 +224,8 @@ export async function POST(req: Request) {
          */
         const now = new Date();
 
-       const trialStartDate = now;
+        const trialStartDate =
+            getISTWallClockDate(now);
 
         const trialEndDate =
             getTrialEndDate(trialStartDate);

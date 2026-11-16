@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
@@ -83,6 +84,7 @@ export async function GET(
                 { status: 404 }
             );
         }
+
 
         const [totalEvents, customerRecords, totalImages, events] =
             await Promise.all([
@@ -198,7 +200,6 @@ export async function GET(
                 notes: studio.internalNotes ?? "",
             },
             plan: subscription?.plan ?? "Professional",
-            price: String(subscription?.price ?? 0),
             status: studio.isActive ? "Active" : "Inactive",
         });
     } catch (error) {
@@ -225,6 +226,7 @@ export async function PATCH(
 
         const { studioId } = await params;
         const data = await request.json();
+
 
         if (data.action === "set-status") {
             if (typeof data.isActive !== "boolean") {
@@ -277,8 +279,7 @@ export async function PATCH(
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        "Studio name, admin name, username and email are required.",
+                    message: "Studio name, admin name, username and email are required.",
                 },
                 { status: 400 }
             );
@@ -334,31 +335,15 @@ export async function PATCH(
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        "All storage and usage limits must be positive whole numbers.",
+                    message: "All storage and usage limits must be positive whole numbers.",
                 },
                 { status: 400 }
             );
         }
 
-        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
-
-        type Plan = (typeof validPlans)[number];
-
-        const plan: Plan = (
-            validPlans as readonly string[]
-        ).includes(data.plan)
-            ? (data.plan as Plan)
+        const plan = ["Basic", "Professional", "Enterprise"].includes(data.plan)
+            ? data.plan
             : "Professional";
-
-        const planPrices: Record<Plan, number> = {
-            Trial: 0,
-            Basic: 3999,
-            Professional: 8999,
-            Enterprise: 24999,
-        };
-
-        const price = planPrices[plan];
 
         const status = data.status === "Inactive" ? "Inactive" : "Active";
 
@@ -388,8 +373,7 @@ export async function PATCH(
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        "No admin account is linked to this studio. Create its admin account first.",
+                    message: "No admin account is linked to this studio. Create its admin account first.",
                 },
                 { status: 400 }
             );
@@ -445,7 +429,6 @@ export async function PATCH(
 
             const subscriptionData = {
                 plan,
-                price,
                 status,
                 startDate,
                 endDate,
@@ -458,33 +441,10 @@ export async function PATCH(
             const existingSubscription = currentStudio.Subscription[0];
 
             if (existingSubscription) {
-                const startDateChanged =
-                    existingSubscription.startDate.getTime() !==
-                    startDate.getTime();
-
-                const endDateChanged =
-                    (existingSubscription.endDate?.getTime() ?? null) !==
-                    endDate.getTime();
-
-                const isNewSubscriptionPeriod =
-                    startDateChanged || endDateChanged;
-
-                if (isNewSubscriptionPeriod) {
-                    await tx.subscription.create({
-                        data: {
-                            id: crypto.randomUUID(),
-                            ...subscriptionData,
-                            studioId,
-                        },
-                    });
-                } else {
-                    await tx.subscription.update({
-                        where: {
-                            id: existingSubscription.id,
-                        },
-                        data: subscriptionData,
-                    });
-                }
+                await tx.subscription.update({
+                    where: { id: existingSubscription.id },
+                    data: subscriptionData,
+                });
             } else {
                 await tx.subscription.create({
                     data: {

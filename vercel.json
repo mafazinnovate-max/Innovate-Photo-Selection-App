@@ -1,8 +1,0 @@
-{
-    "crons": [
-        {
-            "path": "/api/upload/recovery",
-            "schedule": "0 0 * * *"
-        }
-    ]
-}

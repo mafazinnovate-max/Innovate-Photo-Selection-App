@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
     AlertCircle,
     ArrowUpRight,
@@ -12,7 +12,6 @@ import {
     ChevronRight,
     Clock3,
     CreditCard,
-    DollarSign,
     Eye,
     MoreHorizontal,
     Pencil,
@@ -21,9 +20,8 @@ import {
     TrendingUp,
     XCircle,
 } from "lucide-react";
-import Image from "next/image";
 
-type Plan = "Trial" | "Basic" | "Professional" | "Enterprise" | "Not configured";
+type Plan = "Basic" | "Professional" | "Enterprise" | "Not configured";
 
 type SubscriptionStatus =
     | "Active"
@@ -40,7 +38,6 @@ interface Subscription {
     status: SubscriptionStatus;
     startDate: string;
     endDate: string;
-    price: number | null;
     storageUsed: number | null;
     storageLimit: number;
     events: number;
@@ -63,13 +60,12 @@ interface StudioApiRecord {
         phone?: string | null;
         createdAt: string;
     }>;
-    Subscription?: Array<{
+    subscriptions?: Array<{
         id: string;
         plan: string;
         status: string;
         startDate: string;
         endDate: string | null;
-        price: number | null;
         storageLimitGb: number;
         maxEvents: number;
         maxCustomers: number;
@@ -79,7 +75,7 @@ interface StudioApiRecord {
 }
 
 function toPlan(value?: string): Plan {
-    if (value === "Trial" || value === "Professional" || value === "Enterprise") return value;
+    if (value === "Professional" || value === "Enterprise") return value;
     return "Basic";
 }
 
@@ -100,7 +96,7 @@ function getDisplayStatus(studioIsActive: boolean, endDate: string | null, subsc
 }
 
 function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
-    const latestSubscription = studio.Subscription?.[0];
+    const latestSubscription = studio.subscriptions?.[0];
     const admin = studio.admins?.[0];
 
     return {
@@ -114,7 +110,6 @@ function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
         startDate: latestSubscription?.startDate ?? "",
         endDate: latestSubscription?.endDate ?? "",
         storageUsed: null,
-        price: latestSubscription?.price ?? null,
         storageLimit: latestSubscription?.storageLimitGb ?? 0,
         events: studio._count?.events ?? 0,
         maxEvents: latestSubscription?.maxEvents ?? 0,
@@ -124,59 +119,14 @@ function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
     };
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 8;
 
 export default function SubscriptionsPage() {
     const router = useRouter();
-    const pathname = usePathname();
-
-    const [isNavigating, setIsNavigating] = useState(false);
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
-
-    const navigateWithLoader = (path: string) => {
-        setIsNavigating(true);
-        router.push(path);
-    };
 
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        async function loadProfile() {
-            try {
-                const response = await fetch(
-                    "/api/super-admin/settings/profile",
-                    { cache: "no-store" }
-                );
-
-                if (!response.ok) return;
-
-                const data = await response.json();
-
-                if (isMounted && data.profile) {
-                    setLogoUrl(data.profile.logoUrl || null);
-                }
-            } catch (error) {
-                console.error(
-                    "Failed to load Super Admin logo:",
-                    error
-                );
-            }
-        }
-
-        loadProfile();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    useEffect(() => {
-        setIsNavigating(false);
-    }, [pathname]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
 
     useEffect(() => {
         let cancelled = false;
@@ -258,20 +208,10 @@ export default function SubscriptionsPage() {
     const activeSubscriptions = subscriptions.filter((item) => item.status === "Active").length;
     const expiringSubscriptions = subscriptions.filter((item) => item.status === "Expiring Soon").length;
     const inactiveSubscriptions = subscriptions.filter((item) => item.status === "Inactive").length;
-
-    const configuredMonthlyRevenue = subscriptions.some(
-        (item) => item.price !== null
-    )
+    const configuredMonthlyRevenue = subscriptions.some((item) => item.monthlyPrice !== null)
         ? subscriptions
-            .filter(
-                (item) =>
-                    item.status === "Active" ||
-                    item.status === "Expiring Soon"
-            )
-            .reduce(
-                (total, item) => total + (item.price ?? 0),
-                0
-            )
+            .filter((item) => item.status === "Active" || item.status === "Expiring Soon")
+            .reduce((total, item) => total + (item.monthlyPrice ?? 0), 0)
         : null;
 
     const resetPage = () => {
@@ -299,53 +239,31 @@ export default function SubscriptionsPage() {
 
     return (
         <div className="pb-10">
-            {/* Navigation Loader */}
-            {isNavigating && (
-                <div
-                    className="fixed left-72 right-0 top-0 bottom-0 z-30 flex items-center justify-center bg-black"
-                    role="status"
-                    aria-label="Loading page"
-                >
-                    {logoUrl ? (
-                        <Image
-                            src={logoUrl}
-                            alt="Picnovate"
-                            width={96}
-                            height={96}
-                            priority
-                            unoptimized
-                            className="h-20 w-20 animate-pulse object-contain sm:h-24 sm:w-24"
-                        />
-                    ) : (
-                        <h1 className="animate-pulse text-3xl font-bold tracking-wide text-white">
-                            Picnovate
-                        </h1>
-                    )}
-                </div>
-            )}
-
             {/* Header */}
             <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-black">
-                        <DollarSign size={21} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-white">
+                <div>
+                    <div className="mb-2 flex items-center gap-2 text-sm text-zinc-500">
+                        <span>Super Admin</span>
+                        <span>/</span>
+                        <span className="text-zinc-300">
                             Subscriptions
-                        </h1>
-
-                        <p className="mt-1 text-sm text-zinc-400">
-                            Manage studio subscription plans, billing periods,
-                            usage limits and subscription status.
-                        </p>
+                        </span>
                     </div>
+
+                    <h1 className="text-3xl font-bold text-white">
+                        Subscriptions
+                    </h1>
+
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                        Manage studio subscription plans, billing periods,
+                        usage limits and subscription status.
+                    </p>
                 </div>
 
                 <button
                     type="button"
                     onClick={() =>
-                        navigateWithLoader("/super-admin/studios")
+                        router.push("/super-admin/studios")
                     }
                     className="flex w-fit items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
                 >
@@ -360,7 +278,7 @@ export default function SubscriptionsPage() {
                     title="Total Subscriptions"
                     value={totalSubscriptions.toString()}
                     description="All subscription records"
-                    icon={<DollarSign size={19} />}
+                    icon={<CreditCard size={19} />}
                 />
 
                 <SummaryCard
@@ -383,8 +301,8 @@ export default function SubscriptionsPage() {
                     title="Inactive"
                     value={inactiveSubscriptions.toString()}
                     description="Inactive studios or ended plans"
-                    icon={<AlertCircle size={19} />}
-                    iconClassName="text-red-400"
+                    icon={<XCircle size={19} />}
+                    iconClassName="text-zinc-400"
                 />
 
                 <SummaryCard
@@ -426,7 +344,6 @@ export default function SubscriptionsPage() {
                             }
                             options={[
                                 "All",
-                                "Trial",
                                 "Basic",
                                 "Professional",
                                 "Enterprise",
@@ -539,271 +456,176 @@ export default function SubscriptionsPage() {
                         </thead>
 
                         <tbody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, index) => (
+                            {paginatedSubscriptions.map(
+                                (subscription) => (
                                     <tr
-                                        key={`subscription-skeleton-${index}`}
-                                        className="animate-pulse border-b border-zinc-800/80 last:border-0"
+                                        key={subscription.id}
+                                        className="border-b border-zinc-800/80 last:border-0 hover:bg-zinc-800/20"
                                     >
                                         {/* Studio */}
                                         <td className="px-5 py-5">
-                                            <div className="h-4 w-32 rounded bg-zinc-800" />
-                                            <div className="mt-2 h-3 w-24 rounded bg-zinc-800/70" />
-                                            <div className="mt-2 h-3 w-36 rounded bg-zinc-800/50" />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    router.push(
+                                                        `/super-admin/studios/${subscription.studioId}`
+                                                    )
+                                                }
+                                                className="group text-left"
+                                            >
+                                                <p className="font-medium text-white transition group-hover:text-zinc-300">
+                                                    {subscription.studioName}
+                                                </p>
+
+                                                <p className="mt-1 text-xs text-zinc-500">
+                                                    {subscription.adminName}
+                                                </p>
+
+                                                <p className="mt-0.5 text-xs text-zinc-600">
+                                                    {subscription.adminEmail}
+                                                </p>
+                                            </button>
                                         </td>
 
                                         {/* Plan */}
                                         <td className="px-5 py-5">
-                                            <div className="h-6 w-24 rounded-lg bg-zinc-800" />
-                                            <div className="mt-2 h-3 w-28 rounded bg-zinc-800/60" />
+                                            <PlanBadge plan={subscription.plan} />
+
+                                            <p className="mt-2 text-xs text-zinc-600">
+                                                {subscription.monthlyPrice === null ? "Price not configured" : `${formatCurrency(subscription.monthlyPrice)}/month`}
+                                            </p>
                                         </td>
 
-                                        {/* Subscription */}
+                                        {/* Subscription Dates */}
                                         <td className="px-5 py-5">
-                                            <div className="h-4 w-24 rounded bg-zinc-800" />
-                                            <div className="mt-2 h-3 w-8 rounded bg-zinc-800/60" />
-                                            <div className="mt-2 h-4 w-24 rounded bg-zinc-800" />
-                                            <div className="mt-3 h-3 w-28 rounded bg-zinc-800/60" />
+                                            <div className="flex items-start gap-2">
+                                                <CalendarDays
+                                                    size={15}
+                                                    className="mt-0.5 shrink-0 text-zinc-600"
+                                                />
+
+                                                <div>
+                                                    <p className="text-sm text-zinc-300">
+                                                        {formatDate(
+                                                            subscription.startDate
+                                                        )}
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs text-zinc-600">
+                                                        to
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm text-zinc-300">
+                                                        {formatDate(
+                                                            subscription.endDate
+                                                        )}
+                                                    </p>
+
+                                                    <RemainingDays
+                                                        endDate={subscription.endDate}
+                                                        status={subscription.status}
+                                                    />
+                                                </div>
+                                            </div>
                                         </td>
 
                                         {/* Usage */}
                                         <td className="px-5 py-5">
-                                            <div className="h-3 w-32 rounded bg-zinc-800" />
-                                            <div className="mt-3 h-1.5 w-36 rounded-full bg-zinc-800" />
-                                            <div className="mt-3 h-3 w-28 rounded bg-zinc-800/60" />
+                                            <div className="w-44">
+                                                <div className="mb-2 flex items-center justify-between text-xs">
+                                                    <span className="text-zinc-500">
+                                                        Storage
+                                                    </span>
+
+                                                    <span className="text-zinc-300">
+                                                        {subscription.storageUsed === null ? "Not tracked" : `${subscription.storageUsed} / ${subscription.storageLimit} GB`}
+                                                    </span>
+                                                </div>
+
+                                                {subscription.storageUsed !== null && (
+                                                    <UsageBar value={subscription.storageUsed} max={subscription.storageLimit} />
+                                                )}
+
+                                                <div className="mt-2 flex items-center gap-3 text-xs text-zinc-600">
+                                                    <span>
+                                                        {subscription.events}/
+                                                        {subscription.maxEvents} events
+                                                    </span>
+
+                                                    <span>
+                                                        {subscription.customers === null ? "Customers: Not tracked" : `${subscription.customers}/${subscription.maxCustomers} customers`}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
 
                                         {/* Billing */}
                                         <td className="px-5 py-5">
-                                            <div className="h-4 w-24 rounded bg-zinc-800" />
-                                            <div className="mt-2 h-3 w-14 rounded bg-zinc-800/60" />
+                                            <p className="text-sm font-medium text-white">
+                                                {subscription.monthlyPrice === null ? "Not configured" : formatCurrency(subscription.monthlyPrice)}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-zinc-600">
+                                                Monthly
+                                            </p>
                                         </td>
 
                                         {/* Status */}
                                         <td className="px-5 py-5">
-                                            <div className="h-6 w-20 rounded-full bg-zinc-800" />
+                                            <StatusBadge
+                                                status={subscription.status}
+                                            />
                                         </td>
 
                                         {/* Action */}
-                                        <td className="px-5 py-5">
-                                            <div className="ml-auto h-9 w-9 rounded-lg bg-zinc-800" />
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                paginatedSubscriptions.map(
-                                    (subscription) => (
-                                        <tr
-                                            key={subscription.id}
-                                            className="border-b border-zinc-800/80 last:border-0 hover:bg-zinc-800/20"
-                                        >
-                                            {/* Studio */}
-                                            <td className="px-5 py-5">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        navigateWithLoader(
+                                        <td className="relative px-5 py-5 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setOpenMenu(
+                                                        openMenu === subscription.id
+                                                            ? null
+                                                            : subscription.id
+                                                    )
+                                                }
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                                            >
+                                                <MoreHorizontal size={18} />
+                                            </button>
+
+                                            {openMenu === subscription.id && (
+                                                <ActionMenu
+                                                    onClose={() => setOpenMenu(null)}
+                                                    onView={() =>
+                                                        router.push(
                                                             `/super-admin/studios/${subscription.studioId}`
                                                         )
                                                     }
-                                                    className="group text-left"
-                                                >
-                                                    <p className="font-medium text-white transition group-hover:text-zinc-300">
-                                                        {subscription.studioName}
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs text-zinc-500">
-                                                        {subscription.adminName}
-                                                    </p>
-
-                                                    <p className="mt-0.5 text-xs text-zinc-600">
-                                                        {subscription.adminEmail}
-                                                    </p>
-                                                </button>
-                                            </td>
-
-                                            {/* Plan */}
-                                            <td className="px-5 py-5">
-                                                <PlanBadge plan={subscription.plan} />
-
-                                                <p className="mt-2 text-xs text-zinc-600">
-                                                    {subscription.monthlyPrice === null ? "Price not configured" : `${formatCurrency(subscription.monthlyPrice)}/month`}
-                                                </p>
-                                            </td>
-
-                                            {/* Subscription Dates */}
-                                            <td className="px-5 py-5">
-                                                <div className="flex items-start gap-2">
-                                                    <CalendarDays
-                                                        size={15}
-                                                        className="mt-0.5 shrink-0 text-zinc-600"
-                                                    />
-
-                                                    <div>
-                                                        <p className="text-sm text-zinc-300">
-                                                            {formatDate(
-                                                                subscription.startDate
-                                                            )}
-                                                        </p>
-
-                                                        <p className="mt-1 text-xs text-zinc-600">
-                                                            to
-                                                        </p>
-
-                                                        <p className="mt-1 text-sm text-zinc-300">
-                                                            {formatDate(
-                                                                subscription.endDate
-                                                            )}
-                                                        </p>
-
-                                                        <RemainingDays
-                                                            endDate={subscription.endDate}
-                                                            status={subscription.status}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Usage */}
-                                            <td className="px-5 py-5">
-                                                <div className="w-44">
-                                                    <div className="mb-2 flex items-center justify-between text-xs">
-                                                        <span className="text-zinc-500">
-                                                            Storage
-                                                        </span>
-
-                                                        <span className="text-zinc-300">
-                                                            {subscription.storageUsed === null ? "Not tracked" : subscription.storageUsed} / {subscription.storageLimit} GB
-                                                        </span>
-                                                    </div>
-
-                                                    {subscription.storageUsed !== null && (
-                                                        <UsageBar value={subscription.storageUsed} max={subscription.storageLimit} />
-                                                    )}
-
-                                                    <div className="mt-2 flex items-center gap-3 text-xs text-zinc-600">
-                                                        <span>
-                                                            {subscription.events}/
-                                                            {subscription.maxEvents} events
-                                                        </span>
-
-                                                        {/* <span>
-                                                            {subscription.customers === null ? "Customers: Not tracked" : `${subscription.customers}/${subscription.maxCustomers} customers`}
-                                                        </span> */}
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Billing */}
-                                            <td className="px-5 py-5">
-                                                <p className="text-sm font-medium text-white">
-                                                    {subscription.price === null ? "Not configured" : formatCurrency(subscription.price)}
-                                                </p>
-
-                                                {/* <p className="mt-1 text-xs text-zinc-600">
-                                                    Monthly
-                                                </p> */}
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="px-5 py-5">
-                                                <StatusBadge
-                                                    status={subscription.status}
-                                                />
-                                            </td>
-
-                                            {/* Action */}
-                                            <td className="relative px-5 py-5 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setOpenMenu(
-                                                            openMenu === subscription.id
-                                                                ? null
-                                                                : subscription.id
+                                                    onEdit={() =>
+                                                        router.push(
+                                                            `/super-admin/studios/${subscription.studioId}/edit`
                                                         )
                                                     }
-                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
-                                                >
-                                                    <MoreHorizontal size={18} />
-                                                </button>
-
-                                                {openMenu === subscription.id && (
-                                                    <ActionMenu
-                                                        onClose={() => setOpenMenu(null)}
-                                                        onView={() =>
-                                                            navigateWithLoader(
-                                                                `/super-admin/studios/${subscription.studioId}`
-                                                            )
-                                                        }
-                                                        onEdit={() =>
-                                                            navigateWithLoader(
-                                                                `/super-admin/studios/${subscription.studioId}/edit`
-                                                            )
-                                                        }
-                                                    />
-                                                )}
-                                            </td>
-                                        </tr>
-                                    )
+                                                />
+                                            )}
+                                        </td>
+                                    </tr>
                                 )
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {!isLoading && paginatedSubscriptions.length === 0 && (
+                {isLoading ? (
+                    <div className="px-6 py-16 text-center text-sm text-zinc-500">Loading subscriptions...</div>
+                ) : paginatedSubscriptions.length === 0 ? (
                     <EmptyState />
-                )}
+                ) : null}
             </div>
 
             {/* Mobile / Tablet Cards */}
             <div className="space-y-4 lg:hidden">
-                {isLoading ? (
-                    Array.from({ length: 4 }).map((_, index) => (
-                        <div
-                            key={`mobile-subscription-skeleton-${index}`}
-                            className="animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 space-y-3">
-                                    <div className="h-4 w-36 rounded bg-zinc-800" />
-                                    <div className="h-3 w-28 rounded bg-zinc-800/70" />
-                                    <div className="h-3 w-44 max-w-full rounded bg-zinc-800/50" />
-                                </div>
-                                <div className="h-6 w-20 rounded-full bg-zinc-800" />
-                            </div>
-
-                            <div className="mt-5 flex gap-2">
-                                <div className="h-7 w-24 rounded-lg bg-zinc-800" />
-                                <div className="h-7 w-28 rounded-lg bg-zinc-800/70" />
-                            </div>
-
-                            <div className="mt-5 grid grid-cols-2 gap-4">
-                                <div className="space-y-3">
-                                    <div className="h-3 w-28 rounded bg-zinc-800/70" />
-                                    <div className="h-4 w-24 rounded bg-zinc-800" />
-                                    <div className="h-3 w-32 rounded bg-zinc-800/60" />
-                                </div>
-                                <div className="space-y-3">
-                                    <div className="h-3 w-16 rounded bg-zinc-800/70" />
-                                    <div className="h-4 w-28 rounded bg-zinc-800" />
-                                    <div className="h-2 w-full rounded-full bg-zinc-800" />
-                                </div>
-                            </div>
-
-                            <div className="mt-5 border-t border-zinc-800 pt-4">
-                                <div className="h-3 w-20 rounded bg-zinc-800/70" />
-                                <div className="mt-2 h-4 w-16 rounded bg-zinc-800" />
-                            </div>
-
-                            <div className="mt-5 flex gap-2">
-                                <div className="h-10 flex-1 rounded-xl bg-zinc-800" />
-                                <div className="h-10 flex-1 rounded-xl bg-zinc-800" />
-                            </div>
-                        </div>
-                    ))
-                ) : (paginatedSubscriptions.map(
+                {paginatedSubscriptions.map(
                     (subscription) => (
                         <div
                             key={subscription.id}
@@ -813,7 +635,7 @@ export default function SubscriptionsPage() {
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        navigateWithLoader(
+                                        router.push(
                                             `/super-admin/studios/${subscription.studioId}`
                                         )
                                     }
@@ -925,7 +747,7 @@ export default function SubscriptionsPage() {
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        navigateWithLoader(
+                                        router.push(
                                             `/super-admin/studios/${subscription.studioId}`
                                         )
                                     }
@@ -938,7 +760,7 @@ export default function SubscriptionsPage() {
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        navigateWithLoader(
+                                        router.push(
                                             `/super-admin/studios/${subscription.studioId}/edit`
                                         )
                                     }
@@ -950,11 +772,13 @@ export default function SubscriptionsPage() {
                             </div>
                         </div>
                     )
-                ))}
-
-                {!isLoading && paginatedSubscriptions.length === 0 && (
-                    <EmptyState />
                 )}
+
+                {isLoading ? (
+                    <div className="px-6 py-16 text-center text-sm text-zinc-500">Loading subscriptions...</div>
+                ) : paginatedSubscriptions.length === 0 ? (
+                    <EmptyState />
+                ) : null}
             </div>
 
             {/* Pagination */}
@@ -1130,7 +954,6 @@ function PlanBadge({
     plan: Plan;
 }) {
     const classes = {
-        Trial: "border-amber-500/20 bg-amber-500/10 text-amber-400",
         Basic: "border-zinc-700 bg-zinc-800 text-zinc-300",
         Professional:
             "border-blue-500/20 bg-blue-500/10 text-blue-400",

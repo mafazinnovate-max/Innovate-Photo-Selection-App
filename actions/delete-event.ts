@@ -5,13 +5,6 @@ import { v2 as cloudinary } from "cloudinary";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { verifyAuthToken } from "@/lib/auth";
-import {
-    DeleteObjectsCommand,
-} from "@aws-sdk/client-s3";
-import {
-    r2,
-    R2_BUCKET_NAME,
-} from "@/lib/r2";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -26,7 +19,9 @@ export const deleteEvent = async (eventId: string) => {
         const token = cookieStore.get("auth-token")?.value;
 
         if (!token) {
-            return { success: false };
+            return {
+                success: false,
+            };
         }
 
         const session = await verifyAuthToken(token);
@@ -37,16 +32,16 @@ export const deleteEvent = async (eventId: string) => {
             session.role !== "admin" ||
             !session.studioId
         ) {
-            return { success: false };
+            return {
+                success: false,
+            };
         }
-
-        const studioId = session.studioId;
 
         // Make sure the event belongs to this admin's studio
         const event = await prisma.event.findFirst({
             where: {
                 id: eventId,
-                studioId,
+                studioId: session.studioId,
                 deletedAt: null,
             },
             include: {
@@ -59,104 +54,36 @@ export const deleteEvent = async (eventId: string) => {
         });
 
         if (!event) {
-            return { success: false };
+            return {
+                success: false,
+            };
         }
 
-        const images = event.folders.flatMap(
-            (folder) => folder.images,
-        );
-
-        // Collect R2 objects belonging to this studio
-        const studioPrefix = `studios/${studioId}/`;
-
-        const r2Keys = new Set<string>();
-
-        const addR2Key = (key: string | null | undefined) => {
-            if (
-                key &&
-                key.startsWith(studioPrefix) &&
-                !key.includes("..") &&
-                !key.includes("\\")
-            ) {
-                r2Keys.add(key);
-            }
-        };
-
-        // Event cover image
-        addR2Key(event.coverImageKey);
-
-        // Gallery original, optimized and thumbnail images
-        for (const image of images) {
-            addR2Key(image.storageKey);
-            addR2Key(image.optimizedKey);
-            addR2Key(image.thumbnailKey);
-
-            // Include imageUrl only when it is an R2 object key
-            addR2Key(image.imageUrl);
-        }
-
-        // Delete R2 objects in batches of 1000
-        const keys = Array.from(r2Keys);
-
-        for (let i = 0; i < keys.length; i += 1000) {
-            const batch = keys.slice(i, i + 1000);
-
-            try {
-                const result = await r2.send(
-                    new DeleteObjectsCommand({
-                        Bucket: R2_BUCKET_NAME,
-                        Delete: {
-                            Objects: batch.map((Key) => ({ Key })),
-                            Quiet: true,
-                        },
-                    }),
-                );
-
-                if (result.Errors?.length) {
-                    console.error(
-                        "Some R2 objects could not be deleted:",
-                        result.Errors,
-                    );
-                }
-            } catch (error) {
-                console.error(
-                    "R2 event image cleanup failed:",
-                    error,
-                );
-            }
-        }
-
-        // Delete legacy cover image from Cloudinary
-        // R2 cover images use coverImageKey instead.
-        if (
-            !event.coverImageKey &&
-            event.coverImagePublicId
-        ) {
+        // Delete cover image from Cloudinary
+        if (event.coverImagePublicId) {
             try {
                 await cloudinary.uploader.destroy(
                     event.coverImagePublicId,
                 );
             } catch (error) {
-                console.error(
-                    "Cloudinary cover delete failed:",
-                    error,
-                );
+                console.log(error);
             }
         }
 
-        // Delete legacy gallery images from Cloudinary
+        // Delete all folder images from Cloudinary
+        const images = event.folders.flatMap(
+            (folder) => folder.images,
+        );
+
         for (const image of images) {
-            if (
-                !image.storageKey &&
-                image.publicId
-            ) {
+            if (image.publicId) {
                 try {
                     await cloudinary.uploader.destroy(
                         image.publicId,
                     );
                 } catch (error) {
-                    console.error(
-                        "Cloudinary image delete failed:",
+                    console.log(
+                        "Image delete failed",
                         error,
                     );
                 }
@@ -164,7 +91,8 @@ export const deleteEvent = async (eventId: string) => {
         }
 
         // Soft delete the event in Neon.
-        // Database records remain for Past Events summary.
+        // The Event, folders, images, selections and other
+        // database records remain in Neon for the Past Events summary.
         await prisma.event.update({
             where: {
                 id: event.id,
@@ -180,7 +108,7 @@ export const deleteEvent = async (eventId: string) => {
             success: true,
         };
     } catch (error) {
-        console.error("Event delete failed:", error);
+        console.log(error);
 
         return {
             success: false,

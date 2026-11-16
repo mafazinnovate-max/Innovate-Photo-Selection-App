@@ -8,7 +8,6 @@ interface CreateFolderProps {
   eventId: string;
   type?: string;
   parentId?: string; // 👈 IMPORTANT (for bride/groom subfolders)
-  hardDiskName?: string;
 }
 
 export const createFolder = async ({
@@ -16,7 +15,6 @@ export const createFolder = async ({
   eventId,
   type = "general",
   parentId,
-  hardDiskName,
 }: CreateFolderProps) => {
   try {
     const folder = await prisma.folder.create({
@@ -25,7 +23,6 @@ export const createFolder = async ({
         eventId,
         type,
         parentId: parentId ?? null, // 👈 safe DB insert
-        hardDiskName: hardDiskName ?? null,
       },
     });
     revalidatePath(`/events/${eventId}`);
