@@ -10,6 +10,7 @@ import {
   KeyRound,
   LockKeyhole,
   Mail,
+  Pencil,
   Phone,
   Save,
   Trash2,
@@ -134,6 +135,7 @@ export default function SettingsPage() {
   const [appliedZoom, setAppliedZoom] = useState(1);
   const [appliedPositionX, setAppliedPositionX] = useState(0);
   const [appliedPositionY, setAppliedPositionY] = useState(0);
+  
 
   /* -----------------------------
      Branding: Pending Logo
@@ -141,6 +143,7 @@ export default function SettingsPage() {
   ----------------------------- */
 
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [pendingPublicId, setPendingPublicId] = useState<string | null>(
     null
   );
@@ -156,6 +159,7 @@ export default function SettingsPage() {
   const [logoError, setLogoError] = useState("");
   const [logoSuccess, setLogoSuccess] = useState("");
   const [savingLogo, setSavingLogo] = useState(false);
+  
 
   const isEditingLogo = pendingLogo !== null;
 
@@ -769,10 +773,11 @@ export default function SettingsPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-  zoom: pendingZoom,
-  positionX: pendingPositionX,
-  positionY: pendingPositionY,
-}),
+          logoUrl: pendingLogo,
+          zoom: pendingZoom,
+          positionX: pendingPositionX,
+          positionY: pendingPositionY,
+        }),
       });
 
       const data = await response.json();
@@ -851,29 +856,52 @@ export default function SettingsPage() {
      Remove Applied Logo
   ----------------------------- */
 
-  const removeLogo = () => {
-    setAppliedLogo(null);
-    setAppliedZoom(1);
-    setAppliedPositionX(0);
-    setAppliedPositionY(0);
+  const removeLogo = async () => {
+    try {
+      setLogoError("");
+      setLogoSuccess("");
 
-    setLogoError("");
-    setLogoSuccess("");
+      const response = await fetch("/api/upload-logo", {
+        method: "DELETE",
+      });
 
-    localStorage.removeItem("studioLogo");
-    localStorage.removeItem("studioLogoZoom");
-    localStorage.removeItem("studioLogoPositionX");
-    localStorage.removeItem("studioLogoPositionY");
+      const data = await response.json();
 
-    window.dispatchEvent(
-      new Event("studio-logo-changed")
-    );
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Failed to remove logo."
+        );
+      }
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      setAppliedLogo(null);
+      setAppliedZoom(1);
+      setAppliedPositionX(0);
+      setAppliedPositionY(0);
+
+      localStorage.removeItem("studioLogo");
+      localStorage.removeItem("studioLogoZoom");
+      localStorage.removeItem("studioLogoPositionX");
+      localStorage.removeItem("studioLogoPositionY");
+
+      window.dispatchEvent(
+        new Event("studio-logo-changed")
+      );
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      setLogoSuccess("Logo removed successfully.");
+      setSaved(false);
+    } catch (error) {
+      console.error("Failed to remove logo:", error);
+
+      setLogoError(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove logo."
+      );
     }
-
-    setSaved(false);
   };
 
   /* -----------------------------
@@ -884,6 +912,19 @@ export default function SettingsPage() {
     setIsEditingSettings(true);
     setSaved(false);
     setSettingsError("");
+  };
+
+  const handleSettingsKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (
+      event.key === "Enter" &&
+      isEditingSettings &&
+      !savingSettings
+    ) {
+      event.preventDefault();
+      handleSave();
+    }
   };
 
   /* -----------------------------
@@ -1065,8 +1106,11 @@ export default function SettingsPage() {
 
   const cropScale = cropSize / REF_SIZE;
 
-  const lockedFieldClass =
-    "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 disabled:cursor-not-allowed disabled:opacity-70";
+  const viewFieldClass =
+    "w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-300 outline-none transition-all duration-200 disabled:cursor-default";
+
+  const editFieldClass =
+    "w-full rounded-xl border border-zinc-600 bg-zinc-900 px-4 py-3 text-sm text-white outline-none transition-all duration-200 focus:border-white/60 focus:bg-zinc-800 focus:ring-2 focus:ring-white/5";
 
   const passwordFieldClass =
     "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-600";
@@ -1098,19 +1142,32 @@ export default function SettingsPage() {
             type="button"
             onClick={handleChangeSettings}
             disabled={loadingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <LockKeyhole size={18} />
-            Change Settings
+            <LockKeyhole
+              size={18}
+              className="transition-transform duration-200 group-hover:scale-110"
+            />
+            Edit Settings
           </button>
         ) : (
           <button
             type="button"
             onClick={handleSave}
             disabled={loadingSettings || savingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saved ? <Check size={18} /> : <Save size={18} />}
+            {saved ? (
+              <Check
+                size={18}
+                className="transition-transform duration-200 group-hover:scale-110"
+              />
+            ) : (
+              <Save
+                size={18}
+                className="transition-transform duration-200 group-hover:scale-110"
+              />
+            )}
 
             {savingSettings
               ? "Saving..."
@@ -1154,7 +1211,7 @@ export default function SettingsPage() {
           <p className="mt-1 text-sm text-zinc-500">
             {isEditingSettings
               ? "You can now edit your studio information."
-              : "Studio information is locked. Click Change Settings to edit."}
+              : "Studio information is locked. Click Edit Settings to edit."}
           </p>
         </div>
 
@@ -1176,7 +1233,12 @@ export default function SettingsPage() {
                 setStudioName(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={
+                isEditingSettings
+                  ? editFieldClass
+                  : viewFieldClass
+              }
               placeholder="Enter studio name"
             />
           </div>
@@ -1200,7 +1262,12 @@ export default function SettingsPage() {
                   setEmail(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="studio@example.com"
               />
             </div>
@@ -1223,7 +1290,12 @@ export default function SettingsPage() {
                   setPhone(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -1247,7 +1319,12 @@ export default function SettingsPage() {
                 setWebsite(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={
+                isEditingSettings
+                  ? editFieldClass
+                  : viewFieldClass
+              }
               placeholder="https://yourstudio.com"
             />
           </div>
@@ -1269,7 +1346,11 @@ export default function SettingsPage() {
                 setAddress(e.target.value);
                 setSaved(false);
               }}
-              className={`${lockedFieldClass} resize-none`}
+              className={`${
+                isEditingSettings
+                  ? editFieldClass
+                  : viewFieldClass
+              } resize-none`}
               placeholder="Enter your studio address"
             />
           </div>
@@ -1292,7 +1373,12 @@ export default function SettingsPage() {
                   setCity(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="Enter city"
               />
             </div>
@@ -1314,7 +1400,12 @@ export default function SettingsPage() {
                   setState(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="Enter state"
               />
             </div>
@@ -1337,7 +1428,12 @@ export default function SettingsPage() {
                 setCountry(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={
+                isEditingSettings
+                  ? editFieldClass
+                  : viewFieldClass
+              }
               placeholder="Enter country"
             />
           </div>
@@ -1354,15 +1450,13 @@ export default function SettingsPage() {
                 </p>
               ) : (
                 <p className="text-sm text-zinc-600">
-                  No studio description has been added by the Super
-                  Admin yet.
+                  No studio description has been provided by the platform administrator yet.
                 </p>
               )}
             </div>
 
             <p className="mt-2 text-xs text-zinc-500">
-              This information is managed by the Super Admin and
-              cannot be changed here.
+              This information is managed by the platform administrator and can only be updated by them.
             </p>
           </div>
         </div>
@@ -1381,7 +1475,7 @@ export default function SettingsPage() {
           <p className="mt-1 text-sm text-zinc-500">
             {isEditingSettings
               ? "You can now edit the contact information associated with this admin account."
-              : "Admin information is locked. Click Change Settings to edit."}
+              : "Admin information is locked. Click Edit Settings to edit."}
           </p>
         </div>
 
@@ -1403,7 +1497,12 @@ export default function SettingsPage() {
                 setAdminName(e.target.value);
                 setSaved(false);
               }}
-              className={lockedFieldClass}
+              onKeyDown={handleSettingsKeyDown}
+              className={
+                isEditingSettings
+                  ? editFieldClass
+                  : viewFieldClass
+              }
               placeholder="Enter admin name"
             />
           </div>
@@ -1427,7 +1526,12 @@ export default function SettingsPage() {
                   setAdminEmail(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="admin@example.com"
               />
             </div>
@@ -1450,7 +1554,12 @@ export default function SettingsPage() {
                   setAdminPhone(e.target.value);
                   setSaved(false);
                 }}
-                className={lockedFieldClass}
+                onKeyDown={handleSettingsKeyDown}
+                className={
+                  isEditingSettings
+                    ? editFieldClass
+                    : viewFieldClass
+                }
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -1808,7 +1917,7 @@ export default function SettingsPage() {
               {!isEditingLogo && appliedLogo && (
                 <button
                   type="button"
-                  onClick={removeLogo}
+                  onClick={() => setShowRemoveConfirm(true)}
                   className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-white"
                 >
                   <Trash2 size={16} />
@@ -1823,17 +1932,62 @@ export default function SettingsPage() {
               </p>
             )}
 
+            {logoSuccess && (
+              <p className="mt-3 text-xs text-emerald-400">
+                {logoSuccess}
+              </p>
+            )}
+
+            <p className="mt-2 text-xs text-zinc-500">
+              Maximum 5MB.
+            </p>
+
+            {showRemoveConfirm && (
+              <div className="mt-3 flex flex-col gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white">
+                    Remove studio logo?
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    This will remove the current logo and delete it from Cloudinary.
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowRemoveConfirm(false)}
+                    className="rounded-lg border border-zinc-800 px-3 py-2 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowRemoveConfirm(false);
+                      await removeLogo();
+                    }}
+                    className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full">
             {isEditingLogo && (
-              <div className="mt-6 rounded-2xl border border-amber-500/30 bg-zinc-950/70 p-4">
+              <div className="rounded-2xl border border-amber-500/30 bg-zinc-950/70 p-4 lg:sticky lg:top-6">
                 <div className="mb-4">
                   <p className="text-sm font-medium text-white">
                     Position New Logo
                   </p>
 
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Drag the image to move it. Scroll or pinch
-                    to zoom. Your current logo stays active until
-                    you click Apply Logo.
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    Drag the image to move it. Scroll or pinch to zoom. Your current logo stays active until you click Apply Logo.
                   </p>
                 </div>
 
@@ -1854,23 +2008,11 @@ export default function SettingsPage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Check size={14} />
-                    {savingLogo
-                      ? "Applying..."
-                      : "Apply Logo"}
+                    {savingLogo ? "Applying..." : "Apply Logo"}
                   </button>
                 </div>
               </div>
             )}
-
-            {logoSuccess && (
-              <p className="mt-3 text-xs text-emerald-400">
-                {logoSuccess}
-              </p>
-            )}
-
-            <p className="mt-2 text-xs text-zinc-500">
-              Maximum 5MB.
-            </p>
           </div>
         </div>
       </section>
@@ -1895,9 +2037,19 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSave}
             disabled={loadingSettings || savingSettings}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-black shadow-lg shadow-white/10 transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:bg-zinc-100 hover:shadow-2xl hover:shadow-white/20 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saved ? <Check size={18} /> : <Save size={18} />}
+            {saved ? (
+              <Check
+                size={18}
+                className="transition-transform duration-200 group-hover:scale-110"
+              />
+            ) : (
+              <Save
+                size={18}
+                className="transition-transform duration-200 group-hover:scale-110"
+              />
+            )}
 
             {savingSettings
               ? "Saving..."

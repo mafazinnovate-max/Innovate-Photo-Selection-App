@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import PicknovateLoader from "@/components/admin/picknovate-loader";
 import { useState } from "react";
 
 export default function FolderLink({
@@ -26,7 +26,7 @@ export default function FolderLink({
 
             {loading && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    <PicknovateLoader />
                 </div>
             )}
         </>

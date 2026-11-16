@@ -13,6 +13,7 @@ import {
 interface SubscriptionInfo {
   id: string;
   plan: string;
+  price: number;
   status: string;
   startDate: string;
   endDate: string | null;
@@ -250,7 +251,7 @@ export default function SubscriptionCard({
     <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
       {/* Header */}
       <div className="border-b border-zinc-800 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="shrink-0 rounded-xl bg-zinc-800 p-3">
               <CalendarDays className="h-5 w-5 text-zinc-300" />
@@ -261,23 +262,39 @@ export default function SubscriptionCard({
                 Current Subscription
               </p>
 
-              <h2 className="mt-1 truncate text-xl font-semibold text-white">
+              <h2 className="mt-1 truncate text-xl font-semibold tracking-tight text-white">
                 {subscription.plan} Plan
               </h2>
             </div>
           </div>
 
-          <span
-            className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${
-              isExpired
-                ? "border-red-900/60 bg-red-950/30 text-red-400"
-                : subscription.status === "Active"
-                  ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
-                  : "border-amber-900/60 bg-amber-950/30 text-amber-400"
-            }`}
-          >
-            {statusText}
-          </span>
+          <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+            <span
+              className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${
+                isExpired
+                  ? "border-red-900/60 bg-red-950/30 text-red-400"
+                  : subscription.status === "Active"
+                    ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
+                    : "border-amber-900/60 bg-amber-950/30 text-amber-400"
+              }`}
+            >
+              {statusText}
+            </span>
+
+            <div className="relative overflow-hidden rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-400/10 via-zinc-900 to-zinc-950 px-4 py-2.5 shadow-lg shadow-black/10">
+              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700" />
+
+              <div className="pl-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-amber-400/70">
+                  Plan Value
+                </p>
+
+                <p className="mt-0.5 text-lg font-bold tracking-tight text-white">
+                  ₹{subscription.price.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
