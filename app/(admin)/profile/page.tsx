@@ -1567,6 +1567,7 @@ if (loading) {
       </p>
     </div>
 
+
     <button
       type="button"
       onClick={handlePremiumSelect}
@@ -1577,38 +1578,34 @@ if (loading) {
           : "border-[#d4af37]/30 hover:border-[#d4af37]/70"
       }`}
     >
+      {/* LEFT: Browser preview */}
       <span
         aria-hidden="true"
-        className="relative block overflow-hidden rounded-xl border border-[#d4af37]/20 bg-gradient-to-br from-[#241c0a] via-[#121212] to-[#0a0a0a] p-3 transition-transform duration-500 group-hover:scale-[1.02]"
+        className="relative block min-w-0 overflow-hidden rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#241c0a] via-[#121212] to-[#0a0a0a] p-3 transition-transform duration-500 group-hover:scale-[1.01]"
       >
+        {/* Browser header */}
         <span className="mb-3 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-[#d4af37]/70" />
           <span className="h-2 w-2 rounded-full bg-[#d4af37]/40" />
           <span className="h-2 w-2 rounded-full bg-[#d4af37]/20" />
-          <span className="ml-3 h-2 flex-1 rounded-full bg-white/5" />
+          <span className="ml-3 h-2 flex-1 rounded-full bg-white/10" />
         </span>
 
-        <span className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#2a2110] via-[#15120a] to-black">
-          <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.22),transparent_55%)]" />
-          <span className="relative text-center">
-            <span className="block text-[11px] tracking-[0.3em] text-[#d4af37]/80">
-              YOUR STUDIO
-            </span>
-            <span className="mx-auto mt-3 block h-px w-16 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent" />
-            <span className="mt-3 block text-sm text-zinc-400">
-              Premium Website Preview
-            </span>
-          </span>
-        </span>
-
-        <span className="mt-3 grid grid-cols-3 gap-2">
-          <span className="block aspect-[4/3] rounded-md bg-white/[0.04]" />
-          <span className="block aspect-[4/3] rounded-md bg-white/[0.06]" />
-          <span className="block aspect-[4/3] rounded-md bg-white/[0.04]" />
+        {/* Actual photography website image */}
+        <span className="relative block aspect-[1.04/1] w-full overflow-hidden rounded-lg bg-black">
+          <Image
+            src="/template-preview/premium-template.png"
+            alt="Picknovate Photography Website Preview"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-contain"
+          />
         </span>
       </span>
 
-      <span className="block">
+      {/* RIGHT: Premium website information */}
+      <span className="block min-w-0">
         <span className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-gradient-to-r from-[#b8860b] via-[#d4af37] to-[#f0d98a] px-3 py-1 text-[10px] font-bold tracking-wider text-black">
             PREMIUM
@@ -1655,6 +1652,7 @@ if (loading) {
         </span>
       </span>
     </button>
+
   </div>
 </section>
 
