@@ -396,7 +396,7 @@ export default function Sidebar({
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto p-4">
+       <div className="flex-1 overflow-y-auto p-4 pt-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <nav className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -512,7 +512,7 @@ export default function Sidebar({
                     remainingDays <= 3
                   );
                 })() && (
-                  <div className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.07] p-3 shadow-[0_0_20px_rgba(34,211,238,0.05)]">
+                  <div className="mt-2 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.07] p-3 shadow-[0_0_20px_rgba(34,211,238,0.05)]">
                     <div className="flex items-start gap-2.5">
                       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10">
                         <span className="text-sm text-cyan-400">

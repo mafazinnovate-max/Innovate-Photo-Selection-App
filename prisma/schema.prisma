@@ -371,8 +371,8 @@ model StudioProfilePortfolio {
 
   profile StudioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  @@index([profileId, sortOrder])
-  @@index([profileId, processingStatus])
+   @@index([profileId, sortOrder])
+   @@index([profileId, processingStatus])
 }
 
 model Staff {
