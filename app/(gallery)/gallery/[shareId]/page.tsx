@@ -42,6 +42,23 @@ export default async function GalleryPage({
     );
   }
 
+  let coverImageSrc: string | null = null;
+
+  if (event.coverImageKey) {
+    try {
+      coverImageSrc = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: event.coverImageKey,
+        }),
+        { expiresIn: 3600 }
+      );
+    } catch (error) {
+      console.error("Failed to generate event cover URL:", error);
+    }
+  }
+
   if (!event.studio) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -220,10 +237,10 @@ export default async function GalleryPage({
       {/* Event Header */}
       <div className="relative mx-5 mt-8 max-w-7xl overflow-hidden rounded-3xl border border-amber-400/10 bg-zinc-950 shadow-2xl shadow-black/40 xl:mx-auto">
         {/* Cover Image */}
-        {event.coverImageUrl && (
+        {coverImageSrc && (
           <>
             <img
-              src={event.coverImageUrl}
+              src={coverImageSrc}
               alt={event.name}
               className="absolute inset-0 h-full w-full object-cover"
               style={{
