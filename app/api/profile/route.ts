@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import cloudinary from "@/lib/cloudinary";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 async function getAdminSession() {
   const cookieStore = await cookies();
@@ -22,6 +25,21 @@ async function getAdminSession() {
     ...session,
     studioId: session.studioId,
   };
+}
+
+async function getProfileImageUrl(storageKey: string | null, fallbackUrl: string | null) {
+  if (!storageKey) {
+    return fallbackUrl ?? "";
+  }
+
+  return getSignedUrl(
+    r2,
+    new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: storageKey,
+    }),
+    { expiresIn: 3600 }
+  );
 }
 
 export async function GET() {
@@ -53,9 +71,40 @@ export async function GET() {
       },
     });
 
+        if (!profile) {
+      return NextResponse.json({
+        success: true,
+        profile: null,
+      });
+    }
+
+    const profileWithFreshUrls = {
+      ...profile,
+
+      logoUrl: await getProfileImageUrl(
+        profile.logoStorageKey,
+        profile.logoUrl
+      ),
+
+      coverPhotoUrl: await getProfileImageUrl(
+        profile.coverStorageKey,
+        profile.coverPhotoUrl
+      ),
+
+      portfolioPhotos: await Promise.all(
+        profile.portfolioPhotos.map(async (photo) => ({
+          ...photo,
+          imageUrl: await getProfileImageUrl(
+            photo.storageKey,
+            photo.imageUrl
+          ),
+        }))
+      ),
+    };
+
     return NextResponse.json({
       success: true,
-      profile,
+      profile: profileWithFreshUrls,
     });
   } catch (error) {
     console.error("Profile load error:", error);
@@ -143,9 +192,23 @@ export async function POST(request: Request) {
           isPublished: false,
           studioName,
           logoUrl: body.logoUrl || null,
+          logoStorageKey:
+  typeof body.logoStorageKey === "string" &&
+  body.logoStorageKey.startsWith(
+    `studios/${session.studioId}/profile/logo/`
+  )
+    ? body.logoStorageKey
+    : null,
           description: body.description || null,
           shortTagline: body.shortTagline || null,
           coverPhotoUrl: body.coverPhotoUrl || null,
+          coverStorageKey:
+  typeof body.coverStorageKey === "string" &&
+  body.coverStorageKey.startsWith(
+    `studios/${session.studioId}/profile/cover/`
+  )
+    ? body.coverStorageKey
+    : null,
           ownerName: body.ownerName || null,
           ownerPhone: body.ownerPhone || null,
           phoneNumber: body.phoneNumber || null,
@@ -162,9 +225,23 @@ export async function POST(request: Request) {
         update: {
           studioName,
           logoUrl: body.logoUrl || null,
+          logoStorageKey:
+  typeof body.logoStorageKey === "string" &&
+  body.logoStorageKey.startsWith(
+    `studios/${session.studioId}/profile/logo/`
+  )
+    ? body.logoStorageKey
+    : null,
           description: body.description || null,
           shortTagline: body.shortTagline || null,
           coverPhotoUrl: body.coverPhotoUrl || null,
+          coverStorageKey:
+  typeof body.coverStorageKey === "string" &&
+  body.coverStorageKey.startsWith(
+    `studios/${session.studioId}/profile/cover/`
+  )
+    ? body.coverStorageKey
+    : null,
           ownerName: body.ownerName || null,
           ownerPhone: body.ownerPhone || null,
           phoneNumber: body.phoneNumber || null,
@@ -249,15 +326,22 @@ if (packages.length > 0) {
           photo.imageUrl.trim()
         ) {
           await tx.studioProfilePortfolio.create({
-            data: {
-              profileId: savedProfile.id,
-              imageUrl: photo.imageUrl.trim(),
-              publicId:
-                typeof photo.publicId === "string"
-                  ? photo.publicId
-                  : null,
-              sortOrder: index,
-            },
+           data: {
+  profileId: savedProfile.id,
+  imageUrl: photo.imageUrl.trim(),
+  publicId:
+    typeof photo.publicId === "string"
+      ? photo.publicId
+      : null,
+  storageKey:
+    typeof photo.publicId === "string" &&
+    photo.publicId.startsWith(
+      `studios/${session.studioId}/profile/portfolio/`
+    )
+      ? photo.publicId
+      : null,
+  sortOrder: index,
+},
           });
         }
       }
@@ -281,23 +365,76 @@ if (packages.length > 0) {
       });
     });
 
-    for (const removedPhoto of removedPortfolioPhotos) {
-      if (removedPhoto.publicId) {
-        try {
-          await cloudinary.uploader.destroy(
-            removedPhoto.publicId,
-            {
-              resource_type: "image",
-            }
-          );
-        } catch (cloudinaryError) {
-          console.error(
-            "Cloudinary portfolio deletion error:",
-            cloudinaryError
-          );
-        }
-      }
+    // Delete replaced logo from R2
+const oldLogoKey = existingProfile?.logoStorageKey;
+const newLogoKey = profile?.logoStorageKey;
+
+if (
+  typeof oldLogoKey === "string" &&
+  oldLogoKey !== newLogoKey &&
+  oldLogoKey.startsWith(
+    `studios/${session.studioId}/profile/logo/`
+  )
+) {
+  try {
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: oldLogoKey,
+      })
+    );
+  } catch (r2Error) {
+    console.error("R2 logo deletion error:", r2Error);
+  }
+}
+
+// Delete replaced cover from R2
+const oldCoverKey = existingProfile?.coverStorageKey;
+const newCoverKey = profile?.coverStorageKey;
+
+if (
+  typeof oldCoverKey === "string" &&
+  oldCoverKey !== newCoverKey &&
+  oldCoverKey.startsWith(
+    `studios/${session.studioId}/profile/cover/`
+  )
+) {
+  try {
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: oldCoverKey,
+      })
+    );
+  } catch (r2Error) {
+    console.error("R2 cover deletion error:", r2Error);
+  }
+}
+
+   for (const removedPhoto of removedPortfolioPhotos) {
+  const storageKey = removedPhoto.storageKey;
+
+  if (
+    typeof storageKey === "string" &&
+    storageKey.startsWith(
+      `studios/${session.studioId}/profile/portfolio/`
+    )
+  ) {
+    try {
+      await r2.send(
+        new DeleteObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: storageKey,
+        })
+      );
+    } catch (r2Error) {
+      console.error(
+        "R2 portfolio deletion error:",
+        r2Error
+      );
     }
+  }
+}
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,15 @@
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import cloudinary from "@/lib/cloudinary";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomUUID } from "crypto";
+
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
 import { verifyAuthToken } from "@/lib/auth";
 
 async function getAdminSession() {
@@ -26,13 +35,8 @@ export async function POST(request: Request) {
 
     if (!session) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -41,37 +45,32 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File | null;
     const type = formData.get("type");
 
-    // Portfolio photo limit: maximum 25 photos per studio
-if (type === "portfolio") {
-  const currentCountValue = formData.get("currentCount");
-  const currentCount = Number(currentCountValue);
+    // Portfolio photo limit: maximum 25 photos per studio.
+    if (type === "portfolio") {
+      const currentCountValue = formData.get("currentCount");
+      const currentCount = Number(currentCountValue);
 
-  if (
-    typeof currentCountValue !== "string" ||
-    !/^\d+$/.test(currentCountValue) ||
-    !Number.isInteger(currentCount) ||
-    currentCount < 0 ||
-    currentCount >= 25
-  ) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Maximum 25 portfolio photos are allowed.",
-      },
-      { status: 400 }
-    );
-  }
-}
+      if (
+        typeof currentCountValue !== "string" ||
+        !/^\d+$/.test(currentCountValue) ||
+        !Number.isInteger(currentCount) ||
+        currentCount < 0 ||
+        currentCount >= 25
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Maximum 25 portfolio photos are allowed.",
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!file) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "No file provided",
-        },
-        {
-          status: 400,
-        }
+        { success: false, error: "No file provided" },
+        { status: 400 }
       );
     }
 
@@ -81,13 +80,8 @@ if (type === "portfolio") {
       type !== "portfolio"
     ) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid upload type",
-        },
-        {
-          status: 400,
-        }
+        { success: false, error: "Invalid upload type" },
+        { status: 400 }
       );
     }
 
@@ -103,9 +97,7 @@ if (type === "portfolio") {
           success: false,
           error: "Only PNG, JPG and WEBP images are allowed",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -117,46 +109,44 @@ if (type === "portfolio") {
           success: false,
           error: "Image must be smaller than 10MB",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const extension =
+      file.type === "image/png"
+        ? "png"
+        : file.type === "image/jpeg"
+          ? "jpg"
+          : "webp";
 
-    const folder =
-      type === "logo"
-        ? `studio-profiles/${session.studioId}/logo`
-        : type === "cover"
-          ? `studio-profiles/${session.studioId}/cover`
-          : `studio-profiles/${session.studioId}/portfolio`;
+    const storageKey =
+      `studios/${session.studioId}/profile/${type}/${randomUUID()}.${extension}`;
 
-    const result = await new Promise<any>(
-      (resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              folder,
-              resource_type: "image",
-            },
-            (error, uploadResult) => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve(uploadResult);
-              }
-            }
-          )
-          .end(buffer);
-      }
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: storageKey,
+        Body: buffer,
+        ContentType: file.type,
+      })
+    );
+
+    const url = await getSignedUrl(
+      r2,
+      new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: storageKey,
+      }),
+      { expiresIn: 3600 }
     );
 
     return NextResponse.json({
       success: true,
-      url: result.secure_url,
-      publicId: result.public_id,
+      url,
+      publicId: storageKey,
     });
   } catch (error) {
     console.error("Profile media upload error:", error);
@@ -166,9 +156,7 @@ if (type === "portfolio") {
         success: false,
         error: "Image upload failed",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -179,13 +167,8 @@ export async function DELETE(request: Request) {
 
     if (!session) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -198,33 +181,27 @@ export async function DELETE(request: Request) {
 
     if (!publicId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Public ID is required",
-        },
-        {
-          status: 400,
-        }
+        { success: false, error: "Public ID is required" },
+        { status: 400 }
       );
     }
 
-    const studioPrefix = `studio-profiles/${session.studioId}/`;
+    const studioPrefix =
+      `studios/${session.studioId}/profile/`;
 
     if (!publicId.startsWith(studioPrefix)) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid media ownership",
-        },
-        {
-          status: 403,
-        }
+        { success: false, error: "Invalid media ownership" },
+        { status: 403 }
       );
     }
 
-    await cloudinary.uploader.destroy(publicId, {
-      resource_type: "image",
-    });
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: publicId,
+      })
+    );
 
     return NextResponse.json({
       success: true,
@@ -237,9 +214,7 @@ export async function DELETE(request: Request) {
         success: false,
         error: "Image deletion failed",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
