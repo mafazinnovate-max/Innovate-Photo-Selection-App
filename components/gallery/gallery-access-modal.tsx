@@ -4,16 +4,20 @@ import { useState, useTransition } from "react";
 import { verifyGalleryAccess } from "@/actions/verify-gallery-access";
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 
 interface GalleryAccessModalProps {
     shareId: string;
     parentId?: string | null;
+    studioName: string;
+    studioLogoUrl?: string | null;
 }
 
 export default function GalleryAccessModal({
     shareId,
     parentId,
+    studioName,
+    studioLogoUrl,
 }: GalleryAccessModalProps) {
     const router = useRouter();
 
@@ -50,14 +54,17 @@ export default function GalleryAccessModal({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 px-4">
             <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-zinc-900/95 p-8 shadow-2xl backdrop-blur-xl">
                 <div className="mb-8 flex flex-col items-center">
-                    <Image
-                        src="/innovate-logo.png"
-                        alt="logo"
-                        width={180}
-                        height={60}
-                        priority
-                        className="h-auto object-contain"
-                    />
+                        {studioLogoUrl && (
+                            <img
+                                src={studioLogoUrl}
+                                alt={`${studioName} logo`}
+                                className="h-20 w-20 rounded-full border border-white/10 bg-white object-contain"
+                            />
+                        )}
+
+                        <h2 className="mt-4 text-center text-lg font-semibold uppercase tracking-[0.2em] text-white">
+                            {studioName}
+                        </h2>
 
                     <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4">
                         <Lock size={26} />

@@ -59,25 +59,12 @@ export default async function GalleryPage({
     }
   }
 
+
   if (!event.studio) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
         Studio not found
       </div>
-    );
-  }
-
-  const hasAccess = await hasGalleryAccess(
-    shareId,
-    parentId ?? null,
-  );
-
-  if (!hasAccess) {
-    return (
-      <GalleryAccessModal
-        shareId={shareId}
-        parentId={parentId ?? null}
-      />
     );
   }
 
@@ -103,10 +90,27 @@ export default async function GalleryPage({
     }
   }
 
+  const hasAccess = await hasGalleryAccess(
+    shareId,
+    parentId ?? null,
+  );
+
+  if (!hasAccess) {
+    return (
+      <GalleryAccessModal
+        shareId={shareId}
+        parentId={parentId ?? null}
+        studioName={event.studio.name}
+        studioLogoUrl={studioLogoUrl}
+      />
+    );
+  }
+
   const studioBrandingData = {
     ...event.studio,
     logoUrl: studioLogoUrl,
   };
+
 
   const folders = await prisma.folder.findMany({
     where: {

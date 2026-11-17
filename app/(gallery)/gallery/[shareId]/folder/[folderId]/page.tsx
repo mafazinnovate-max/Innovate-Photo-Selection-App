@@ -25,10 +25,57 @@ export default async function FolderPage({
 }: FolderPageProps) {
   const { shareId, folderId } = await params;
 
+  // Fetch studio details for the access modal
+  const event = await prisma.event.findUnique({
+    where: { shareId },
+    select: {
+      studio: {
+        select: {
+          name: true,
+          logoUrl: true,
+          logoStorageKey: true,
+          logoOptimizedKey: true,
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return <div>Folder not found</div>;
+  }
+
+  // Generate signed URL for the studio logo
+  let studioLogoUrl = event.studio?.logoUrl ?? null;
+
+  const studioLogoKey =
+    event.studio?.logoOptimizedKey ||
+    event.studio?.logoStorageKey;
+
+  if (studioLogoKey) {
+    try {
+      studioLogoUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: studioLogoKey,
+        }),
+        { expiresIn: 3600 }
+      );
+    } catch (error) {
+      console.error("Failed to generate studio logo URL:", error);
+    }
+  }
+
   const hasAccess = await hasGalleryAccess(shareId);
 
   if (!hasAccess) {
-    return <GalleryAccessModal shareId={shareId} />;
+    return (
+      <GalleryAccessModal
+        shareId={shareId}
+        studioName={event.studio?.name ?? "Studio"}
+        studioLogoUrl={studioLogoUrl}
+      />
+    );
   }
 
   const folder = await prisma.folder.findFirst({
