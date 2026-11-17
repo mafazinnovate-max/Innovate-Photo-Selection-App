@@ -10,7 +10,6 @@ import {
   KeyRound,
   LockKeyhole,
   Mail,
-  Pencil,
   Phone,
   Save,
   Trash2,
@@ -42,23 +41,23 @@ type LogoTransform = {
 type Gesture =
   | { mode: "none" }
   | {
-      mode: "drag";
-      id: number;
-      startClientX: number;
-      startClientY: number;
-      originX: number;
-      originY: number;
-    }
+    mode: "drag";
+    id: number;
+    startClientX: number;
+    startClientY: number;
+    originX: number;
+    originY: number;
+  }
   | {
-      mode: "pinch";
-      ids: [number, number];
-      startDistance: number;
-      startZoom: number;
-      startMidX: number;
-      startMidY: number;
-      originX: number;
-      originY: number;
-    };
+    mode: "pinch";
+    ids: [number, number];
+    startDistance: number;
+    startZoom: number;
+    startMidX: number;
+    startMidY: number;
+    originX: number;
+    originY: number;
+  };
 
 export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -135,7 +134,7 @@ export default function SettingsPage() {
   const [appliedZoom, setAppliedZoom] = useState(1);
   const [appliedPositionX, setAppliedPositionX] = useState(0);
   const [appliedPositionY, setAppliedPositionY] = useState(0);
-  
+
 
   /* -----------------------------
      Branding: Pending Logo
@@ -144,9 +143,9 @@ export default function SettingsPage() {
 
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [pendingPublicId, setPendingPublicId] = useState<string | null>(
-    null
-  );
+  const [pendingStorageKey, setPendingStorageKey] = useState<string | null>(null);
+  const [pendingOptimizedKey, setPendingOptimizedKey] = useState<string | null>(null);
+  const [pendingThumbnailKey, setPendingThumbnailKey] = useState<string | null>(null);
   const [pendingZoom, setPendingZoom] = useState(1);
   const [pendingPositionX, setPendingPositionX] = useState(0);
   const [pendingPositionY, setPendingPositionY] = useState(0);
@@ -159,7 +158,7 @@ export default function SettingsPage() {
   const [logoError, setLogoError] = useState("");
   const [logoSuccess, setLogoSuccess] = useState("");
   const [savingLogo, setSavingLogo] = useState(false);
-  
+
 
   const isEditingLogo = pendingLogo !== null;
 
@@ -586,7 +585,7 @@ export default function SettingsPage() {
 
     const nextZoom = clamp(
       gesture.startZoom *
-        (distance / gesture.startDistance),
+      (distance / gesture.startDistance),
       MIN_ZOOM,
       MAX_ZOOM
     );
@@ -685,8 +684,44 @@ export default function SettingsPage() {
     }
   };
 
+
   /* -----------------------------
-     Logo Upload -> becomes PENDING logo
+     Discard pending R2 logo files
+  ----------------------------- */
+
+  const discardPendingLogo = async () => {
+    const keys = [
+      pendingStorageKey,
+      pendingOptimizedKey,
+      pendingThumbnailKey,
+    ].filter((key): key is string => Boolean(key));
+
+    if (keys.length > 0) {
+      try {
+        await fetch("/api/studio-logo/discard", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ keys }),
+        });
+      } catch (error) {
+        console.error("Pending logo cleanup failed:", error);
+      }
+    }
+
+    if (pendingLogo?.startsWith("blob:")) {
+      URL.revokeObjectURL(pendingLogo);
+    }
+
+    setPendingLogo(null);
+    setPendingStorageKey(null);
+    setPendingOptimizedKey(null);
+    setPendingThumbnailKey(null);
+  };
+
+  /* -----------------------------
+     Logo Upload -> Pending Logo
   ----------------------------- */
 
   const handleLogoChange = async (
@@ -700,8 +735,18 @@ export default function SettingsPage() {
     setLogoSuccess("");
     setSaved(false);
 
-    if (!file.type.startsWith("image/")) {
-      setLogoError("Please select an image file.");
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/avif",
+      "image/svg+xml",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError(
+        "Please select a JPEG, PNG, WebP, AVIF or SVG image."
+      );
       event.target.value = "";
       return;
     }
@@ -712,33 +757,109 @@ export default function SettingsPage() {
       return;
     }
 
+    let temporaryKey: string | null = null;
+
     try {
       setUploadingLogo(true);
 
-      const formData = new FormData();
-      formData.append("file", file);
+      // Remove previous pending logo before replacing it
+      await discardPendingLogo();
 
-      const response = await fetch("/api/upload-logo", {
-        method: "POST",
-        body: formData,
-      });
+      // 1. Request R2 upload URL
+      const presignResponse = await fetch(
+        "/api/studio-logo/presign",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type,
+            fileSize: file.size,
+          }),
+        }
+      );
 
-      const data = await response.json();
+      const presignData = await presignResponse.json();
 
-      if (!response.ok || !data.success) {
+      if (!presignResponse.ok || !presignData.success) {
         throw new Error(
-          data.message || "Logo upload failed."
+          presignData.message || "Unable to prepare logo upload."
         );
       }
 
-      setPendingLogo(data.url);
-      setPendingPublicId(data.publicId);
+      temporaryKey = presignData.storageKey;
+
+      // 2. Upload directly to R2
+      const uploadResponse = await fetch(
+        presignData.uploadUrl,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload logo to storage.");
+      }
+
+      // 3. Finalize and optimize the uploaded logo
+      const finalizeResponse = await fetch(
+        "/api/studio-logo/finalize",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            storageKey: temporaryKey,
+            contentType: file.type,
+          }),
+        }
+      );
+
+      const finalizeData = await finalizeResponse.json();
+
+      if (!finalizeResponse.ok || !finalizeData.success) {
+        throw new Error(
+          finalizeData.message || "Logo processing failed."
+        );
+      }
+
+      // 4. Keep local preview until Apply Logo
+      const previewUrl = URL.createObjectURL(file);
+
+      setPendingLogo(previewUrl);
+      setPendingStorageKey(finalizeData.storageKey);
+      setPendingOptimizedKey(finalizeData.optimizedKey);
+      setPendingThumbnailKey(finalizeData.thumbnailKey);
 
       commitPendingTransform(1, 0, 0);
 
       setLogoSuccess("");
     } catch (error) {
-      console.error(error);
+      console.error("Studio logo upload error:", error);
+
+      // Clean up temporary upload if finalize did not complete
+      if (temporaryKey) {
+        try {
+          await fetch("/api/studio-logo/discard", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              keys: [temporaryKey],
+            }),
+          });
+        } catch (cleanupError) {
+          console.error("Temporary logo cleanup failed:", cleanupError);
+        }
+      }
 
       setLogoError(
         error instanceof Error
@@ -760,7 +881,15 @@ export default function SettingsPage() {
   ----------------------------- */
 
   const applyLogo = async () => {
-    if (!pendingLogo || savingLogo) return;
+    if (
+      !pendingLogo ||
+      !pendingStorageKey ||
+      !pendingOptimizedKey ||
+      !pendingThumbnailKey ||
+      savingLogo
+    ) {
+      return;
+    }
 
     try {
       setSavingLogo(true);
@@ -773,7 +902,9 @@ export default function SettingsPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          logoUrl: pendingLogo,
+          storageKey: pendingStorageKey,
+          optimizedKey: pendingOptimizedKey,
+          thumbnailKey: pendingThumbnailKey,
           zoom: pendingZoom,
           positionX: pendingPositionX,
           positionY: pendingPositionY,
@@ -784,11 +915,22 @@ export default function SettingsPage() {
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.message || "Failed to save logo adjustment."
+          data.message || "Failed to apply logo."
         );
       }
 
-      localStorage.setItem("studioLogo", pendingLogo);
+      // Use the new signed URL returned by the API
+      const appliedLogoUrl = data.logoUrl;
+
+      if (!appliedLogoUrl) {
+        throw new Error("Logo was saved but its preview URL is missing.");
+      }
+
+      if (pendingLogo.startsWith("blob:")) {
+        URL.revokeObjectURL(pendingLogo);
+      }
+
+      localStorage.setItem("studioLogo", appliedLogoUrl);
 
       localStorage.setItem(
         "studioLogoZoom",
@@ -805,13 +947,15 @@ export default function SettingsPage() {
         String(pendingPositionY)
       );
 
-      setAppliedLogo(pendingLogo);
+      setAppliedLogo(appliedLogoUrl);
       setAppliedZoom(pendingZoom);
       setAppliedPositionX(pendingPositionX);
       setAppliedPositionY(pendingPositionY);
 
       setPendingLogo(null);
-      setPendingPublicId(null);
+      setPendingStorageKey(null);
+      setPendingOptimizedKey(null);
+      setPendingThumbnailKey(null);
 
       commitPendingTransform(1, 0, 0);
 
@@ -822,12 +966,12 @@ export default function SettingsPage() {
       setLogoSuccess("Logo applied successfully.");
       setSaved(false);
     } catch (error) {
-      console.error("Failed to save logo adjustment:", error);
+      console.error("Failed to apply studio logo:", error);
 
       setLogoError(
         error instanceof Error
           ? error.message
-          : "Failed to save logo adjustment."
+          : "Failed to apply logo."
       );
     } finally {
       setSavingLogo(false);
@@ -838,9 +982,10 @@ export default function SettingsPage() {
      Cancel Editing
   ----------------------------- */
 
-  const cancelLogoEditing = () => {
-    setPendingLogo(null);
-    setPendingPublicId(null);
+  const cancelLogoEditing = async () => {
+    if (savingLogo) return;
+
+    await discardPendingLogo();
 
     commitPendingTransform(1, 0, 0);
 
@@ -1346,11 +1491,10 @@ export default function SettingsPage() {
                 setAddress(e.target.value);
                 setSaved(false);
               }}
-              className={`${
-                isEditingSettings
-                  ? editFieldClass
-                  : viewFieldClass
-              } resize-none`}
+              className={`${isEditingSettings
+                ? editFieldClass
+                : viewFieldClass
+                } resize-none`}
               placeholder="Enter your studio address"
             />
           </div>
@@ -1827,15 +1971,13 @@ export default function SettingsPage() {
                     ? "Logo crop area. Drag to move, scroll or pinch to zoom."
                     : "Studio logo"
                 }
-                className={`relative flex aspect-square h-56 w-56 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border bg-zinc-950 shadow-lg sm:h-60 sm:w-60 2xl:h-72 2xl:w-72 ${
-                  isEditingLogo
-                    ? `touch-none border-amber-500/60 ${
-                        isDragging
-                          ? "cursor-grabbing"
-                          : "cursor-grab"
-                      }`
-                    : "border-zinc-700"
-                }`}
+                className={`relative flex aspect-square h-56 w-56 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border bg-zinc-950 shadow-lg sm:h-60 sm:w-60 2xl:h-72 2xl:w-72 ${isEditingLogo
+                  ? `touch-none border-amber-500/60 ${isDragging
+                    ? "cursor-grabbing"
+                    : "cursor-grab"
+                  }`
+                  : "border-zinc-700"
+                  }`}
                 style={{ borderRadius: "9999px" }}
               >
                 {displayedLogo ? (
@@ -1849,11 +1991,9 @@ export default function SettingsPage() {
                     draggable={false}
                     className="pointer-events-none h-full w-full select-none object-contain p-[9%] will-change-transform"
                     style={{
-                      transform: `translate(${
-                        displayedPositionX * cropScale
-                      }px, ${
-                        displayedPositionY * cropScale
-                      }px) scale(${displayedZoom})`,
+                      transform: `translate(${displayedPositionX * cropScale
+                        }px, ${displayedPositionY * cropScale
+                        }px) scale(${displayedZoom})`,
                     }}
                   />
                 ) : (
@@ -1873,11 +2013,10 @@ export default function SettingsPage() {
 
                 {isEditingLogo && (
                   <div
-                    className={`pointer-events-none absolute inset-0 transition-opacity duration-150 ${
-                      isDragging
-                        ? "opacity-100"
-                        : "opacity-0"
-                    }`}
+                    className={`pointer-events-none absolute inset-0 transition-opacity duration-150 ${isDragging
+                      ? "opacity-100"
+                      : "opacity-0"
+                      }`}
                   >
                     <div className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
                     <div className="absolute left-2/3 top-0 h-full w-px bg-white/25" />
@@ -1891,7 +2030,7 @@ export default function SettingsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
               onChange={handleLogoChange}
               className="hidden"
             />
@@ -1902,7 +2041,7 @@ export default function SettingsPage() {
                 onClick={() =>
                   fileInputRef.current?.click()
                 }
-                disabled={uploadingLogo}
+                disabled={uploadingLogo || savingLogo}
                 className="inline-flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Upload size={16} />
@@ -1950,7 +2089,7 @@ export default function SettingsPage() {
                   </p>
 
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    This will remove the current logo and delete it from Cloudinary.
+                    This will permanently remove your current studio logo.
                   </p>
                 </div>
 
@@ -1995,7 +2134,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={cancelLogoEditing}
-                    disabled={savingLogo}
+                    disabled={uploadingLogo || savingLogo}
                     className="rounded-lg border border-zinc-800 px-4 py-2 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Cancel
@@ -2004,7 +2143,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={applyLogo}
-                    disabled={savingLogo}
+                    disabled={uploadingLogo || savingLogo}
                     className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Check size={14} />
