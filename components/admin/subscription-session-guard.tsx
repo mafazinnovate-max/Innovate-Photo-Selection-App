@@ -25,8 +25,8 @@ export default function SubscriptionSessionGuard({
             endDate.replace("Z", "") + "+05:30"
         ).getTime();
 
-        console.log("END DATE FROM SERVER:", endDate);
-        console.log("CALCULATED EXPIRY TIME:", expiryTime);
+        // console.log("END DATE FROM SERVER:", endDate);
+        // console.log("CALCULATED EXPIRY TIME:", expiryTime);
 
         const logoutAdmin = async (
             reason: "subscription" | "inactive"

@@ -1,8 +1,9 @@
-
 "use client";
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import PeekCat from "@/components/signuppage/PeekCat";
+
 
 type Step = 1 | 2;
 
@@ -45,13 +46,18 @@ export default function SignupPage() {
 
     const [studioName, setStudioName] = useState("");
     const [studioEmail, setStudioEmail] = useState("");
-    const [adminName, setAdminName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [secondName, setSecondName] = useState("");
     const [adminContact, setAdminContact] = useState("");
     const [adminEmail, setAdminEmail] = useState("");
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] =
+        useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -69,7 +75,10 @@ export default function SignupPage() {
                     setLogoUrl(data.logoUrl);
                 }
             } catch (error) {
-                console.error("Failed to load Picknovate logo:", error);
+                console.error(
+                    "Failed to load Picknovate logo:",
+                    error
+                );
             }
         };
 
@@ -82,7 +91,8 @@ export default function SignupPage() {
         if (
             !studioName.trim() ||
             !studioEmail.trim() ||
-            !adminName.trim() ||
+            !firstName.trim() ||
+            !secondName.trim() ||
             !adminContact.trim() ||
             !adminEmail.trim()
         ) {
@@ -128,6 +138,8 @@ export default function SignupPage() {
             setError("Password must be at least 8 characters.");
             return;
         }
+
+        const adminName = `${firstName.trim()} ${secondName.trim()}`;
 
         try {
             setLoading(true);
@@ -225,7 +237,7 @@ export default function SignupPage() {
                                             Step 1 of 2
                                         </p>
 
-                                        <h2 className="mt-2 text-xl font-semibold">
+                                        <h2 className="mt-2 text-xl font-bold text-[#f5f1e8]">
                                             Studio details
                                         </h2>
                                     </div>
@@ -390,7 +402,7 @@ export default function SignupPage() {
                                             Step 2 of 2
                                         </p>
 
-                                        <h2 className="mt-2 text-xl font-semibold">
+                                        <h2 className="mt-2 text-xl font-bold text-[#f5f1e8]">
                                             Create your login
                                         </h2>
                                     </div>
@@ -648,7 +660,7 @@ export default function SignupPage() {
                             Already have an account?{" "}
                             <Link
                                 href="/login"
-                                className="font-medium text-white transition hover:text-zinc-300"
+                                className="font-semibold text-[#ffc93c] transition hover:underline"
                             >
                                 Login
                             </Link>

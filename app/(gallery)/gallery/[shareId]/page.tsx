@@ -383,8 +383,9 @@ export default async function GalleryPage({
             {folders.map((folder, index) => (
               <div
                 key={folder.id}
-                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
-                  }`}
+                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${
+                  index !== 0 ? "border-t border-white/5" : ""
+                }`}
               >
                 <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <div className="min-w-0 max-w-full">

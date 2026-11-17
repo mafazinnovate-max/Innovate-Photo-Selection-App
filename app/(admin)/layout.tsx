@@ -7,6 +7,7 @@ import SubscriptionSessionGuard from "@/components/admin/subscription-session-gu
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
 import AuthHistoryGuard from "@/components/admin/auth-history-guard";
+import PageEntrance from "@/components/admin/page-entrance";
 
 export default async function AdminLayout({
     children,
@@ -96,9 +97,11 @@ if (!studio || !studio.isActive) {
              />
 
             <main className="min-h-screen min-w-0 overflow-x-clip p-4 pt-20 sm:p-6 sm:pt-20 lg:ml-72 lg:p-8">
-                <div className="mx-auto w-full max-w-[1800px]">
-                    {children}
-                </div>
+              <div className="mx-auto w-full max-w-[1800px]">
+    <PageEntrance>
+        {children}
+    </PageEntrance>
+</div>
             </main>
         </div>
     );

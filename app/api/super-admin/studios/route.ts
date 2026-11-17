@@ -137,9 +137,22 @@ export async function POST(request: Request) {
             );
         }
 
-        const plan = ["Basic", "Professional", "Enterprise"].includes(data.plan)
+        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
+
+        type Plan = (typeof validPlans)[number];
+
+        const planPrices: Record<Plan, number> = {
+            Trial: 0,
+            Basic: 3999,
+            Professional: 8999,
+            Enterprise: 24999,
+        };
+
+        const plan: Plan = validPlans.includes(data.plan)
             ? data.plan
             : "Professional";
+
+        const price = planPrices[plan];
 
         const status = data.status === "Inactive" ? "Inactive" : "Active";
 
@@ -195,6 +208,7 @@ export async function POST(request: Request) {
             const subscription = await tx.subscription.create({
                 data: {
                     plan,
+                    price,
                     id: crypto.randomUUID(),
                     status,
                     startDate,

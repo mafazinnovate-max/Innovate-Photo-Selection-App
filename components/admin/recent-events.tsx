@@ -12,11 +12,13 @@ import {
 interface Category {
   id: string;
   name: string;
+  hardDiskName: string | null;
   totalPhotos: number;
   selectedPhotos: number;
   children?: {
     id: string;
     name: string;
+    hardDiskName: string | null;
     totalPhotos: number;
     selectedPhotos: number;
   }[];
@@ -160,6 +162,13 @@ export default function RecentEvents({
                             {category.name}
                           </h5>
 
+                          <p className="mt-1 text-xs text-zinc-500">
+  Hard Disk Name:{" "}
+  <span className="text-zinc-300">
+    {category.hardDiskName || "—"}
+  </span>
+</p>
+
                           {/* Child folders only for Bride & Groom mode */}
                           {isNested &&
                           category.children &&
@@ -180,7 +189,14 @@ export default function RecentEvents({
                                       {child.totalPhotos}
                                     </span>
                                   </div>
-                                </div>
+
+                                    <p className="mt-2 text-xs text-zinc-500">
+                                       Hard Disk Name:{" "}
+                                       <span className="text-zinc-300">
+                                         {child.hardDiskName || "—"}
+                                       </span>
+                                     </p>
+                                       </div>  
                               ))}
                             </div>
                           ) : null}

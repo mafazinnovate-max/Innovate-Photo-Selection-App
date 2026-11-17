@@ -3,6 +3,10 @@ import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import { prisma } from "@/lib/prisma";
 
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 interface SelectionCategory {
   folderId: string;
   folderName: string;
@@ -118,6 +122,10 @@ export default async function FolderPage({
           fileName: true,
           isSelected: true,
           comment: true,
+
+          storageKey: true,
+          optimizedKey: true,
+          thumbnailKey: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -275,7 +283,8 @@ export default async function FolderPage({
       })
       : await prisma.folder.findMany({
         where: {
-          id: folder.id,
+          eventId: folder.eventId,
+          parentId: null,
         },
         select: {
           id: true,
@@ -300,7 +309,7 @@ export default async function FolderPage({
 
   return (
     <ClientFolderPage
-      images={folder.images}
+      images={imagesWithSignedUrls}
       folderName={folder.name}
       folderId={folder.id}
       shareId={shareId}

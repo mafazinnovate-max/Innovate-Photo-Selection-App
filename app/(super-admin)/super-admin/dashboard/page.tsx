@@ -180,10 +180,37 @@ export default function SuperAdminDashboardPage() {
 
                 <div className="px-6 py-5">
                     {loading ? (
-                        <div className="flex min-h-48 items-center justify-center">
-                            <p className="text-sm text-zinc-500">
-                                Loading studios...
-                            </p>
+                        <div
+                            className="min-h-48 space-y-5"
+                            role="status"
+                            aria-label="Loading studios"
+                        >
+                            {/* Skeleton studio rows */}
+                            {[1, 2, 3, 4].map((item) => (
+                                <div
+                                    key={item}
+                                    className="flex animate-pulse items-center justify-between gap-4 py-3"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        {/* Studio logo */}
+                                        <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-800" />
+
+                                        {/* Studio name and created date */}
+                                        <div className="space-y-2">
+                                            <div className="h-3.5 w-32 rounded bg-zinc-800 sm:w-44" />
+                                            <div className="h-3 w-24 rounded bg-zinc-800/70" />
+                                        </div>
+                                    </div>
+
+                                    {/* Events and status */}
+                                    <div className="flex shrink-0 items-center gap-4">
+                                        <div className="hidden h-3 w-14 rounded bg-zinc-800 sm:block" />
+                                        <div className="h-6 w-16 rounded-full bg-zinc-800" />
+                                    </div>
+                                </div>
+                            ))}
+
+                            <span className="sr-only">Loading studios...</span>
                         </div>
                     ) : studios.length === 0 ? (
                         <div className="flex min-h-64 items-center justify-center">

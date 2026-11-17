@@ -123,7 +123,7 @@ export default function ViewStudioPage() {
 
                 const raw = result.studio;
                 const admin = raw.admins?.[0];
-                const subscription = raw.subscriptions?.[0];
+                const subscription = raw.Subscription?.[0];
                 const metrics = result.metrics ?? {};
 
                 const allowedPlans = [

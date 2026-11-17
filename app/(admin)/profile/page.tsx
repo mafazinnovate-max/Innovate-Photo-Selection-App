@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import PicknovateLoader from "@/components/admin/picknovate-loader";
+import PremiumTemplate from "@/app/studio/templates/premium-template";
 import Image from "next/image";
 
 type PackageItem = {
@@ -121,51 +122,51 @@ const requiredFields: {
   field: keyof ProfileData;
   label: string;
 }[] = [
-    {
-      field: "studioName",
-      label: "Studio Name",
-    },
-    {
-      field: "shortTagline",
-      label: "Short Tagline",
-    },
-    {
-      field: "description",
-      label: "Studio Description",
-    },
-    {
-      field: "logoUrl",
-      label: "Studio Logo",
-    },
-    {
-      field: "coverPhotoUrl",
-      label: "Studio Cover Photo",
-    },
-    {
-      field: "ownerName",
-      label: "Owner Name",
-    },
-    {
-      field: "ownerPhone",
-      label: "Owner Phone Number",
-    },
-    {
-      field: "phoneNumber",
-      label: "Phone Number",
-    },
-    {
-      field: "email",
-      label: "Email ID",
-    },
-    {
-      field: "address",
-      label: "Address",
-    },
-    {
-      field: "location",
-      label: "Location",
-    },
-  ];
+  {
+    field: "studioName",
+    label: "Studio Name",
+  },
+  {
+    field: "shortTagline",
+    label: "Short Tagline",
+  },
+  {
+    field: "description",
+    label: "Studio Description",
+  },
+  {
+    field: "logoUrl",
+    label: "Studio Logo",
+  },
+  {
+    field: "coverPhotoUrl",
+    label: "Studio Cover Photo",
+  },
+  {
+    field: "ownerName",
+    label: "Owner Name",
+  },
+  {
+    field: "ownerPhone",
+    label: "Owner Phone Number",
+  },
+  {
+    field: "phoneNumber",
+    label: "Phone Number",
+  },
+  {
+    field: "email",
+    label: "Email ID",
+  },
+  {
+    field: "address",
+    label: "Address",
+  },
+  {
+    field: "location",
+    label: "Location",
+  },
+];
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -184,190 +185,190 @@ export default function ProfilePage() {
   const [profile, setProfile] =
     useState<ProfileData>(emptyProfile);
 
-  const [selectedTemplate, setSelectedTemplate] =
+    const [selectedTemplate, setSelectedTemplate] =
     useState("template-1");
 
-  const [savingTemplate, setSavingTemplate] = useState(false);
+    const [savingTemplate, setSavingTemplate] = useState(false);
 
-  const [showPremiumPreview, setShowPremiumPreview] = useState(false);
+    const [showPremiumPreview, setShowPremiumPreview] = useState(false);
 
-  // Local UI state only: the Premium option is never saved to the
-  // database and never sent to any API.
-  const [premiumSelected, setPremiumSelected] = useState(false);
+    // Local UI state only: the Premium option is never saved to the
+    // database and never sent to any API.
+    const [premiumSelected, setPremiumSelected] = useState(false);
 
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
 
-  const premiumModalRef = useRef<HTMLDivElement>(null);
-  const [copiedProfileUrl, setCopiedProfileUrl] = useState(false);
+    const premiumModalRef = useRef<HTMLDivElement>(null);
+    const [copiedProfileUrl, setCopiedProfileUrl] = useState(false);
 
-  const [publishing, setPublishing] = useState(false);
+    const [publishing, setPublishing] = useState(false);
 
-  const [isPublished, setIsPublished] = useState(false);
-  const [publicSlug, setPublicSlug] = useState("");
+    const [isPublished, setIsPublished] = useState(false);
+    const [publicSlug, setPublicSlug] = useState("");
 
-  const [fieldErrors, setFieldErrors] =
-    useState<FieldErrors>({});
+    const [fieldErrors, setFieldErrors] =
+      useState<FieldErrors>({});
 
-  async function handleTemplateSelect(templateKey: string) {
-    if (savingTemplate || templateKey === selectedTemplate) return;
+    async function handleTemplateSelect(templateKey: string) {
+  if (savingTemplate || templateKey === selectedTemplate) return;
 
-    setSelectedTemplate(templateKey);
-    setSavingTemplate(true);
-    setError("");
-    setMessage("");
+setSelectedTemplate(templateKey);
+setSavingTemplate(true);
+setError("");
+setMessage("");
 
-    try {
-      const response = await fetch("/api/profile/template", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ templateKey }),
-      });
+  try {
+    const response = await fetch("/api/profile/template", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ templateKey }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || "Failed to update template."
-        );
-      }
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || "Failed to update template."
+      );
+    }
 
-      setSelectedTemplate(data.profile.templateKey);
-      setMessage("Website template updated successfully.");
-    } catch (err) {
-      console.error("Template selection error:", err);
+    setSelectedTemplate(data.profile.templateKey);
+    setMessage("Website template updated successfully.");
+  } catch (err) {
+    console.error("Template selection error:", err);
 
       // Restore the previously saved template if the API request fails.
       setSelectedTemplate(selectedTemplate);
 
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update template."
-      );
-    } finally {
-      setSavingTemplate(false);
-    }
-  }
-
-  // Choosing any free template leaves Premium mode, then runs the
-  // existing free-template selection exactly as before.
-  function handleFreeTemplateClick(templateKey: string) {
-    if (premiumSelected) {
-      setPremiumSelected(false);
-    }
-
-    void handleTemplateSelect(templateKey);
-  }
-
-  function handlePremiumSelect() {
-    setPremiumSelected(true);
-
-    window.open(
-      PREMIUM_PREVIEW_URL,
-      "_blank",
-      "noopener,noreferrer"
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to update template."
     );
+  } finally {
+    setSavingTemplate(false);
+  }
+}
+
+    // Choosing any free template leaves Premium mode, then runs the
+    // existing free-template selection exactly as before.
+    function handleFreeTemplateClick(templateKey: string) {
+  if (premiumSelected) {
+    setPremiumSelected(false);
   }
 
-  const handlePublishToggle = async () => {
-    // Premium is a separate purchase: never publish the Premium
-    // template. Unpublishing is still allowed and uses the API below.
-    if (!isPublished && premiumSelected) {
-      setMessage("");
-      setError("");
-      setShowPremiumModal(true);
+  void handleTemplateSelect(templateKey);
+}
+
+    function handlePremiumSelect() {
+  setPremiumSelected(true);
+
+  window.open(
+    PREMIUM_PREVIEW_URL,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+    
+const handlePublishToggle = async () => {
+  // Premium is a separate purchase: never publish the Premium
+  // template. Unpublishing is still allowed and uses the API below.
+  if (!isPublished && premiumSelected) {
+    setMessage("");
+    setError("");
+    setShowPremiumModal(true);
+    return;
+  }
+
+  // Validate only when publishing, not when unpublishing.
+  if (!isPublished) {
+    setMessage("");
+    setError("");
+
+    if (
+      uploadingLogo ||
+      uploadingCover ||
+      uploadingPortfolio
+    ) {
+      setError(
+        "Please wait until all uploads are completed before publishing your website."
+      );
       return;
     }
 
-    // Validate only when publishing, not when unpublishing.
-    if (!isPublished) {
-      setMessage("");
-      setError("");
-
-      if (
-        uploadingLogo ||
-        uploadingCover ||
-        uploadingPortfolio
-      ) {
-        setError(
-          "Please wait until all uploads are completed before publishing your website."
-        );
-        return;
-      }
-
-      if (!validateRequiredFields()) {
-        return;
-      }
-    }
-
-    try {
-      setPublishing(true);
-      setMessage("");
-      setError("");
-
-      const response = await fetch("/api/profile/publish", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          isPublished: !isPublished,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || "Failed to update publishing status."
-        );
-      }
-
-      setIsPublished(data.profile.isPublished);
-      setPublicSlug(data.profile.publicSlug ?? "");
-
-      if (
-        data.profile.isPublished &&
-        data.profile.publicSlug
-      ) {
-        window.location.assign(
-          `/studio/${data.profile.publicSlug}`
-        );
-        return;
-      }
-
-      setMessage(
-        data.profile.isPublished
-          ? "Your studio website is now published."
-          : "Your studio website has been unpublished."
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update publishing status."
-      );
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  async function handleCopyProfileUrl() {
-    if (!publicSlug) return;
-
-    const profileUrl = `${window.location.origin}/studio/${publicSlug}`;
-
-    try {
-      await navigator.clipboard.writeText(profileUrl);
-      setCopiedProfileUrl(true);
-    } catch (error) {
-      console.error("Failed to copy profile URL:", error);
-      setCopiedProfileUrl(false);
+    if (!validateRequiredFields()) {
+      return;
     }
   }
+
+  try {
+    setPublishing(true);
+    setMessage("");
+    setError("");
+
+    const response = await fetch("/api/profile/publish", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        isPublished: !isPublished,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error || "Failed to update publishing status."
+      );
+    }
+
+    setIsPublished(data.profile.isPublished);
+    setPublicSlug(data.profile.publicSlug ?? "");
+
+    if (
+  data.profile.isPublished &&
+  data.profile.publicSlug
+) {
+  window.location.assign(
+    `/studio/${data.profile.publicSlug}`
+  );
+  return;
+}
+
+    setMessage(
+      data.profile.isPublished
+        ? "Your studio website is now published."
+        : "Your studio website has been unpublished."
+    );
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to update publishing status."
+    );
+  } finally {
+    setPublishing(false);
+  }
+};
+
+async function handleCopyProfileUrl() {
+  if (!publicSlug) return;
+
+  const profileUrl = `${window.location.origin}/studio/${publicSlug}`;
+
+  try {
+    await navigator.clipboard.writeText(profileUrl);
+    setCopiedProfileUrl(true);
+  } catch (error) {
+    console.error("Failed to copy profile URL:", error);
+    setCopiedProfileUrl(false);
+  }
+}
 
   const [packages, setPackages] = useState<PackageItem[]>(
     []
@@ -378,10 +379,10 @@ export default function ProfilePage() {
   >([]);
 
   const [selectedPortfolioPhotoKeys, setSelectedPortfolioPhotoKeys] =
-    useState<Set<string>>(() => new Set());
+  useState<Set<string>>(() => new Set());
 
   const [showDeleteConfirmation, setShowDeleteConfirmation] =
-    useState(false);
+  useState(false);
 
   const [previewPhoto, setPreviewPhoto] =
     useState<PortfolioPhoto | null>(null);
@@ -398,11 +399,11 @@ export default function ProfilePage() {
   const [uploadingPortfolio, setUploadingPortfolio] =
     useState(false);
 
-  const [portfolioUploadProgress, setPortfolioUploadProgress] =
-    useState(0);
+    const [portfolioUploadProgress, setPortfolioUploadProgress] =
+  useState(0);
 
-  const [portfolioUploadTotal, setPortfolioUploadTotal] =
-    useState(0);
+const [portfolioUploadTotal, setPortfolioUploadTotal] =
+  useState(0);
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -480,20 +481,20 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (!message && !error) {
-      return;
-    }
+  if (!message && !error) {
+    return;
+  }
 
-    const timer = window.setTimeout(() => {
-      setMessage("");
-      setError("");
-      setShowSuccessToast(false);
-    }, 4000);
+  const timer = window.setTimeout(() => {
+    setMessage("");
+    setError("");
+    setShowSuccessToast(false);
+  }, 4000);
 
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [message, error]);
+  return () => {
+    window.clearTimeout(timer);
+  };
+}, [message, error]);
 
   // Premium modal: focus the dialog, close on Escape, keep Tab inside
   // the dialog, lock page scroll, and restore focus on close.
@@ -584,13 +585,13 @@ export default function ProfilePage() {
       const savedProfile = data.profile;
 
       setSelectedTemplate(
-        savedProfile.templateKey ?? "template-1"
-      );
+  savedProfile.templateKey ?? "template-1"
+);
 
-      setIsPublished(savedProfile.isPublished ?? false);
-      setPublicSlug(savedProfile.publicSlug ?? "");
+    setIsPublished(savedProfile.isPublished ?? false);
+setPublicSlug(savedProfile.publicSlug ?? "");
 
-      setProfile({
+        setProfile({
         studioName: savedProfile.studioName ?? "",
         logoUrl: savedProfile.logoUrl ?? "",
         logoStorageKey: savedProfile.logoStorageKey ?? "",
@@ -667,42 +668,42 @@ export default function ProfilePage() {
     []
   );
 
+ 
+async function uploadMedia(
+  file: File,
+  type: "logo" | "cover" | "portfolio",
+  currentCount?: number
+) {
+  const formData = new FormData();
 
-  async function uploadMedia(
-    file: File,
-    type: "logo" | "cover" | "portfolio",
-    currentCount?: number
-  ) {
-    const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", type);
 
-    formData.append("file", file);
-    formData.append("type", type);
-
-    if (type === "portfolio") {
-      formData.append(
-        "currentCount",
-        String(currentCount ?? 0)
-      );
-    }
-
-    const response = await fetch("/api/profile/media", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.message || data.error || "Image upload failed"
-      );
-    }
-
-    return {
-      url: data.url as string,
-      publicId: data.publicId as string,
-    };
+  if (type === "portfolio") {
+    formData.append(
+      "currentCount",
+      String(currentCount ?? 0)
+    );
   }
+
+  const response = await fetch("/api/profile/media", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.message || data.error || "Image upload failed"
+    );
+  }
+
+  return {
+    url: data.url as string,
+    publicId: data.publicId as string,
+  };
+}
 
 
   async function handleLogoChange(
@@ -774,132 +775,211 @@ export default function ProfilePage() {
     }
   }
 
+ 
+async function handlePortfolioChange(
+  event: React.ChangeEvent<HTMLInputElement>
+) {
+  const files = Array.from(event.target.files ?? []);
 
-  async function handlePortfolioChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const files = Array.from(event.target.files ?? []);
+  event.target.value = "";
 
-    event.target.value = "";
+  if (files.length === 0) {
+    return;
+  }
 
-    if (files.length === 0) {
-      return;
-    }
+  const availableSlots = Math.max(
+    0,
+    25 - portfolioPhotos.length
+  );
 
-    const availableSlots = Math.max(
-      0,
-      25 - portfolioPhotos.length
-    );
+  if (availableSlots === 0) {
+    setError("Portfolio limit reached. Maximum 25 photos are allowed.");
+    return;
+  }
 
-    if (availableSlots === 0) {
-      setError("Portfolio limit reached. Maximum 25 photos are allowed.");
-      return;
-    }
+  const filesToUpload = files.slice(0, availableSlots);
+  const skippedCount = files.length - filesToUpload.length;
 
-    const filesToUpload = files.slice(0, availableSlots);
-    const skippedCount = files.length - filesToUpload.length;
+  try {
+    setUploadingPortfolio(true);
+    setError("");
+    setMessage("");
 
-    try {
-      setUploadingPortfolio(true);
-      setError("");
-      setMessage("");
+    setPortfolioUploadProgress(0);
+    setPortfolioUploadTotal(filesToUpload.length);
 
-      setPortfolioUploadProgress(0);
-      setPortfolioUploadTotal(filesToUpload.length);
+    const uploadedPhotos: PortfolioPhoto[] = [];
 
-      const uploadedPhotos: PortfolioPhoto[] = [];
+    for (let index = 0; index < filesToUpload.length; index++) {
+      const file = filesToUpload[index];
 
-      for (let index = 0; index < filesToUpload.length; index++) {
-        const file = filesToUpload[index];
+      const currentCount =
+        portfolioPhotos.length + uploadedPhotos.length;
 
-        const currentCount =
-          portfolioPhotos.length + uploadedPhotos.length;
-
-        const result = await uploadMedia(
-          file,
-          "portfolio",
-          currentCount
-        );
-
-        const uploadedPhoto: PortfolioPhoto = {
-          file,
-          preview: result.url,
-          imageUrl: result.url,
-          publicId: result.publicId,
-        };
-
-        uploadedPhotos.push(uploadedPhoto);
-
-        setPortfolioPhotos((current) => [
-          ...current,
-          uploadedPhoto,
-        ]);
-
-        setPortfolioUploadProgress(index + 1);
-      }
-
-      if (skippedCount > 0) {
-        setMessage(
-          `${uploadedPhotos.length} photo uploaded. ${skippedCount} photo skipped because the maximum limit is 25.`
-        );
-      } else {
-        setMessage(
-          `${uploadedPhotos.length} ${uploadedPhotos.length === 1 ? "photo" : "photos"
-          } uploaded successfully.`
-        );
-      }
-    } catch (uploadError) {
-      console.error("Portfolio upload error:", uploadError);
-
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Portfolio upload failed."
+      const result = await uploadMedia(
+        file,
+        "portfolio",
+        currentCount
       );
-    } finally {
-      setUploadingPortfolio(false);
-      setPortfolioUploadProgress(0);
-      setPortfolioUploadTotal(0);
+
+      const uploadedPhoto: PortfolioPhoto = {
+        file,
+        preview: result.url,
+        imageUrl: result.url,
+        publicId: result.publicId,
+      };
+
+      uploadedPhotos.push(uploadedPhoto);
+
+      setPortfolioPhotos((current) => [
+        ...current,
+        uploadedPhoto,
+      ]);
+
+      setPortfolioUploadProgress(index + 1);
     }
-  }
 
-  function togglePortfolioPhotoSelection(photo: PortfolioPhoto) {
-    const key = getPortfolioPhotoSelectionKey(photo);
+    if (skippedCount > 0) {
+      setMessage(
+        `${uploadedPhotos.length} photo uploaded. ${skippedCount} photo skipped because the maximum limit is 25.`
+      );
+    } else {
+      setMessage(
+        `${uploadedPhotos.length} ${
+          uploadedPhotos.length === 1 ? "photo" : "photos"
+        } uploaded successfully.`
+      );
+    }
+  } catch (uploadError) {
+    console.error("Portfolio upload error:", uploadError);
 
-    setSelectedPortfolioPhotoKeys((current) => {
-      const next = new Set(current);
-
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-
-      return next;
-    });
-  }
-
-  function selectAllPortfolioPhotos() {
-    setSelectedPortfolioPhotoKeys(
-      new Set(portfolioPhotos.map(getPortfolioPhotoSelectionKey))
+    setError(
+      uploadError instanceof Error
+        ? uploadError.message
+        : "Portfolio upload failed."
     );
+  } finally {
+    setUploadingPortfolio(false);
+    setPortfolioUploadProgress(0);
+    setPortfolioUploadTotal(0);
   }
+}
 
-  function clearPortfolioPhotoSelection() {
-    setSelectedPortfolioPhotoKeys(new Set());
-  }
+function togglePortfolioPhotoSelection(photo: PortfolioPhoto) {
+  const key = getPortfolioPhotoSelectionKey(photo);
+
+  setSelectedPortfolioPhotoKeys((current) => {
+    const next = new Set(current);
+
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+
+    return next;
+  });
+}
+
+function selectAllPortfolioPhotos() {
+  setSelectedPortfolioPhotoKeys(
+    new Set(portfolioPhotos.map(getPortfolioPhotoSelectionKey))
+  );
+}
+
+function clearPortfolioPhotoSelection() {
+  setSelectedPortfolioPhotoKeys(new Set());
+}
 
   async function removePortfolioPhoto(
-    photo: PortfolioPhoto
-  ) {
-    try {
-      setError("");
-      setMessage("");
+  photo: PortfolioPhoto
+) {
+  try {
+    setError("");
+    setMessage("");
 
-      if (photo.publicId) {
-        const response = await fetch(
-          "/api/profile/media",
-          {
+    if (photo.publicId) {
+      const response = await fetch(
+        "/api/profile/media",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            publicId: photo.publicId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+
+        throw new Error(
+          data.error ||
+            "Failed to remove portfolio photo"
+        );
+      }
+    }
+
+    if (photo.preview.startsWith("blob:")) {
+      URL.revokeObjectURL(photo.preview);
+    }
+
+    setPortfolioPhotos((current) =>
+      current.filter((item) => {
+        if (photo.id) {
+          return item.id !== photo.id;
+        }
+
+        if (photo.publicId) {
+          return item.publicId !== photo.publicId;
+        }
+
+        return item.preview !== photo.preview;
+      })
+    );
+
+    if (
+      previewPhoto?.id === photo.id ||
+      previewPhoto?.preview === photo.preview
+    ) {
+      setPreviewPhoto(null);
+    }
+  } catch (removeError) {
+    console.error(
+      "Portfolio remove error:",
+      removeError
+    );
+
+    setError(
+      removeError instanceof Error
+        ? removeError.message
+        : "Failed to remove portfolio photo."
+    );
+  }
+}
+
+
+async function removeSelectedPortfolioPhotos() {
+  const selectedPhotos = portfolioPhotos.filter((photo) =>
+    selectedPortfolioPhotoKeys.has(
+      getPortfolioPhotoSelectionKey(photo)
+    )
+  );
+
+  if (selectedPhotos.length === 0) return;
+
+  setError("");
+  setMessage("");
+
+  const results = await Promise.all(
+    selectedPhotos.map(async (photo) => {
+      const key = getPortfolioPhotoSelectionKey(photo);
+
+      try {
+        if (photo.publicId) {
+          const response = await fetch("/api/profile/media", {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
@@ -907,166 +987,88 @@ export default function ProfilePage() {
             body: JSON.stringify({
               publicId: photo.publicId,
             }),
+          });
+
+          if (!response.ok) {
+            const data = await response.json().catch(() => null);
+
+            throw new Error(
+              data?.error || "Failed to remove portfolio photo"
+            );
           }
-        );
-
-        if (!response.ok) {
-          const data = await response.json();
-
-          throw new Error(
-            data.error ||
-            "Failed to remove portfolio photo"
-          );
         }
+
+        return { photo, key, success: true as const };
+      } catch (error) {
+        console.error("Bulk portfolio deletion error:", error);
+
+        return {
+          photo,
+          key,
+          success: false as const,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to remove portfolio photo",
+        };
       }
+    })
+  );
 
-      if (photo.preview.startsWith("blob:")) {
-        URL.revokeObjectURL(photo.preview);
-      }
+  const successfulResults = results.filter(
+    (result) => result.success
+  );
 
-      setPortfolioPhotos((current) =>
-        current.filter((item) => {
-          if (photo.id) {
-            return item.id !== photo.id;
-          }
+  const failedResults = results.filter(
+    (result) => !result.success
+  );
 
-          if (photo.publicId) {
-            return item.publicId !== photo.publicId;
-          }
+  const successfulKeys = new Set(
+    successfulResults.map((result) => result.key)
+  );
 
-          return item.preview !== photo.preview;
-        })
-      );
-
-      if (
-        previewPhoto?.id === photo.id ||
-        previewPhoto?.preview === photo.preview
-      ) {
-        setPreviewPhoto(null);
-      }
-    } catch (removeError) {
-      console.error(
-        "Portfolio remove error:",
-        removeError
-      );
-
-      setError(
-        removeError instanceof Error
-          ? removeError.message
-          : "Failed to remove portfolio photo."
-      );
+  successfulResults.forEach(({ photo }) => {
+    if (photo.preview.startsWith("blob:")) {
+      URL.revokeObjectURL(photo.preview);
     }
+  });
+
+  setPortfolioPhotos((current) =>
+    current.filter(
+      (photo) =>
+        !successfulKeys.has(
+          getPortfolioPhotoSelectionKey(photo)
+        )
+    )
+  );
+
+  setSelectedPortfolioPhotoKeys((current) => {
+    const next = new Set(current);
+
+    successfulKeys.forEach((key) => next.delete(key));
+
+    return next;
+  });
+
+  if (
+    previewPhoto &&
+    successfulKeys.has(
+      getPortfolioPhotoSelectionKey(previewPhoto)
+    )
+  ) {
+    setPreviewPhoto(null);
   }
 
-
-  async function removeSelectedPortfolioPhotos() {
-    const selectedPhotos = portfolioPhotos.filter((photo) =>
-      selectedPortfolioPhotoKeys.has(
-        getPortfolioPhotoSelectionKey(photo)
-      )
+  if (failedResults.length > 0) {
+    setError(
+      `${successfulResults.length} photo(s) deleted successfully. ${failedResults.length} photo(s) could not be deleted. They remain selected so you can retry. ${failedResults[0].error}`
     );
-
-    if (selectedPhotos.length === 0) return;
-
-    setError("");
-    setMessage("");
-
-    const results = await Promise.all(
-      selectedPhotos.map(async (photo) => {
-        const key = getPortfolioPhotoSelectionKey(photo);
-
-        try {
-          if (photo.publicId) {
-            const response = await fetch("/api/profile/media", {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                publicId: photo.publicId,
-              }),
-            });
-
-            if (!response.ok) {
-              const data = await response.json().catch(() => null);
-
-              throw new Error(
-                data?.error || "Failed to remove portfolio photo"
-              );
-            }
-          }
-
-          return { photo, key, success: true as const };
-        } catch (error) {
-          console.error("Bulk portfolio deletion error:", error);
-
-          return {
-            photo,
-            key,
-            success: false as const,
-            error:
-              error instanceof Error
-                ? error.message
-                : "Failed to remove portfolio photo",
-          };
-        }
-      })
+  } else {
+    setMessage(
+      `${successfulResults.length} photo(s) deleted successfully.`
     );
-
-    const successfulResults = results.filter(
-      (result) => result.success
-    );
-
-    const failedResults = results.filter(
-      (result) => !result.success
-    );
-
-    const successfulKeys = new Set(
-      successfulResults.map((result) => result.key)
-    );
-
-    successfulResults.forEach(({ photo }) => {
-      if (photo.preview.startsWith("blob:")) {
-        URL.revokeObjectURL(photo.preview);
-      }
-    });
-
-    setPortfolioPhotos((current) =>
-      current.filter(
-        (photo) =>
-          !successfulKeys.has(
-            getPortfolioPhotoSelectionKey(photo)
-          )
-      )
-    );
-
-    setSelectedPortfolioPhotoKeys((current) => {
-      const next = new Set(current);
-
-      successfulKeys.forEach((key) => next.delete(key));
-
-      return next;
-    });
-
-    if (
-      previewPhoto &&
-      successfulKeys.has(
-        getPortfolioPhotoSelectionKey(previewPhoto)
-      )
-    ) {
-      setPreviewPhoto(null);
-    }
-
-    if (failedResults.length > 0) {
-      setError(
-        `${successfulResults.length} photo(s) deleted successfully. ${failedResults.length} photo(s) could not be deleted. They remain selected so you can retry. ${failedResults[0].error}`
-      );
-    } else {
-      setMessage(
-        `${successfulResults.length} photo(s) deleted successfully.`
-      );
-    }
   }
+}
 
 
   async function clearPortfolio() {
@@ -1104,7 +1106,7 @@ export default function ProfilePage() {
     }
   }
 
-  function scrollToElement(
+    function scrollToElement(
     element:
       | HTMLElement
       | null
@@ -1209,8 +1211,8 @@ export default function ProfilePage() {
   }
 
   async function saveProfile(
-    photosToSave: PortfolioPhoto[] = portfolioPhotos
-  ) {
+  photosToSave: PortfolioPhoto[] = portfolioPhotos
+) {
     if (saving) {
       return false;
     }
@@ -1250,12 +1252,12 @@ export default function ProfilePage() {
             description: item.description,
           })),
           portfolioPhotos: photosToSave.map(
-            (photo) => ({
-              id: photo.id,
-              imageUrl: photo.imageUrl,
-              publicId: photo.publicId,
-            })
-          ),
+  (photo) => ({
+    id: photo.id,
+    imageUrl: photo.imageUrl,
+    publicId: photo.publicId,
+  })
+),
         }),
       });
 
@@ -1335,13 +1337,13 @@ export default function ProfilePage() {
       showSuccessFeedback();
 
       requestAnimationFrame(() => {
-        topRef.current?.scrollIntoView({
-          behavior: "auto",
-          block: "start",
-        });
-      });
+  topRef.current?.scrollIntoView({
+    behavior: "auto",
+    block: "start",
+  });
+});
 
-      return true;
+return true;
     } catch (saveError) {
       console.error(
         "Profile save error:",
@@ -1354,14 +1356,14 @@ export default function ProfilePage() {
           : "Failed to save profile."
       );
 
-
-      requestAnimationFrame(() => {
-        topRef.current?.scrollIntoView({
-          behavior: "auto",
-          block: "start",
-        });
-      });
-      return false;
+    
+     requestAnimationFrame(() => {
+  topRef.current?.scrollIntoView({
+    behavior: "auto",
+    block: "start",
+  });
+});
+ return false;
 
     } finally {
       setSaving(false);
@@ -1376,15 +1378,15 @@ export default function ProfilePage() {
   }
 
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-black">
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center lg:min-h-screen">
-          <PicknovateLoader />
-        </div>
-      </main>
-    );
-  }
+if (loading) {
+  return (
+    <main className="min-h-screen bg-black">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center lg:min-h-screen">
+        <PicknovateLoader />
+      </div>
+    </main>
+  );
+}
 
 
   const saveDisabled =
@@ -1462,402 +1464,404 @@ export default function ProfilePage() {
         )}
 
         {/* Website Template Selection (free templates) */}
-        <section className="rounded-2xl border border-white/10 bg-[#111] p-6">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-white">
-              Website Template
-            </h2>
-            <p className="mt-1 text-sm text-gray-400">
-              Choose the design for your public studio profile.
-            </p>
-          </div>
+<section className="rounded-2xl border border-white/10 bg-[#111] p-6">
+  <div className="mb-5">
+    <h2 className="text-lg font-semibold text-white">
+      Website Template
+    </h2>
+    <p className="mt-1 text-sm text-gray-400">
+      Choose the design for your public studio profile.
+    </p>
+  </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {profileTemplates.map((template) => {
-              const isSelected =
-                selectedTemplate === template.key && !premiumSelected;
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {profileTemplates.map((template) => {
+      const isSelected =
+        selectedTemplate === template.key && !premiumSelected;
 
-              return (
-                <button
-                  key={template.key}
-                  type="button"
-                  onClick={() => handleFreeTemplateClick(template.key)}
-                  disabled={savingTemplate}
-                  className={`rounded-xl border p-4 text-left transition ${isSelected
-                    ? "border-yellow-500 bg-yellow-500/10"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/30"
-                    }`}
-                >
-                  <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg bg-[#202020]">
+      return (
+        <button
+          key={template.key}
+          type="button"
+          onClick={() => handleFreeTemplateClick(template.key)}
+          disabled={savingTemplate}
+          className={`rounded-xl border p-4 text-left transition ${
+            isSelected
+              ? "border-yellow-500 bg-yellow-500/10"
+              : "border-white/10 bg-white/[0.02] hover:border-white/30"
+          }`}
+        >
+        <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg bg-[#202020]">
 
-                    <Image
-                      src={template.image}
-                      alt={`${template.name} website preview`}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
+          <Image
+            src={template.image}
+            alt={`${template.name} website preview`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
 
-                  </div>
-
-                  <p className="font-medium text-white">{template.name}</p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    {template.description}
-                  </p>
-
-                  {isSelected && (
-                    <p className="mt-3 text-xs font-semibold text-yellow-500">
-                      SELECTED
-                    </p>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-
-        <div className="mt-8 rounded-2xl border border-zinc-800 bg-black p-4 sm:p-6">
-          {isPublished && publicSlug ? (
-            <>
-              {/* Header */}
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-white">
-                  Publish Studio Website
-                </h2>
-
-                <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
-                  Published
-                </span>
-              </div>
-
-              {/* Published Status */}
-              <div className="mt-5 flex items-center gap-2">
-                <svg
-                  className="h-4 w-4 text-green-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                  <circle cx="12" cy="12" r="10" />
-                </svg>
-
-                <p className="text-base font-medium text-green-500">
-                  Your website is live!
-                </p>
-              </div>
-
-              {/* Public URL */}
-              <div className="mt-5">
-                <p className="text-sm text-zinc-300">
-                  Your public website link
-                </p>
-
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <a
-                    href={`/studio/${publicSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="break-all text-base font-semibold text-orange-500 hover:text-orange-400"
-                  >
-                    {`/studio/${publicSlug}`}
-                  </a>
-
-                  <span className="shrink-0 rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
-                    Live
-                  </span>
-                </div>
-              </div>
-
-              {/* Preview Website */}
-              <a
-                href={`/studio/${publicSlug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-500"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14 5h5v5m-9 4L19 5M19 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V6a1 1 0 011-1h5"
-                  />
-                </svg>
-
-                Preview Your Website
-              </a>
-
-              <p className="mt-4 text-center text-sm text-zinc-300">
-                Opens your published website in a new tab.
-              </p>
-
-              {/* Copy Profile URL */}
-              <button
-                type="button"
-                onClick={handleCopyProfileUrl}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:border-green-500/50 hover:bg-zinc-800"
-              >
-                {copiedProfileUrl ? (
-                  <>
-                    <svg
-                      className="h-5 w-5 text-green-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Profile URL Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <rect x="9" y="9" width="13" height="13" rx="2" />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                      />
-                    </svg>
-                    Copy Profile URL
-                  </>
-                )}
-              </button>
-
-              <p className="mt-2 text-center text-xs text-zinc-500">
-                Share your studio website link with your clients and customers.
-              </p>
-
-              {/* Divider */}
-              <div className="my-6 border-t border-zinc-800" />
-
-              {/* Unpublish */}
-              <button
-                type="button"
-                onClick={handlePublishToggle}
-                disabled={publishing}
-                className="w-full py-1 text-center text-base font-semibold text-red-500 transition hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {publishing ? "Please wait..." : "Unpublish Website"}
-              </button>
-            </>
-          ) : (
-            <>
-              {/* Unpublished State */}
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">
-                    Publish Studio Website
-                  </h2>
-
-                  <p className="mt-1 text-sm text-zinc-400">
-                    Make your studio website publicly accessible through a shareable link.
-                  </p>
-
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-zinc-500" />
-
-                    <span className="text-sm text-zinc-300">
-                      Website Not Published
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handlePublishToggle}
-                  disabled={publishing}
-                  className="rounded-xl bg-yellow-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {publishing ? "Please wait..." : "Publish Website"}
-                </button>
-              </div>
-            </>
-          )}
         </div>
+
+          <p className="font-medium text-white">{template.name}</p>
+          <p className="mt-1 text-xs text-gray-400">
+            {template.description}
+          </p>
+
+          {isSelected && (
+            <p className="mt-3 text-xs font-semibold text-yellow-500">
+              SELECTED
+            </p>
+          )}
+        </button>
+      );
+    })}
+  </div>
+</section>
+
+ 
+<div className="mt-8 rounded-2xl border border-zinc-800 bg-black p-4 sm:p-6">
+  {isPublished && publicSlug ? (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-white">
+          Publish Studio Website
+        </h2>
+
+        <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
+          Published
+        </span>
+      </div>
+
+      {/* Published Status */}
+      <div className="mt-5 flex items-center gap-2">
+        <svg
+          className="h-4 w-4 text-green-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+          <circle cx="12" cy="12" r="10" />
+        </svg>
+
+        <p className="text-base font-medium text-green-500">
+          Your website is live!
+        </p>
+      </div>
+
+      {/* Public URL */}
+      <div className="mt-5">
+        <p className="text-sm text-zinc-300">
+          Your public website link
+        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <a
+            href={`/studio/${publicSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all text-base font-semibold text-orange-500 hover:text-orange-400"
+          >
+            {`/studio/${publicSlug}`}
+          </a>
+
+          <span className="shrink-0 rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-500">
+            Live
+          </span>
+        </div>
+      </div>
+
+      {/* Preview Website */}
+      <a
+        href={`/studio/${publicSlug}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-500"
+      >
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M14 5h5v5m-9 4L19 5M19 13v5a1 1 0 01-1 1H6a1 1 0 01-1-1V6a1 1 0 011-1h5"
+          />
+        </svg>
+
+        Preview Your Website
+      </a>
+
+      <p className="mt-4 text-center text-sm text-zinc-300">
+        Opens your published website in a new tab.
+      </p>
+
+      {/* Copy Profile URL */}
+      <button
+        type="button"
+        onClick={handleCopyProfileUrl}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:border-green-500/50 hover:bg-zinc-800"
+      >
+        {copiedProfileUrl ? (
+          <>
+            <svg
+              className="h-5 w-5 text-green-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            Profile URL Copied!
+          </>
+        ) : (
+          <>
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+              />
+            </svg>
+            Copy Profile URL
+          </>
+        )}
+      </button>
+
+      <p className="mt-2 text-center text-xs text-zinc-500">
+        Share your studio website link with your clients and customers.
+      </p>
+
+      {/* Divider */}
+      <div className="my-6 border-t border-zinc-800" />
+
+      {/* Unpublish */}
+      <button
+        type="button"
+        onClick={handlePublishToggle}
+        disabled={publishing}
+        className="w-full py-1 text-center text-base font-semibold text-red-500 transition hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {publishing ? "Please wait..." : "Unpublish Website"}
+      </button>
+    </>
+  ) : (
+    <>
+      {/* Unpublished State */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">
+            Publish Studio Website
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-400">
+            Make your studio website publicly accessible through a shareable link.
+          </p>
+
+          <div className="mt-3 flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-zinc-500" />
+
+            <span className="text-sm text-zinc-300">
+              Website Not Published
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePublishToggle}
+          disabled={publishing}
+          className="rounded-xl bg-yellow-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {publishing ? "Please wait..." : "Publish Website"}
+        </button>
+      </div>
+    </>
+  )}
+</div>
 
 
         {/* Premium Website (separate paid service) */}
-        <section
-          aria-labelledby="premium-website-heading"
-          className="relative mt-6 overflow-hidden rounded-3xl border border-[#d4af37]/25 bg-gradient-to-br from-[#17130a] via-[#0a0a0a] to-[#1d1608] p-5 shadow-[0_24px_70px_rgba(212,175,55,0.07)] sm:p-8"
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-[#d4af37]/10 blur-3xl"
+<section
+  aria-labelledby="premium-website-heading"
+  className="relative mt-6 overflow-hidden rounded-3xl border border-[#d4af37]/25 bg-gradient-to-br from-[#17130a] via-[#0a0a0a] to-[#1d1608] p-5 shadow-[0_24px_70px_rgba(212,175,55,0.07)] sm:p-8"
+>
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-[#d4af37]/10 blur-3xl"
+  />
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-[#b8860b]/10 blur-3xl"
+  />
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent"
+  />
+
+  <div className="relative">
+    <div className="max-w-2xl">
+      <h2
+        id="premium-website-heading"
+        className="bg-gradient-to-r from-[#f5deb3] via-[#d4af37] to-[#f5deb3] bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl"
+      >
+        Premium Website
+      </h2>
+
+      <p className="mt-1.5 text-sm text-zinc-400">
+        A fully custom website for your studio, built by our team.
+        Open the preview to see the style.
+      </p>
+    </div>
+
+
+    <button
+      type="button"
+      onClick={handlePremiumSelect}
+      aria-pressed={premiumSelected}
+      className={`group mt-6 grid w-full gap-6 rounded-2xl border bg-black/40 p-4 text-left backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-black/55 hover:shadow-[0_18px_50px_rgba(212,175,55,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] sm:p-5 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-8 ${
+        premiumSelected
+          ? "border-[#d4af37] ring-1 ring-[#d4af37]/60"
+          : "border-[#d4af37]/30 hover:border-[#d4af37]/70"
+      }`}
+    >
+      {/* LEFT: Browser preview */}
+      <span
+        aria-hidden="true"
+        className="relative block min-w-0 overflow-hidden rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#241c0a] via-[#121212] to-[#0a0a0a] p-3 transition-transform duration-500 group-hover:scale-[1.01]"
+      >
+        {/* Browser header */}
+        <span className="mb-3 flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[#d4af37]/70" />
+          <span className="h-2 w-2 rounded-full bg-[#d4af37]/40" />
+          <span className="h-2 w-2 rounded-full bg-[#d4af37]/20" />
+          <span className="ml-3 h-2 flex-1 rounded-full bg-white/10" />
+        </span>
+
+        {/* Actual photography website image */}
+        <span className="relative block aspect-[1.04/1] w-full overflow-hidden rounded-lg bg-black">
+          <Image
+            src="/template-preview/premium-template.png"
+            alt="Picknovate Photography Website Preview"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-contain"
           />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-[#b8860b]/10 blur-3xl"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent"
-          />
+        </span>
+      </span>
 
-          <div className="relative">
-            <div className="max-w-2xl">
-              <h2
-                id="premium-website-heading"
-                className="bg-gradient-to-r from-[#f5deb3] via-[#d4af37] to-[#f5deb3] bg-clip-text text-xl font-semibold tracking-tight text-transparent sm:text-2xl"
-              >
-                Premium Website
-              </h2>
+      {/* RIGHT: Premium website information */}
+      <span className="block min-w-0">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-gradient-to-r from-[#b8860b] via-[#d4af37] to-[#f0d98a] px-3 py-1 text-[10px] font-bold tracking-wider text-black">
+            PREMIUM
+          </span>
 
-              <p className="mt-1.5 text-sm text-zinc-400">
-                A fully custom website for your studio, built by our team.
-                Open the preview to see the style.
-              </p>
-            </div>
+          {premiumSelected && (
+            <span className="rounded-full border border-[#d4af37]/60 px-3 py-1 text-[10px] font-semibold tracking-wider text-[#d4af37]">
+              SELECTED
+            </span>
+          )}
+        </span>
 
+        <span className="mt-4 block text-lg font-semibold text-white sm:text-xl">
+          Custom-built studio website
+        </span>
 
-            <button
-              type="button"
-              onClick={handlePremiumSelect}
-              aria-pressed={premiumSelected}
-              className={`group mt-6 grid w-full gap-6 rounded-2xl border bg-black/40 p-4 text-left backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-black/55 hover:shadow-[0_18px_50px_rgba(212,175,55,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] sm:p-5 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-8 ${premiumSelected
-                ? "border-[#d4af37] ring-1 ring-[#d4af37]/60"
-                : "border-[#d4af37]/30 hover:border-[#d4af37]/70"
-                }`}
+        <span className="mt-2 block text-sm leading-6 text-zinc-400">
+          A professionally developed website, separate from the free
+          templates above, created for your photography business.
+        </span>
+
+        <span className="mt-5 block space-y-2.5">
+          {premiumHighlights.map((item) => (
+            <span
+              key={item}
+              className="flex items-start gap-2.5 text-sm text-zinc-300"
             >
-              {/* LEFT: Browser preview */}
-              <span
-                aria-hidden="true"
-                className="relative block min-w-0 overflow-hidden rounded-xl border border-[#d4af37]/30 bg-gradient-to-br from-[#241c0a] via-[#121212] to-[#0a0a0a] p-3 transition-transform duration-500 group-hover:scale-[1.01]"
-              >
-                {/* Browser header */}
-                <span className="mb-3 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#d4af37]/70" />
-                  <span className="h-2 w-2 rounded-full bg-[#d4af37]/40" />
-                  <span className="h-2 w-2 rounded-full bg-[#d4af37]/20" />
-                  <span className="ml-3 h-2 flex-1 rounded-full bg-white/10" />
-                </span>
-
-                {/* Actual photography website image */}
-                <span className="relative block aspect-[1.04/1] w-full overflow-hidden rounded-lg bg-black">
-                  <Image
-                    src="/template-preview/premium-template.png"
-                    alt="Picknovate Photography Website Preview"
-                    fill
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-contain"
-                  />
-                </span>
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#d4af37]/15 text-[10px] text-[#d4af37]">
+                ✓
               </span>
+              <span>{item}</span>
+            </span>
+          ))}
+        </span>
 
-              {/* RIGHT: Premium website information */}
-              <span className="block min-w-0">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-gradient-to-r from-[#b8860b] via-[#d4af37] to-[#f0d98a] px-3 py-1 text-[10px] font-bold tracking-wider text-black">
-                    PREMIUM
-                  </span>
+        <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#d4af37] transition-colors group-hover:text-[#f0d98a]">
+          View preview
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-200 group-hover:translate-x-1"
+          >
+            →
+          </span>
+        </span>
+      </span>
+    </button>
 
-                  {premiumSelected && (
-                    <span className="rounded-full border border-[#d4af37]/60 px-3 py-1 text-[10px] font-semibold tracking-wider text-[#d4af37]">
-                      SELECTED
-                    </span>
-                  )}
-                </span>
-
-                <span className="mt-4 block text-lg font-semibold text-white sm:text-xl">
-                  Custom-built studio website
-                </span>
-
-                <span className="mt-2 block text-sm leading-6 text-zinc-400">
-                  A professionally developed website, separate from the free
-                  templates above, created for your photography business.
-                </span>
-
-                <span className="mt-5 block space-y-2.5">
-                  {premiumHighlights.map((item) => (
-                    <span
-                      key={item}
-                      className="flex items-start gap-2.5 text-sm text-zinc-300"
-                    >
-                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#d4af37]/15 text-[10px] text-[#d4af37]">
-                        ✓
-                      </span>
-                      <span>{item}</span>
-                    </span>
-                  ))}
-                </span>
-
-                <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#d4af37] transition-colors group-hover:text-[#f0d98a]">
-                  View preview
-                  <span
-                    aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:translate-x-1"
-                  >
-                    →
-                  </span>
-                </span>
-              </span>
-            </button>
-
-          </div>
-        </section>
+  </div>
+</section>
 
         {/* Website development enquiry */}
-        <section
-          aria-labelledby="website-enquiry-heading"
-          className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.18)] sm:p-8"
-        >
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <h2
-                id="website-enquiry-heading"
-                className="text-lg font-semibold text-white sm:text-xl"
-              >
-                Give Your Studio a Professional Online Presence
-              </h2>
+<section
+  aria-labelledby="website-enquiry-heading"
+  className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.18)] sm:p-8"
+>
+  <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="max-w-2xl">
+      <h2
+        id="website-enquiry-heading"
+        className="text-lg font-semibold text-white sm:text-xl"
+      >
+        Give Your Studio a Professional Online Presence
+      </h2>
 
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Looking to take your photography business online? We create
-                professionally designed websites tailored to your studio and
-                brand. Get in touch with our team to discuss your website
-                requirements.
-              </p>
+      <p className="mt-2 text-sm leading-6 text-zinc-400">
+        Looking to take your photography business online? We create
+        professionally designed websites tailored to your studio and
+        brand. Get in touch with our team to discuss your website
+        requirements.
+      </p>
 
-              <p className="mt-3 text-xs text-zinc-500">
-                Innovate Wedding Company · {WHATSAPP_NUMBER_DISPLAY}
-              </p>
-            </div>
+      <p className="mt-3 text-xs text-zinc-500">
+        Innovate Wedding Company · {WHATSAPP_NUMBER_DISPLAY}
+      </p>
+    </div>
 
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-6 py-3.5 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(37,211,102,0.15)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3ee27c] hover:shadow-[0_14px_36px_rgba(37,211,102,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:translate-y-0 active:scale-[0.98]"
-            >
-              <WhatsAppIcon className="h-5 w-5" />
-              <span>Discuss Your Website on WhatsApp</span>
-            </a>
-          </div>
-        </section>
+    <a
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex shrink-0 items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-6 py-3.5 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(37,211,102,0.15)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3ee27c] hover:shadow-[0_14px_36px_rgba(37,211,102,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:translate-y-0 active:scale-[0.98]"
+    >
+      <WhatsAppIcon className="h-5 w-5" />
+      <span>Discuss Your Website on WhatsApp</span>
+    </a>
+  </div>
+</section>
 
         <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.18)] sm:p-8">
           <div>
@@ -2369,7 +2373,7 @@ export default function ProfilePage() {
                   type="url"
                   value={
                     profile[
-                    item.id as keyof ProfileData
+                      item.id as keyof ProfileData
                     ]
                   }
                   onChange={(event) =>
@@ -2537,9 +2541,9 @@ export default function ProfilePage() {
                             current.map((item) =>
                               item.id === pkg.id
                                 ? {
-                                  ...item,
-                                  name: value,
-                                }
+                                    ...item,
+                                    name: value,
+                                  }
                                 : item
                             )
                           );
@@ -2550,35 +2554,35 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label
-                        htmlFor={`package-price-${pkg.id}`}
-                        className="mb-2.5 block text-sm font-medium text-zinc-300"
-                      >
-                        Package Price
-                      </label>
+  <label
+    htmlFor={`package-price-${pkg.id}`}
+    className="mb-2.5 block text-sm font-medium text-zinc-300"
+  >
+    Package Price
+  </label>
 
-                      <input
-                        id={`package-price-${pkg.id}`}
-                        type="text"
-                        value={pkg.price}
-                        onChange={(event) => {
-                          const value = event.target.value;
+  <input
+    id={`package-price-${pkg.id}`}
+    type="text"
+    value={pkg.price}
+    onChange={(event) => {
+      const value = event.target.value;
 
-                          setPackages((current) =>
-                            current.map((item) =>
-                              item.id === pkg.id
-                                ? {
-                                  ...item,
-                                  price: value,
-                                }
-                                : item
-                            )
-                          );
-                        }}
-                        placeholder="Enter package price (e.g. ₹25,000)"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700"
-                      />
-                    </div>
+      setPackages((current) =>
+        current.map((item) =>
+          item.id === pkg.id
+            ? {
+                ...item,
+                price: value,
+              }
+            : item
+        )
+      );
+    }}
+    placeholder="Enter package price (e.g. ₹25,000)"
+    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3.5 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700"
+  />
+</div>
 
                     <div>
                       <label
@@ -2600,10 +2604,10 @@ export default function ProfilePage() {
                             current.map((item) =>
                               item.id === pkg.id
                                 ? {
-                                  ...item,
-                                  description:
-                                    value,
-                                }
+                                    ...item,
+                                    description:
+                                      value,
+                                  }
                                 : item
                             )
                           );
@@ -2632,34 +2636,36 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            <div className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400">
-              {portfolioPhotos.length} / 25 photos uploaded
-            </div>
+           <div className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400">
+  {portfolioPhotos.length} / 25 photos uploaded
+</div>
           </div>
 
           <label
-            htmlFor="portfolioPhotos"
-            className={`group mt-6 flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center transition-colors duration-200 ${portfolioPhotos.length >= 25 || uploadingPortfolio
-              ? "cursor-not-allowed border-zinc-800 bg-zinc-950 opacity-50"
-              : "cursor-pointer border-zinc-700 bg-zinc-900/40 hover:border-zinc-500 hover:bg-zinc-900/70"
-              }`}
-          >
+  htmlFor="portfolioPhotos"
+  className={`group mt-6 flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center transition-colors duration-200 ${
+    portfolioPhotos.length >= 25 || uploadingPortfolio
+      ? "cursor-not-allowed border-zinc-800 bg-zinc-950 opacity-50"
+      : "cursor-pointer border-zinc-700 bg-zinc-900/40 hover:border-zinc-500 hover:bg-zinc-900/70"
+  }`}
+>
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 text-2xl text-zinc-500 transition-colors group-hover:border-zinc-500 group-hover:text-zinc-300">
               +
             </div>
 
-            <p
-              className={`mt-4 text-sm font-semibold ${portfolioPhotos.length >= 25
-                ? "text-red-400"
-                : "text-zinc-300"
-                }`}
-            >
-              {portfolioPhotos.length >= 25
-                ? "Portfolio Limit Reached"
-                : uploadingPortfolio
-                  ? "Uploading Photos..."
-                  : "Add Portfolio Photos"}
-            </p>
+           <p
+  className={`mt-4 text-sm font-semibold ${
+    portfolioPhotos.length >= 25
+      ? "text-red-400"
+      : "text-zinc-300"
+  }`}
+>
+  {portfolioPhotos.length >= 25
+    ? "Portfolio Limit Reached"
+    : uploadingPortfolio
+      ? "Uploading Photos..."
+      : "Add Portfolio Photos"}
+</p>
 
             <p className="mt-1 text-xs text-zinc-600">
               Select multiple photographs from your
@@ -2698,10 +2704,11 @@ export default function ProfilePage() {
                 <div
                   className="h-full rounded-full bg-emerald-400 transition-all duration-300"
                   style={{
-                    width: `${portfolioUploadTotal > 0
-                      ? (portfolioUploadProgress / portfolioUploadTotal) * 100
-                      : 0
-                      }%`,
+                    width: `${
+                      portfolioUploadTotal > 0
+                        ? (portfolioUploadProgress / portfolioUploadTotal) * 100
+                        : 0
+                    }%`,
                   }}
                 />
               </div>
@@ -2714,133 +2721,136 @@ export default function ProfilePage() {
 
           {portfolioPhotos.length > 0 && (
             <div className="mt-6">
+              
+<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+      Selected Photos
+    </p>
 
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
-                    Selected Photos
-                  </p>
+    {selectedPortfolioPhotoKeys.size > 0 && (
+      <p className="mt-1 text-xs text-zinc-400">
+        {selectedPortfolioPhotoKeys.size} photo(s) selected
+      </p>
+    )}
+  </div>
 
-                  {selectedPortfolioPhotoKeys.size > 0 && (
-                    <p className="mt-1 text-xs text-zinc-400">
-                      {selectedPortfolioPhotoKeys.size} photo(s) selected
-                    </p>
-                  )}
-                </div>
+  <div className="flex flex-wrap items-center gap-3">
+    <button
+      type="button"
+      onClick={
+        selectedPortfolioPhotoKeys.size === portfolioPhotos.length
+          ? clearPortfolioPhotoSelection
+          : selectAllPortfolioPhotos
+      }
+      className="text-xs font-medium text-zinc-400 transition-colors hover:text-white"
+    >
+      {selectedPortfolioPhotoKeys.size === portfolioPhotos.length
+        ? "Clear Selection"
+        : "Select All"}
+    </button>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={
-                      selectedPortfolioPhotoKeys.size === portfolioPhotos.length
-                        ? clearPortfolioPhotoSelection
-                        : selectAllPortfolioPhotos
-                    }
-                    className="text-xs font-medium text-zinc-400 transition-colors hover:text-white"
-                  >
-                    {selectedPortfolioPhotoKeys.size === portfolioPhotos.length
-                      ? "Clear Selection"
-                      : "Select All"}
-                  </button>
+    {selectedPortfolioPhotoKeys.size > 0 && (
+      <button
+        type="button"
+        onClick={() => setShowDeleteConfirmation(true)}
+        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:border-red-500/60 hover:bg-red-500/20"
+      >
+        Delete Selected ({selectedPortfolioPhotoKeys.size})
+      </button>
+    )}
 
-                  {selectedPortfolioPhotoKeys.size > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirmation(true)}
-                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:border-red-500/60 hover:bg-red-500/20"
-                    >
-                      Delete Selected ({selectedPortfolioPhotoKeys.size})
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={clearPortfolio}
-                    className="text-xs font-medium text-zinc-500 transition-colors hover:text-red-400"
-                  >
-                    Clear All
-                  </button>
-                </div>
-              </div>
+    <button
+      type="button"
+      onClick={clearPortfolio}
+      className="text-xs font-medium text-zinc-500 transition-colors hover:text-red-400"
+    >
+      Clear All
+    </button>
+  </div>
+</div>
 
 
+              
+<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+  {portfolioPhotos.map((photo, index) => {
+    const photoKey = getPortfolioPhotoSelectionKey(photo);
+    const isSelected = selectedPortfolioPhotoKeys.has(photoKey);
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {portfolioPhotos.map((photo, index) => {
-                  const photoKey = getPortfolioPhotoSelectionKey(photo);
-                  const isSelected = selectedPortfolioPhotoKeys.has(photoKey);
+    return (
+      <div
+        key={photo.id ?? photo.publicId ?? photo.preview}
+        className={`group relative aspect-square overflow-hidden rounded-lg border bg-zinc-900 transition-all duration-200 ${
+          isSelected
+            ? "border-yellow-400 ring-2 ring-yellow-400/50"
+            : "border-zinc-800"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setPreviewPhoto(photo)}
+          className="absolute inset-0 z-0"
+          aria-label={`Preview portfolio photo ${index + 1}`}
+        >
+          <img
+            src={photo.preview}
+            alt={`Portfolio photo ${index + 1}`}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </button>
 
-                  return (
-                    <div
-                      key={photo.id ?? photo.publicId ?? photo.preview}
-                      className={`group relative aspect-square overflow-hidden rounded-lg border bg-zinc-900 transition-all duration-200 ${isSelected
-                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
-                          : "border-zinc-800"
-                        }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setPreviewPhoto(photo)}
-                        className="absolute inset-0 z-0"
-                        aria-label={`Preview portfolio photo ${index + 1}`}
-                      >
-                        <img
-                          src={photo.preview}
-                          alt={`Portfolio photo ${index + 1}`}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </button>
+        <div
+          className={`pointer-events-none absolute inset-0 transition-colors ${
+            isSelected
+              ? "bg-yellow-400/10"
+              : "bg-black/0 group-hover:bg-black/30"
+          }`}
+        />
 
-                      <div
-                        className={`pointer-events-none absolute inset-0 transition-colors ${isSelected
-                            ? "bg-yellow-400/10"
-                            : "bg-black/0 group-hover:bg-black/30"
-                          }`}
-                      />
+        <div className="pointer-events-none absolute left-2 top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-md bg-black/60 px-1.5 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+          {index + 1}
+        </div>
 
-                      <div className="pointer-events-none absolute left-2 top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-md bg-black/60 px-1.5 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
-                        {index + 1}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => togglePortfolioPhotoSelection(photo)}
-                        aria-label={
-                          isSelected
-                            ? `Deselect portfolio photo ${index + 1}`
-                            : `Select portfolio photo ${index + 1}`
-                        }
-                        aria-pressed={isSelected}
-                        className={`absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-lg border shadow-lg backdrop-blur-md transition-all ${isSelected
-                            ? "border-yellow-400 bg-yellow-400 text-black"
-                            : "border-white/40 bg-black/65 text-white hover:border-white hover:bg-black/85 sm:opacity-0 sm:group-hover:opacity-100"
-                          }`}
-                      >
-                        {isSelected ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            className="h-5 w-5"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                          >
-                            <path
-                              d="m4 10 4 4 8-8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        ) : (
-                          <span className="h-3.5 w-3.5 rounded border-2 border-current" />
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+        <button
+          type="button"
+          onClick={() => togglePortfolioPhotoSelection(photo)}
+          aria-label={
+            isSelected
+              ? `Deselect portfolio photo ${index + 1}`
+              : `Select portfolio photo ${index + 1}`
+          }
+          aria-pressed={isSelected}
+          className={`absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-lg border shadow-lg backdrop-blur-md transition-all ${
+            isSelected
+              ? "border-yellow-400 bg-yellow-400 text-black"
+              : "border-white/40 bg-black/65 text-white hover:border-white hover:bg-black/85 sm:opacity-0 sm:group-hover:opacity-100"
+          }`}
+        >
+          {isSelected ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-5 w-5"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path
+                d="m4 10 4 4 8-8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <span className="h-3.5 w-3.5 rounded border-2 border-current" />
+          )}
+        </button>
+      </div>
+    );
+  })}
+</div>
 
             </div>
           )}
@@ -2908,9 +2918,9 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
+       
 
-
-      {saving && (
+        {saving && (
         <div
           className="fixed inset-0 z-[300] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm"
           role="status"
@@ -3060,75 +3070,75 @@ export default function ProfilePage() {
       )}
 
       {showDeleteConfirmation && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
-          role="presentation"
+  <div
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
+    role="presentation"
+  >
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-confirmation-title"
+      aria-describedby="delete-confirmation-description"
+      className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#141414] p-6 shadow-2xl"
+    >
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6 text-red-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
         >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="delete-confirmation-title"
-            aria-describedby="delete-confirmation-description"
-            className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#141414] p-6 shadow-2xl"
-          >
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 text-red-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"
-                />
-              </svg>
-            </div>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 9v3m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"
+          />
+        </svg>
+      </div>
 
-            <h2
-              id="delete-confirmation-title"
-              className="mt-5 text-center text-lg font-semibold text-white"
-            >
-              Delete Selected Photos?
-            </h2>
+      <h2
+        id="delete-confirmation-title"
+        className="mt-5 text-center text-lg font-semibold text-white"
+      >
+        Delete Selected Photos?
+      </h2>
 
-            <p
-              id="delete-confirmation-description"
-              className="mt-3 text-center text-sm leading-6 text-zinc-400"
-            >
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-white">
-                {selectedPortfolioPhotoKeys.size} selected photo(s)
-              </span>
-              ? This action cannot be undone.
-            </p>
+      <p
+        id="delete-confirmation-description"
+        className="mt-3 text-center text-sm leading-6 text-zinc-400"
+      >
+        Are you sure you want to delete{" "}
+        <span className="font-semibold text-white">
+          {selectedPortfolioPhotoKeys.size} selected photo(s)
+        </span>
+        ? This action cannot be undone.
+      </p>
 
-            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirmation(false)}
-                className="flex-1 rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
-              >
-                Cancel
-              </button>
+      <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirmation(false)}
+          className="flex-1 rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          Cancel
+        </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteConfirmation(false);
-                  void removeSelectedPortfolioPhotos();
-                }}
-                className="flex-1 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-600"
-              >
-                Confirm Deletion
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={() => {
+            setShowDeleteConfirmation(false);
+            void removeSelectedPortfolioPhotos();
+          }}
+          className="flex-1 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-600"
+        >
+          Confirm Deletion
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       <style jsx global>{`
         @keyframes success-toast-in {

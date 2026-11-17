@@ -64,7 +64,7 @@ export default async function StudioProfilePage({
           ...photo,
           imageUrl: photo.storageKey
             ? (await getR2SignedUrl(photo.storageKey)) ??
-            photo.imageUrl
+              photo.imageUrl
             : photo.imageUrl,
         }))
       ),

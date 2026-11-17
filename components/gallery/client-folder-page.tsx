@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 interface GalleryImage {
   id: string;
   imageUrl: string;
+  thumbnailUrl: string;
   fileName: string | null;
   isSelected: boolean;
   comment: string | null;
@@ -156,6 +157,13 @@ export default function ClientFolderPage({
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const limitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  /*
+   * Used only to determine when the original category action
+   * section has completely left the mobile viewport.
+   */
+  const categoryStatusRef =
+    useRef<HTMLDivElement | null>(null);
+
   const router = useRouter();
 
   const isCompleted =
@@ -163,7 +171,6 @@ export default function ClientFolderPage({
 
   const isDirty = () =>
     versionRef.current !== savedVersionRef.current;
-
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -191,29 +198,66 @@ export default function ClientFolderPage({
    * IMPORTANT:
    * The main category section is NOT sticky.
    * Only this small action bar becomes fixed
-   * after the user scrolls down.
+   * after the original category status section
+   * has completely left the viewport.
    */
   useEffect(() => {
-    const handleScroll = () => {
+    const categoryStatusElement =
+      categoryStatusRef.current;
+
+    if (!categoryStatusElement) {
+      return;
+    }
+
+    const observer =
+      new IntersectionObserver(
+        ([entry]) => {
+          if (window.innerWidth >= 768) {
+            setShowMobileActionBar(false);
+            return;
+          }
+
+          setShowMobileActionBar(
+            !entry.isIntersecting,
+          );
+        },
+        {
+          threshold: 0,
+        },
+      );
+
+    observer.observe(categoryStatusElement);
+
+    const handleResize = () => {
       if (window.innerWidth >= 768) {
         setShowMobileActionBar(false);
         return;
       }
 
-      setShowMobileActionBar(window.scrollY > 220);
+      const rect =
+        categoryStatusElement.getBoundingClientRect();
+
+      const isVisible =
+        rect.bottom > 0 &&
+        rect.top < window.innerHeight;
+
+      setShowMobileActionBar(!isVisible);
     };
 
-    handleScroll();
+    window.addEventListener(
+      "resize",
+      handleResize,
+    );
 
-    window.addEventListener("scroll", handleScroll, {
-      passive: true,
-    });
-
-    window.addEventListener("resize", handleScroll);
+    handleResize();
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      observer.disconnect();
+
+      window.removeEventListener(
+        "resize",
+        handleResize,
+      );
     };
   }, []);
 
@@ -360,7 +404,7 @@ export default function ClientFolderPage({
 
     if (
       maxSelections !== null &&
-      current.length >= maxSelections
+      totalSelected >= maxSelections
     ) {
       setShowLimitWarning(true);
 
@@ -771,12 +815,13 @@ export default function ClientFolderPage({
     : `/gallery/${shareId}`;
 
   const handleLogoClick = () => {
-
     setSavedScrollY(window.scrollY);
+
     sessionStorage.setItem(
       `gallery-scroll-${shareId}-${folderId}`,
       String(window.scrollY),
     );
+
     if (
       hasUnsavedChanges ||
       isDirty()
@@ -896,7 +941,8 @@ export default function ClientFolderPage({
       touches[1].clientY;
 
     return Math.sqrt(
-      dx * dx + dy * dy,
+      dx * dx +
+      dy * dy,
     );
   };
 
@@ -1124,8 +1170,8 @@ export default function ClientFolderPage({
   return (
     <div className="min-h-screen bg-black text-white">
       {/* =====================================================
-    HEADER
-    ===================================================== */}
+          HEADER
+          ===================================================== */}
 
       <div className="mx-auto max-w-7xl border-b border-zinc-800 bg-black px-4 py-6 sm:px-5 sm:py-8">
         <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
@@ -1232,26 +1278,23 @@ export default function ClientFolderPage({
 
       {/* =====================================================
           MAIN CATEGORY SECTION
-
-          IMPORTANT:
-          NO sticky here.
-
-          This restores the original desktop/laptop behavior.
-          The whole section scrolls away naturally.
           ===================================================== */}
 
       <div className="border-b border-zinc-800 bg-black">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {folderName}
-            </h1>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-5 sm:py-6">
+          <div className="flex flex-col gap-5">
+            {/* Category Heading */}
+            <div>
+              <h1 className="text-2xl font-bold">
+                {folderName}
+              </h1>
 
-            <p className="mt-1 text-sm text-zinc-400">
-              {isCompleted
-                ? "Your photo selection has been completed."
-                : "Select your favorite photos"}
-            </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                {isCompleted
+                  ? "Your photo selection has been completed."
+                  : "Select your favorite photos"}
+              </p>
+            </div>
 
             {/* Category Status */}
             <div
@@ -1283,14 +1326,14 @@ export default function ClientFolderPage({
                       }`}
                   >
                     {isCompleted
-                      ? "Client Selected Photos"
-                      : "Client Selecting Photos"}
+                      ? "Selection Complete"
+                      : "Selection in Progress"}
                   </h2>
 
                   <p className="mt-1 text-xs leading-5 text-zinc-400 sm:text-sm">
                     {isCompleted
                       ? "This category is locked. Your selections cannot be changed unless you choose to select photos again."
-                      : "You can select, remove, and comment on photos. Complete the category when you are finished."}
+                      : "You can select and comment on photos. Complete the category when you are finished."}
                   </p>
                 </div>
               </div>
@@ -1448,20 +1491,20 @@ export default function ClientFolderPage({
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
                     {adjustedSelectionSummary.map(
                       (category) => (
                         <div
                           key={
                             category.folderId
                           }
-                          className="rounded-full border border-zinc-700 bg-black px-3 py-1.5 text-xs text-zinc-300"
+                          className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-3.5 py-3"
                         >
-                          {
-                            category.folderName
-                          }
-                          :{" "}
-                          <span className="font-semibold text-white">
+                          <span className="min-w-0 truncate text-xs font-medium text-zinc-400">
+                            {category.folderName}
+                          </span>
+
+                          <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-zinc-900 px-2 text-xs font-semibold text-white">
                             {
                               category.selectedCount
                             }
@@ -1619,9 +1662,9 @@ export default function ClientFolderPage({
       </div>
 
       {/* =====================================================
-    MOBILE COMPACT ACTION BAR
-    ONLY THIS SMALL BAR IS FIXED.
-    ===================================================== */}
+          MOBILE COMPACT ACTION BAR
+          ONLY THIS SMALL BAR IS FIXED.
+          ===================================================== */}
 
       {showMobileActionBar && (
         <div className="fixed inset-x-0 top-0 z-[80] border-b border-zinc-800 bg-black px-3 py-3 shadow-2xl md:hidden">
@@ -1704,9 +1747,7 @@ export default function ClientFolderPage({
               >
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <Image
-                    src={
-                      image.imageUrl
-                    }
+                    src={image.thumbnailUrl}
                     alt="Wedding"
                     fill
                     unoptimized
@@ -2232,14 +2273,7 @@ export default function ClientFolderPage({
             </span>
 
             <span className="font-semibold text-white">
-              {
-                selectedImages.length
-              }
-
-              {maxSelections !==
-                null
-                ? ` / ${maxSelections}`
-                : ` / ${images.length}`}
+              {selectedImages.length} / {images.length}
             </span>
           </div>
 
@@ -2253,14 +2287,18 @@ export default function ClientFolderPage({
             </span>
 
             <span className="font-semibold text-white">
-              {images.length}
+              {totalSelected}
+              {maxSelections !== null
+                ? ` / ${maxSelections}`
+                : ""}
             </span>
           </div>
         </div>
       </div>
+
       {/* =====================================================
-    PICKNOVATE FOOTER
-    ===================================================== */}
+          PICKNOVATE FOOTER
+          ===================================================== */}
 
       <div className="border-t border-white/10 bg-black px-5 py-10 sm:py-12">
         <div className="flex flex-col items-center justify-center">
