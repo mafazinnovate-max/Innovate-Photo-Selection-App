@@ -1,7 +1,6 @@
 import StudioBranding from "@/components/gallery/studio-branding";
 import { prisma } from "@/lib/prisma";
-import Image from "next/image";
-import { CheckCircle2, Clock3, Heart } from "lucide-react";
+import { CheckCircle2, Clock3, Heart, } from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import FolderLink from "@/components/gallery/folder-link";
@@ -480,11 +479,12 @@ export default async function GalleryPage({
           </p>
 
           {superAdmin?.logoUrl && (
-            <Image
+            <img
               src={superAdmin.logoUrl}
               alt="Picknovate"
               width={140}
               height={140}
+              loading="eager"
               className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
             />
           )}

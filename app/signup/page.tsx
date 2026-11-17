@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import PeekCat from "@/components/signuppage/PeekCat";
@@ -167,7 +166,7 @@ export default function SignupPage() {
             if (!response.ok || !data.success) {
                 setError(
                     data.message ||
-                        "Unable to create your account."
+                    "Unable to create your account."
                 );
                 return;
             }
@@ -199,12 +198,12 @@ export default function SignupPage() {
                         className="flex items-center"
                     >
                         {logoUrl && (
-                            <Image
+                            <img
                                 src={logoUrl}
                                 alt="Picknnovate"
                                 width={96}
                                 height={96}
-                                priority
+                                loading="eager"
                                 className="h-16 w-16 rounded-2xl object-contain sm:h-20 sm:w-20"
                             />
                         )}
