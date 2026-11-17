@@ -211,7 +211,7 @@ export default async function GalleryPage({
   for (const image of selectedImages) {
     selectedCounts.set(
       image.folderId,
-      (selectedCounts.get(image.folderId) ?? 0) + 1,
+      (selectedCounts.get(image.folderId) ?? 0) + 1
     );
   }
 
@@ -256,7 +256,6 @@ export default async function GalleryPage({
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
 
-
             {/* Subtle gold atmosphere */}
             <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
           </>
@@ -292,16 +291,13 @@ export default async function GalleryPage({
               </div>
             </div>
 
-            {/* Selection Limit */}
+            {/* Existing Selection Limit - unchanged */}
             {maxSelections && (
               <div className="w-full shrink-0 lg:max-w-[300px]">
                 <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
-                      <Heart
-                        size={18}
-                        strokeWidth={1.8}
-                      />
+                      <Heart size={18} strokeWidth={1.8} />
                     </div>
 
                     <div className="min-w-0">
@@ -329,8 +325,9 @@ export default async function GalleryPage({
       <div className="mx-auto mt-10 max-w-7xl px-5">
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-2xl shadow-black/20">
           {/* Summary Header */}
-          <div className="flex flex-col gap-6 p-6 sm:p-7 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-6 p-6 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+            {/* Your Selection */}
+            <div className="flex items-center gap-4 lg:min-w-[250px]">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
                 <Heart size={19} strokeWidth={1.8} />
               </div>
@@ -339,19 +336,43 @@ export default async function GalleryPage({
                 <p className="text-sm font-semibold tracking-wide text-white">
                   Your Selection
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 text-sm text-zinc-400">
                   A quick look at your photo choices
                 </p>
               </div>
             </div>
 
+            {/* Additional Selection Limit */}
+            {maxSelections && (
+              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 sm:px-5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                  <Heart size={16} strokeWidth={1.8} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
+                    Selection Limit
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-zinc-200">
+                    Choose up to{" "}
+                    <span className="font-bold text-amber-300">
+                      {maxSelections}
+                    </span>{" "}
+                    photos
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Total Selected */}
-            <div className="flex min-w-[150px] flex-col items-center justify-center rounded-2xl border border-amber-400/15 bg-amber-400/[0.06] px-6 py-4 text-center">
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+            <div className="flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.08] px-5 py-4 sm:px-6">
+              <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
                 Photos Selected
               </p>
 
-              <p className="mt-2 text-3xl font-semibold leading-none tracking-tight text-amber-300">
+              <span className="h-6 w-px bg-amber-400/20" />
+
+              <p className="text-3xl font-bold leading-none tracking-tight text-amber-300 tabular-nums">
                 {totalSelected}
               </p>
             </div>
@@ -362,8 +383,9 @@ export default async function GalleryPage({
             {folders.map((folder, index) => (
               <div
                 key={folder.id}
-                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
-                  }`}
+                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${
+                  index !== 0 ? "border-t border-white/5" : ""
+                }`}
               >
                 <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <div className="min-w-0 max-w-full">
@@ -388,11 +410,9 @@ export default async function GalleryPage({
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold text-white">
                     {selectedCounts.get(folder.id) ?? 0}
-                    <span className="mx-1 text-zinc-600">/</span>
-                    <span className="text-zinc-400">{maxSelections}</span>
                   </p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-600">
-                    Selected
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                    Photos Selected
                   </p>
                 </div>
               </div>
@@ -428,9 +448,9 @@ export default async function GalleryPage({
                 <span className="font-medium text-white">
                   {selectedCounts.get(folder.id) ?? 0}
                 </span>
-                <span className="mx-1 text-zinc-600">/</span>
-                <span>{maxSelections}</span>
-                <span className="ml-2 text-zinc-500">Selected</span>
+                <span className="ml-2 text-zinc-500">
+                  Photos Selected
+                </span>
               </p>
 
               <div className="mt-4">
