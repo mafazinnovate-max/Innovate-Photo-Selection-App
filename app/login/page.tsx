@@ -16,8 +16,8 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const router = useRouter();
 
+    const router = useRouter();
 
     useEffect(() => {
         const loadLogo = async () => {
@@ -59,7 +59,7 @@ export default function LoginPage() {
                 if (data.role === "superadmin") {
                     router.replace("/super-admin/dashboard");
                 } else {
-                    router.push("/events");
+                    router.push("/dashboard");
                 }
 
                 return;
@@ -67,27 +67,15 @@ export default function LoginPage() {
 
             setIsLoading(false);
 
-            /*
-             * Show the exact message returned by the API.
-             *
-             * Wrong credentials:
-             * "Invalid username or password."
-             *
-             * Expired subscription:
-             * "Your subscription has expired..."
-             */
             toast.error(
-                data.message ||
-                "Invalid username or password."
+                data.message || "Invalid username or password."
             );
         } catch (error) {
             console.error("Login request failed:", error);
 
             setIsLoading(false);
 
-            toast.error(
-                "Unable to login. Please try again."
-            );
+            toast.error("Unable to login. Please try again.");
         }
     };
 
@@ -212,55 +200,91 @@ export default function LoginPage() {
                                     )}
                                 </div>
 
-                                <h1 className="text-center text-3xl font-bold text-white">
-                                    Admin Panel
-                                </h1>
-
-                                <p className="mt-2 mb-4 text-center text-sm text-zinc-400">
-                                    Sign in to access the dashboard
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FFC93C]">
+                                    Welcome back
                                 </p>
 
-                                <div className="space-y-4">
-                                    <input
-                                        type="text"
-                                        placeholder="Username"
-                                        value={username}
-                                        onChange={(e) =>
-                                            setUsername(e.target.value)
-                                        }
-                                        className="w-full rounded-xl border border-zinc-700 bg-zinc-800 p-3 text-white"
-                                    />
+                                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[#F4F1EA] sm:text-4xl">
+                                    Admin Panel
+                                </h2>
 
-                                    <div className="relative">
-                                        <input
-                                            type={
-                                                showPassword
-                                                    ? "text"
-                                                    : "password"
-                                            }
-                                            placeholder="Password"
-                                            value={password}
-                                            onChange={(e) =>
-                                                setPassword(e.target.value)
-                                            }
-                                            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 p-3 pr-12 text-white outline-none"
-                                        />
+                                <p className="mt-3 text-sm leading-6 text-[#F4F1EA]/45">
+                                    Sign in to access your dashboard.
+                                </p>
+                            </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setShowPassword(
-                                                    (prev) => !prev
-                                                )
-                                            }
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-zinc-400 hover:text-white"
+                            {/* Login form */}
+                            <form onSubmit={handleLogin}>
+
+                                <div className="space-y-6">
+
+                                    {/* Username */}
+                                    <div>
+                                        <label
+                                            htmlFor="username"
+                                            className="mb-2.5 block text-xs font-medium tracking-wide text-[#F4F1EA]/75"
                                         >
-                                            {showPassword ? (
-                                                <EyeOff size={20} />
-                                            ) : (
-                                                <Eye size={20} />
-                                            )}
-                                        </button>
+                                            Username
+                                        </label>
+
+                                        <input
+                                            id="username"
+                                            type="text"
+                                            placeholder="Enter your username"
+                                            value={username}
+                                            onChange={(e) =>
+                                                setUsername(e.target.value)
+                                            }
+                                            autoComplete="username"
+                                            className="h-14 w-full rounded-xl border border-white/[0.09] bg-[#14161A] px-4 text-sm text-[#F4F1EA] outline-none transition-all duration-300 placeholder:text-[#F4F1EA]/25 hover:border-white/20 focus:border-[#FFC93C]/70 focus:ring-4 focus:ring-[#FFC93C]/10"
+                                        />
+                                    </div>
+
+                                    {/* Password */}
+                                    <div>
+                                        <label
+                                            htmlFor="password"
+                                            className="mb-2.5 block text-xs font-medium tracking-wide text-[#F4F1EA]/75"
+                                        >
+                                            Password
+                                        </label>
+
+                                        <div className="relative">
+                                            <input
+                                                id="password"
+                                                type={
+                                                    showPassword
+                                                        ? "text"
+                                                        : "password"
+                                                }
+                                                placeholder="Enter your password"
+                                                value={password}
+                                                onChange={(e) =>
+                                                    setPassword(e.target.value)
+                                                }
+                                                autoComplete="current-password"
+                                                className="h-14 w-full rounded-xl border border-white/[0.09] bg-[#14161A] px-4 pr-12 text-sm text-[#F4F1EA] outline-none transition-all duration-300 placeholder:text-[#F4F1EA]/25 hover:border-white/20 focus:border-[#FFC93C]/70 focus:ring-4 focus:ring-[#FFC93C]/10"
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowPassword((prev) => !prev)
+                                                }
+                                                aria-label={
+                                                    showPassword
+                                                        ? "Hide password"
+                                                        : "Show password"
+                                                }
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#F4F1EA]/35 transition-colors duration-200 hover:text-[#FFC93C]"
+                                            >
+                                                {showPassword ? (
+                                                    <EyeOff size={19} />
+                                                ) : (
+                                                    <Eye size={19} />
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
