@@ -1,26 +1,37 @@
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { v2 as cloudinary } from "cloudinary";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "crypto";
+
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
+import {
+    r2Public,
+    R2_PUBLIC_BUCKET_NAME,
+    R2_PUBLIC_URL,
+} from "@/lib/r2-public";
 
 export const runtime = "nodejs";
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_TYPES: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+};
 
 export async function POST(request: Request) {
+    let uploadedKey: string | null = null;
+
     try {
+        // 1. Super Admin authentication
         const cookieStore = await cookies();
         const token = cookieStore.get("auth-token")?.value;
 
         if (!token) {
             return NextResponse.json(
-                { message: "Please log in again." },
+                { message: "Unauthorized." },
                 { status: 401 }
             );
         }
@@ -34,100 +45,91 @@ export async function POST(request: Request) {
             );
         }
 
-        if (
-            !process.env.CLOUDINARY_CLOUD_NAME ||
-            !process.env.CLOUDINARY_API_KEY ||
-            !process.env.CLOUDINARY_API_SECRET
-        ) {
-            return NextResponse.json(
-                { message: "Cloudinary environment variables are not configured." },
-                { status: 500 }
-            );
-        }
-
+        // 2. Validate uploaded file
         const formData = await request.formData();
         const file = formData.get("logo");
 
         if (!(file instanceof File)) {
             return NextResponse.json(
-                { message: "Choose a logo image first." },
+                { message: "Please select a logo image." },
                 { status: 400 }
             );
         }
 
-        const allowedTypes = [
-            "image/png",
-            "image/jpeg",
-            "image/webp",
-        ];
+        const extension = ALLOWED_TYPES[file.type];
 
-        if (!allowedTypes.includes(file.type)) {
+        if (!extension) {
             return NextResponse.json(
-                { message: "Only PNG, JPG and WebP images are supported." },
+                {
+                    message:
+                        "Only PNG, JPEG and WebP images are allowed.",
+                },
                 { status: 400 }
             );
         }
 
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size === 0 || file.size > MAX_FILE_SIZE) {
             return NextResponse.json(
-                { message: "Logo image must be 5 MB or smaller." },
+                { message: "Logo size must be greater than 0 and less than 5MB." },
                 { status: 400 }
             );
         }
 
+        // 3. Find Super Admin
         const superAdmin = await prisma.superAdmin.findFirst();
 
         if (!superAdmin) {
             return NextResponse.json(
-                { message: "Super Admin account was not found." },
+                { message: "Super Admin account not found." },
                 { status: 404 }
             );
         }
 
+        // 4. Generate unique R2 object key
+        const storageKey =
+            `picnovate/platform/superadmin/logo-${randomUUID()}.${extension}`;
+
         const bytes = Buffer.from(await file.arrayBuffer());
 
-        const uploadResult = await new Promise<{
-            secure_url: string;
-            public_id: string;
-        }>((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-                {
-                    folder: "picnovate/platform",
-                    resource_type: "image",
-                    allowed_formats: ["png", "jpg", "jpeg", "webp"],
-                },
-                (error, result) => {
-                    if (error || !result) {
-                        reject(error ?? new Error("Cloudinary upload failed."));
-                        return;
-                    }
+        // 5. Upload to separate public R2 bucket
+        await r2Public.send(
+            new PutObjectCommand({
+                Bucket: R2_PUBLIC_BUCKET_NAME,
+                Key: storageKey,
+                Body: bytes,
+                ContentType: file.type,
+                CacheControl: "public, max-age=31536000, immutable",
+            })
+        );
 
-                    resolve({
-                        secure_url: result.secure_url,
-                        public_id: result.public_id,
-                    });
-                }
-            );
+        uploadedKey = storageKey;
 
-            stream.end(bytes);
-        });
+        // 6. Build public logo URL
+        const logoUrl = `${R2_PUBLIC_URL}/${storageKey}`;
 
+        // 7. Update database
         await prisma.superAdmin.update({
             where: { id: superAdmin.id },
             data: {
-                logoUrl: uploadResult.secure_url,
+                logoUrl,
+                logoStorageKey: storageKey,
             },
         });
 
         return NextResponse.json({
             message: "Platform logo uploaded successfully.",
-            logoUrl: uploadResult.secure_url,
+            logoUrl,
         });
     } catch (error) {
-        console.error("Super Admin logo upload error:", error);
+        console.error("Platform logo R2 upload failed:", error);
 
+        // Upload succeeded but database update failed.
+        // Keep the uploaded file for investigation/recovery.
         return NextResponse.json(
-            { message: "Logo upload failed. Please try again." },
+            {
+                message:
+                    "Platform logo upload failed. Please check server logs and try again.",
+            },
             { status: 500 }
         );
     }

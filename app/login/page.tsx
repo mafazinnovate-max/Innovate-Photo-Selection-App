@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -7,7 +6,6 @@ import {
     Loader2,
     ArrowUpRight,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -187,12 +185,12 @@ export default function LoginPage() {
                                 <div className="mb-7 flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border border-white/[0.07] bg-[#14161A] p-3 sm:h-32 sm:w-32">
 
                                     {logoUrl ? (
-                                        <Image
+                                        <img
                                             src={logoUrl}
                                             alt="Picknovate Logo"
                                             width={160}
                                             height={160}
-                                            priority
+                                            loading="eager"
                                             className="h-full w-full object-contain"
                                         />
                                     ) : (

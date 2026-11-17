@@ -543,6 +543,7 @@ export default function SuperAdminSettingsPage() {
                                         src={displayedLogo}
                                         alt="Picnovate platform logo"
                                         className="h-full w-full object-contain p-2"
+                                        loading="eager"
                                     />
                                 ) : (
                                     <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-xl font-black tracking-tight text-zinc-950">
@@ -645,8 +646,8 @@ export default function SuperAdminSettingsPage() {
                         <div
                             role="status"
                             className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${noticeType === "success"
-                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                                    : "border-red-500/30 bg-red-500/10 text-red-200"
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                                : "border-red-500/30 bg-red-500/10 text-red-200"
                                 }`}
                         >
                             <span
