@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 export default async function Loading() {
@@ -11,12 +10,12 @@ export default async function Loading() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-black">
             {superAdmin?.logoUrl && (
-                <Image
+                <img
                     src={superAdmin.logoUrl}
                     alt="Picknovate"
                     width={96}
                     height={96}
-                    priority
+                    loading="eager"
                     className="h-20 w-20 object-contain animate-pulse sm:h-24 sm:w-24"
                 />
             )}

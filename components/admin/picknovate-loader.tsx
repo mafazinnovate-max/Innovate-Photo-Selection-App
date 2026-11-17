@@ -30,12 +30,12 @@ export default function PicknovateLoader() {
     <div className="flex min-h-[60vh] items-center justify-center">
       {logoUrl && (
         <div className="animate-pulse">
-          <Image
+          <img
             src={logoUrl}
             alt="Picknovate"
             width={140}
             height={140}
-            priority
+            loading="eager"
             className="h-28 w-28 object-contain sm:h-32 sm:w-32"
           />
         </div>

@@ -1,6 +1,3 @@
-
-import Image from "next/image";
-import Link from "next/link";
 import { Inter } from "next/font/google";
 import { prisma } from "@/lib/prisma";
 import CursorRibbon from "@/components/landingpage/CursorRibbons";
@@ -136,12 +133,12 @@ export default async function Home() {
     });
 
     const logo = superAdmin?.logoUrl ? (
-        <Image
+        <img
             src={superAdmin.logoUrl}
             alt="Picknovate"
             width={64}
             height={64}
-            priority
+            loading="eager"
             className="h-14 w-14 rounded-xl object-contain sm:h-16 sm:w-16"
         />
     ) : null;
@@ -155,11 +152,11 @@ export default async function Home() {
             <CursorRibbon />
 
             {/* Navigation */}
-           <Navbar logo={logo} />
+            <Navbar logo={logo} />
 
             {/* Hero */}
             <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-14 pt-6 sm:px-8 sm:pb-20 sm:pt-10 lg:grid-cols-2 lg:px-10 lg:pb-24 lg:pt-12">
-                
+
                 <HeroContentReveal />
 
                 <div
@@ -188,18 +185,18 @@ export default async function Home() {
             <WebsiteSection />
 
 
-           {/* Built around you */}
+            {/* Built around you */}
             <BuiltAroundYouSection />
 
 
-           {/* FAQ + CTA */}
+            {/* FAQ + CTA */}
             <FAQCTASection />
 
 
             {/* Footer */}
-               <Footer />
+            <Footer />
 
-               
+
         </main>
     );
 }

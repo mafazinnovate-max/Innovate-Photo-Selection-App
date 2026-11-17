@@ -2307,11 +2307,12 @@ export default function ClientFolderPage({
           </p>
 
           {superAdminLogoUrl && (
-            <Image
+            <img
               src={superAdminLogoUrl}
               alt="Picknovate"
               width={140}
               height={140}
+              loading="eager"
               className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
             />
           )}
