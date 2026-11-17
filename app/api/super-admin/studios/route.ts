@@ -7,6 +7,10 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
 
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 async function verifySuperAdmin() {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth-token")?.value;
@@ -182,11 +186,11 @@ export async function POST(request: Request) {
             });
 
             const authSecret = await tx.authSecret.create({
-    data: {
-        secret: randomBytes(32).toString("hex"),
-        adminId: admin.id,
-    },
-});
+                data: {
+                    secret: randomBytes(32).toString("hex"),
+                    adminId: admin.id,
+                },
+            });
 
             const subscription = await tx.subscription.create({
                 data: {
@@ -232,6 +236,7 @@ export async function POST(request: Request) {
     }
 }
 
+
 export async function GET() {
     try {
         if (!(await verifySuperAdmin())) {
@@ -258,11 +263,10 @@ export async function GET() {
                     },
                     orderBy: { createdAt: "asc" },
                 },
-Subscription: {
-    orderBy: { createdAt: "desc" },
-    take: 1,
-},
-
+                Subscription: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                },
                 _count: {
                     select: {
                         events: {
@@ -275,9 +279,45 @@ Subscription: {
             },
         });
 
+        // Generate signed R2 URLs for Studio logos
+        const studiosWithSignedLogos = await Promise.all(
+            studios.map(async (studio) => {
+                const logoKey =
+                    studio.logoOptimizedKey ||
+                    studio.logoStorageKey;
+
+                if (!logoKey) {
+                    return studio;
+                }
+
+                try {
+                    const signedLogoUrl = await getSignedUrl(
+                        r2,
+                        new GetObjectCommand({
+                            Bucket: R2_BUCKET_NAME,
+                            Key: logoKey,
+                        }),
+                        { expiresIn: 3600 }
+                    );
+
+                    return {
+                        ...studio,
+                        logoUrl: signedLogoUrl,
+                    };
+                } catch (error) {
+                    console.error(
+                        `Failed to generate logo URL for studio ${studio.id}:`,
+                        error
+                    );
+
+                    return studio;
+                }
+            })
+        );
+
         return NextResponse.json({
             success: true,
-            studios,
+            studios: studiosWithSignedLogos,
         });
     } catch (error) {
         console.error("Super Admin studio fetch error:", error);

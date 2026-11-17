@@ -3,14 +3,7 @@
 import { completeCategory } from "@/actions/complete-category";
 import { reopenCategory } from "@/actions/reopen-category";
 import { saveSelections } from "@/actions/save-selections";
-import {
-  ArrowLeft,
-  Check,
-  LocateFixedIcon,
-  Lock,
-  PhoneCall,
-  Unlock,
-} from "lucide-react";
+import { ArrowLeft, Check, LocateFixedIcon, Lock, PhoneCall, Unlock, } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -60,7 +53,7 @@ export default function ClientFolderPage({
   shareId,
   maxSelections,
   parentId,
-   studio,
+  studio,
   selectionSummary,
   selectionStatus,
 }: ClientFolderPageProps) {
@@ -132,7 +125,7 @@ export default function ClientFolderPage({
   const [showMobileActionBar, setShowMobileActionBar] =
     useState(false);
 
-    const [superAdminLogoUrl, setSuperAdminLogoUrl] =
+  const [superAdminLogoUrl, setSuperAdminLogoUrl] =
     useState<string | null>(null);
 
   const lastTapRef = useRef(0);
@@ -173,24 +166,24 @@ export default function ClientFolderPage({
 
 
   useEffect(() => {
-  const loadLogo = async () => {
-    try {
-      const response = await fetch("/api/public-logo");
-      const data = await response.json();
+    const loadLogo = async () => {
+      try {
+        const response = await fetch("/api/public-logo");
+        const data = await response.json();
 
-      if (data.success && data.logoUrl) {
-        setSuperAdminLogoUrl(data.logoUrl);
+        if (data.success && data.logoUrl) {
+          setSuperAdminLogoUrl(data.logoUrl);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load Picknovate logo:",
+          error,
+        );
       }
-    } catch (error) {
-      console.error(
-        "Failed to load Picknovate logo:",
-        error,
-      );
-    }
-  };
+    };
 
-  loadLogo();
-}, []);
+    loadLogo();
+  }, []);
 
   /*
    * MOBILE ACTION BAR
@@ -450,7 +443,7 @@ export default function ClientFolderPage({
           if (
             firstEntry.isIntersecting &&
             visibleCount <
-              filteredImages.length
+            filteredImages.length
           ) {
             setVisibleCount(
               (prev) => prev + 20,
@@ -559,29 +552,29 @@ export default function ClientFolderPage({
   }, []);
 
   useEffect(() => {
-  const savedScroll = sessionStorage.getItem(
-    `gallery-scroll-${shareId}-${folderId}`,
-  );
+    const savedScroll = sessionStorage.getItem(
+      `gallery-scroll-${shareId}-${folderId}`,
+    );
 
-  if (!savedScroll || scrollRestoredRef.current) {
-    return;
-  }
+    if (!savedScroll || scrollRestoredRef.current) {
+      return;
+    }
 
-  const scrollY = Number(savedScroll);
+    const scrollY = Number(savedScroll);
 
-  if (!Number.isFinite(scrollY)) {
-    return;
-  }
+    if (!Number.isFinite(scrollY)) {
+      return;
+    }
 
-  scrollRestoredRef.current = true;
+    scrollRestoredRef.current = true;
 
-  requestAnimationFrame(() => {
-    window.scrollTo({
-      top: scrollY,
-      behavior: "auto",
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: scrollY,
+        behavior: "auto",
+      });
     });
-  });
-}, [shareId, folderId]);
+  }, [shareId, folderId]);
 
   /*
    * Cleanup
@@ -779,11 +772,11 @@ export default function ClientFolderPage({
 
   const handleLogoClick = () => {
 
-     setSavedScrollY(window.scrollY);
-     sessionStorage.setItem(
-  `gallery-scroll-${shareId}-${folderId}`,
-  String(window.scrollY),
-);
+    setSavedScrollY(window.scrollY);
+    sessionStorage.setItem(
+      `gallery-scroll-${shareId}-${folderId}`,
+      String(window.scrollY),
+    );
     if (
       hasUnsavedChanges ||
       isDirty()
@@ -853,7 +846,7 @@ export default function ClientFolderPage({
       }
 
       leavingRef.current = true;
-window.history.back();
+      window.history.back();
     };
 
   /*
@@ -943,8 +936,8 @@ window.history.back();
 
       const nextImage =
         images[
-          (currentIndex + 1) %
-            images.length
+        (currentIndex + 1) %
+        images.length
         ];
 
       setActiveImage(
@@ -1030,16 +1023,16 @@ window.history.back();
 
     const nextImage =
       images[
-        (currentIndex + 1) %
-          images.length
+      (currentIndex + 1) %
+      images.length
       ];
 
     const prevImage =
       images[
-        (currentIndex -
-          1 +
-          images.length) %
-          images.length
+      (currentIndex -
+        1 +
+        images.length) %
+      images.length
       ];
 
     [nextImage, prevImage].forEach(
@@ -1134,108 +1127,108 @@ window.history.back();
     HEADER
     ===================================================== */}
 
-<div className="mx-auto max-w-7xl border-b border-zinc-800 bg-black px-4 py-6 sm:px-5 sm:py-8">
-  <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-    {/* Studio Branding */}
-    <div
-      className="flex cursor-pointer items-center gap-4"
-      onClick={handleLogoClick}
-    >
-      <ArrowLeft
-        size={18}
-        className="shrink-0 text-zinc-400 transition-colors hover:text-white"
-      />
+      <div className="mx-auto max-w-7xl border-b border-zinc-800 bg-black px-4 py-6 sm:px-5 sm:py-8">
+        <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+          {/* Studio Branding */}
+          <div
+            className="flex cursor-pointer items-center gap-4"
+            onClick={handleLogoClick}
+          >
+            <ArrowLeft
+              size={18}
+              className="shrink-0 text-zinc-400 transition-colors hover:text-white"
+            />
 
-      <div className="flex min-w-0 items-center gap-4">
-        {/* Studio Logo */}
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] shadow-2xl sm:h-24 sm:w-24">
-          {studio?.logoUrl ? (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                transform: `
-                  translate(
-                    ${studio.logoPositionX * (80 / 176)}px,
-                    ${studio.logoPositionY * (80 / 176)}px
-                  )
-                  scale(${studio.logoZoom * (80 / 176)})
-                `,
-              }}
-            >
-              <Image
-                src={studio.logoUrl}
-                alt={studio.name}
-                width={176}
-                height={176}
-                priority
-                className="h-[176px] w-[176px] max-w-none object-contain"
-              />
+            <div className="flex min-w-0 items-center gap-4">
+              {/* Studio Logo */}
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] shadow-2xl sm:h-24 sm:w-24">
+                {studio?.logoUrl ? (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{
+                      transform: `
+                        translate(
+                          ${studio.logoPositionX * (80 / 176)}px,
+                          ${studio.logoPositionY * (80 / 176)}px
+                        )
+                        scale(${studio.logoZoom * (80 / 176)})
+                      `,
+                    }}
+                  >
+                    <img
+                      src={studio.logoUrl}
+                      alt={studio.name}
+                      width={176}
+                      height={176}
+                      draggable={false}
+                      className="h-[176px] w-[176px] max-w-none object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center px-2 text-center">
+                    <span className="text-xs font-medium text-zinc-500">
+                      {studio?.name || "Studio"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Studio Name */}
+              <div className="min-w-0">
+                <h2 className="break-words bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-xl font-semibold tracking-[0.06em] text-transparent sm:text-2xl">
+                  {studio?.name || "Studio"}
+                </h2>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="h-px w-8 bg-gradient-to-r from-transparent to-zinc-600" />
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-zinc-400" />
+                  <span className="h-px w-8 bg-gradient-to-l from-transparent to-zinc-600" />
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center px-2 text-center">
-              <span className="text-xs font-medium text-zinc-500">
-                {studio?.name || "Studio"}
-              </span>
+          </div>
+
+          {/* Contact */}
+          {studio && (
+            <div className="w-full max-w-lg space-y-4 text-sm text-zinc-300 lg:w-auto">
+              {studio.phone && (
+                <div className="flex items-start gap-3">
+                  <PhoneCall
+                    size={18}
+                    className="mt-0.5 shrink-0 text-zinc-400"
+                  />
+
+                  <a
+                    href={`tel:${studio.phone}`}
+                    className="break-words transition-colors hover:text-white"
+                  >
+                    {studio.phone}
+                  </a>
+                </div>
+              )}
+
+              {(studio.address || studio.city || studio.state) && (
+                <div className="flex items-start gap-3">
+                  <LocateFixedIcon
+                    size={18}
+                    className="mt-0.5 shrink-0 text-zinc-400"
+                  />
+
+                  <p className="break-words leading-6">
+                    {[
+                      studio.address,
+                      studio.city,
+                      studio.state,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {/* Studio Name */}
-        <div className="min-w-0">
-          <h2 className="break-words bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-xl font-semibold tracking-[0.06em] text-transparent sm:text-2xl">
-            {studio?.name || "Studio"}
-          </h2>
-
-          <div className="mt-2 flex items-center gap-2">
-            <span className="h-px w-8 bg-gradient-to-r from-transparent to-zinc-600" />
-            <span className="h-1 w-1 animate-pulse rounded-full bg-zinc-400" />
-            <span className="h-px w-8 bg-gradient-to-l from-transparent to-zinc-600" />
-          </div>
-        </div>
       </div>
-    </div>
-
-    {/* Contact */}
-    {studio && (
-      <div className="w-full max-w-lg space-y-4 text-sm text-zinc-300 lg:w-auto">
-        {studio.phone && (
-          <div className="flex items-start gap-3">
-            <PhoneCall
-              size={18}
-              className="mt-0.5 shrink-0 text-zinc-400"
-            />
-
-            <a
-              href={`tel:${studio.phone}`}
-              className="break-words transition-colors hover:text-white"
-            >
-              {studio.phone}
-            </a>
-          </div>
-        )}
-
-        {(studio.address || studio.city || studio.state) && (
-          <div className="flex items-start gap-3">
-            <LocateFixedIcon
-              size={18}
-              className="mt-0.5 shrink-0 text-zinc-400"
-            />
-
-            <p className="break-words leading-6">
-              {[
-                studio.address,
-                studio.city,
-                studio.state,
-              ]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
-</div>
 
       {/* =====================================================
           MAIN CATEGORY SECTION
@@ -1262,19 +1255,18 @@ window.history.back();
 
             {/* Category Status */}
             <div
-              className={`mt-4 rounded-xl border p-4 ${
-                isCompleted
-                  ? "border-green-500/30 bg-green-500/10"
-                  : "border-amber-500/30 bg-amber-500/10"
-              }`}
+              ref={categoryStatusRef}
+              className={`rounded-2xl border p-4 sm:p-5 ${isCompleted
+                ? "border-green-500/30 bg-green-500/10"
+                : "border-amber-500/30 bg-amber-500/10"
+                }`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                    isCompleted
-                      ? "bg-green-500/15 text-green-400"
-                      : "bg-amber-500/15 text-amber-300"
-                  }`}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isCompleted
+                    ? "bg-green-500/15 text-green-400"
+                    : "bg-amber-500/15 text-amber-300"
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock size={18} />
@@ -1285,11 +1277,10 @@ window.history.back();
 
                 <div className="min-w-0 flex-1">
                   <h2
-                    className={`text-sm font-semibold sm:text-base ${
-                      isCompleted
-                        ? "text-green-300"
-                        : "text-amber-300"
-                    }`}
+                    className={`text-sm font-semibold sm:text-base ${isCompleted
+                      ? "text-green-300"
+                      : "text-amber-300"
+                      }`}
                   >
                     {isCompleted
                       ? "Client Selected Photos"
@@ -1350,116 +1341,279 @@ window.history.back();
               )}
             </div>
 
-            {/* Selection Summary */}
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">
-                  Total Selected
-                </span>
+            {/* =================================================
+                SELECTION CONTROL PANEL
+                ================================================= */}
 
-                <span className="text-lg font-bold text-amber-300">
-                  {totalSelected}
-                </span>
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+              {/* Panel Header */}
+              <div className="border-b border-white/10 px-4 py-4 sm:px-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                      Selection Overview
+                    </p>
+
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Review your selected photos and category counts.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${isCompleted
+                        ? "bg-green-400"
+                        : "bg-amber-400"
+                        }`}
+                    />
+
+                    <span className="text-xs text-zinc-500">
+                      {isCompleted
+                        ? "Finalized"
+                        : "In progress"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {adjustedSelectionSummary.map(
-                  (category) => (
-                    <div
-                      key={
-                        category.folderId
-                      }
-                      className="rounded-full border border-zinc-700 bg-black px-3 py-1.5 text-xs text-zinc-300"
-                    >
-                      {
-                        category.folderName
-                      }
-                      :{" "}
-                      <span className="font-semibold text-white">
-                        {
-                          category.selectedCount
-                        }
+              {/* Main Summary */}
+              <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.7fr)]">
+                {/* Total Selected */}
+                <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.10] via-zinc-900 to-zinc-950 p-5">
+                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-400/[0.06] blur-2xl" />
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                          Total Selected
+                        </p>
+
+                        <p className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                          {totalSelected}
+                          {maxSelections !== null
+                            ? ` / ${maxSelections}`
+                            : ""}
+                        </p>
+                      </div>
+
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10">
+                        <Check
+                          size={19}
+                          className="text-amber-300"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 h-px bg-white/10" />
+
+                    <p className="mt-3 text-xs leading-5 text-zinc-500">
+                      Photos selected across all categories
+                    </p>
+
+                    {maxSelections !== null && (
+                      <p className="mt-1 text-xs font-medium leading-5 text-amber-300/80">
+                        Choose up to {maxSelections} photos for your final selection.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Breakdown */}
+                <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        Category Breakdown
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Your selections by category
+                      </p>
+                    </div>
+
+                    {/* Category Count */}
+                    <div className="relative flex min-w-[68px] flex-col items-center justify-center rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+                      <div className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400/10 text-amber-300">
+                        <Check size={10} strokeWidth={2.5} />
+                      </div>
+
+                      <span className="text-lg font-semibold leading-5 text-white">
+                        {adjustedSelectionSummary.length}
+                      </span>
+
+                      <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+                        Categories
                       </span>
                     </div>
-                  ),
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {adjustedSelectionSummary.map(
+                      (category) => (
+                        <div
+                          key={
+                            category.folderId
+                          }
+                          className="rounded-full border border-zinc-700 bg-black px-3 py-1.5 text-xs text-zinc-300"
+                        >
+                          {
+                            category.folderName
+                          }
+                          :{" "}
+                          <span className="font-semibold text-white">
+                            {
+                              category.selectedCount
+                            }
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="border-t border-white/10 bg-black/30 p-4 sm:p-5">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {/* Show Selected */}
+                  <button
+                    onClick={() =>
+                      setShowSelectedOnly(
+                        (prev) => !prev,
+                      )
+                    }
+                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showSelectedOnly
+                      ? "border-white bg-white text-black shadow-lg shadow-white/5"
+                      : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
+                      }`}
+                  >
+                    <div className="min-w-0">
+                      <p
+                        className={`text-xs font-semibold ${showSelectedOnly
+                          ? "text-black"
+                          : "text-zinc-200"
+                          }`}
+                      >
+                        {showSelectedOnly
+                          ? "Show All Photos"
+                          : "Show Selected"}
+                      </p>
+
+                      <p
+                        className={`mt-0.5 text-[10px] ${showSelectedOnly
+                          ? "text-zinc-600"
+                          : "text-zinc-500"
+                          }`}
+                      >
+                        {showSelectedOnly
+                          ? "View the complete gallery"
+                          : "View only your picks"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showSelectedOnly
+                        ? "bg-black/10 text-black"
+                        : "bg-white/5 text-zinc-400"
+                        }`}
+                    >
+                      {showSelectedOnly ? "◉" : "○"}
+                    </span>
+                  </button>
+
+                  {/* Selection Count in This Category */}
+                  <div
+                    className={`flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 ${maxSelections !== null
+                      ? "border-amber-500/20 bg-amber-500/[0.06]"
+                      : "border-white/10 bg-zinc-900/60"
+                      }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-zinc-200">
+                        Selection Count in This Category
+                      </p>
+
+                      <p className="mt-0.5 text-[10px] text-zinc-500">
+                        Photos selected in this category
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${maxSelections !== null
+                        ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                        : "border-white/10 bg-white/5 text-zinc-200"
+                        }`}
+                    >
+                      {selectedImages.length}
+                    </span>
+                  </div>
+
+                  {/* Commented */}
+                  <button
+                    onClick={() =>
+                      setShowCommentedOnly(
+                        (prev) => !prev,
+                      )
+                    }
+                    className={`group flex min-h-[58px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 ${showCommentedOnly
+                      ? "border-white bg-white text-black shadow-lg shadow-white/5"
+                      : "border-white/10 bg-zinc-900/60 text-zinc-200 hover:border-white/20 hover:bg-zinc-900"
+                      }`}
+                  >
+                    <div className="min-w-0">
+                      <p
+                        className={`text-xs font-semibold ${showCommentedOnly
+                          ? "text-black"
+                          : "text-zinc-200"
+                          }`}
+                      >
+                        {showCommentedOnly
+                          ? "Show All Photos"
+                          : "Commented"}
+                      </p>
+
+                      <p
+                        className={`mt-0.5 text-[10px] ${showCommentedOnly
+                          ? "text-zinc-600"
+                          : "text-zinc-500"
+                          }`}
+                      >
+                        {showCommentedOnly
+                          ? "View the complete gallery"
+                          : "View photos with comments"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs ${showCommentedOnly
+                        ? "bg-black/10 text-black"
+                        : "bg-white/5 text-zinc-400"
+                        }`}
+                    >
+                      {showCommentedOnly ? "●" : "○"}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Submit Selection */}
+                {hasUnsavedChanges && (
+                  <button
+                    onClick={() => {
+                      setSaveError(false);
+                      setShowConfirmModal(
+                        true,
+                      );
+                    }}
+                    className="mt-3 hidden w-full items-center justify-center rounded-xl bg-white px-4 py-3.5 text-sm font-semibold text-black transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90 hover:shadow-xl md:flex"
+                  >
+                    {isSaving
+                      ? "Saving..."
+                      : "Submit Selection"}
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-            <button
-              onClick={() =>
-                setShowSelectedOnly(
-                  (prev) => !prev,
-                )
-              }
-              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${
-                showSelectedOnly
-                  ? "border-white bg-white text-black"
-                  : "border-zinc-700 hover:bg-zinc-900"
-              }`}
-            >
-              {showSelectedOnly
-                ? "Show All"
-                : "Show Selected"}
-            </button>
-
-            {maxSelections ===
-              null && (
-              <div className="rounded-full bg-zinc-800 px-4 py-2 text-sm">
-                {
-                  selectedImages.length
-                }{" "}
-                Selected
-              </div>
-            )}
-
-            {maxSelections !==
-              null && (
-              <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300">
-                {
-                  selectedImages.length
-                }{" "}
-                /{" "}
-                {maxSelections}{" "}
-                Selected
-              </div>
-            )}
-
-            {hasUnsavedChanges && (
-              <button
-                onClick={() => {
-                  setSaveError(false);
-                  setShowConfirmModal(
-                    true,
-                  );
-                }}
-                className="hidden flex-1 rounded-full bg-white px-4 py-2 text-center text-sm font-medium text-black md:block md:flex-none"
-              >
-                {isSaving
-                  ? "Saving..."
-                  : "Submit Selection"}
-              </button>
-            )}
-
-            <button
-              onClick={() =>
-                setShowCommentedOnly(
-                  (prev) => !prev,
-                )
-              }
-              className={`flex-1 rounded-full border px-4 py-2 text-center text-sm transition md:flex-none ${
-                showCommentedOnly
-                  ? "border-white bg-white text-black"
-                  : "border-zinc-700 hover:bg-zinc-900"
-              }`}
-            >
-              {showCommentedOnly
-                ? "Show All"
-                : "Commented"}
-            </button>
           </div>
         </div>
       </div>
@@ -1469,60 +1623,59 @@ window.history.back();
     ONLY THIS SMALL BAR IS FIXED.
     ===================================================== */}
 
-{showMobileActionBar && (
-  <div className="fixed inset-x-0 top-0 z-[80] border-b border-zinc-800 bg-black px-3 py-3 shadow-2xl md:hidden">
-    <div className="mx-auto flex w-full max-w-md flex-col gap-2.5">
-      {/* Folder + Status */}
-      <div className="min-w-0">
-        <p className="truncate text-[11px] leading-4 text-zinc-500">
-          {folderName}
-        </p>
+      {showMobileActionBar && (
+        <div className="fixed inset-x-0 top-0 z-[80] border-b border-zinc-800 bg-black px-3 py-3 shadow-2xl md:hidden">
+          <div className="mx-auto flex w-full max-w-md flex-col gap-2.5">
+            {/* Folder + Status */}
+            <div className="min-w-0">
+              <p className="truncate text-[11px] leading-4 text-zinc-500">
+                {folderName}
+              </p>
 
-        <p
-          className={`text-sm font-semibold leading-5 ${
-            isCompleted
-              ? "text-green-300"
-              : "text-amber-300"
-          }`}
-        >
-          {isCompleted
-            ? "Client Selected Photos"
-            : "Client Selecting Photos"}
-        </p>
-      </div>
+              <p
+                className={`text-sm font-semibold leading-5 ${isCompleted
+                  ? "text-green-300"
+                  : "text-amber-300"
+                  }`}
+              >
+                {isCompleted
+                  ? "Selection Complete"
+                  : "Selection in Progress"}
+              </p>
+            </div>
 
-      {/* Category Action */}
-      {isCompleted ? (
-        <button
-          onClick={handleReopenCategory}
-          disabled={isReopening}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Unlock size={15} />
+            {/* Category Action */}
+            {isCompleted ? (
+              <button
+                onClick={handleReopenCategory}
+                disabled={isReopening}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Unlock size={15} />
 
-          {isReopening
-            ? "Opening..."
-            : "Select Photos Again"}
-        </button>
-      ) : (
-        <button
-          onClick={handleCompleteCategory}
-          disabled={
-            isCompleting ||
-            isSaving
-          }
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Check size={15} />
+                {isReopening
+                  ? "Opening..."
+                  : "Select Photos Again"}
+              </button>
+            ) : (
+              <button
+                onClick={handleCompleteCategory}
+                disabled={
+                  isCompleting ||
+                  isSaving
+                }
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Check size={15} />
 
-          {isCompleting
-            ? "Completing..."
-            : "Complete Category"}
-        </button>
+                {isCompleting
+                  ? "Completing..."
+                  : "Complete Category"}
+              </button>
+            )}
+          </div>
+        </div>
       )}
-    </div>
-  </div>
-)}
 
       {/* =====================================================
           GALLERY
@@ -1544,11 +1697,10 @@ window.history.back();
                     image.id,
                   )
                 }
-                className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${
-                  isSelected
-                    ? "border-white"
-                    : "border-zinc-800"
-                }`}
+                className={`group relative cursor-pointer overflow-hidden rounded-2xl border transition ${isSelected
+                  ? "border-white"
+                  : "border-zinc-800"
+                  }`}
               >
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <Image
@@ -1576,13 +1728,12 @@ window.history.back();
                       image.id,
                     );
                   }}
-                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
-                    isCompleted
-                      ? "cursor-not-allowed bg-black/70 text-zinc-500"
-                      : isSelected
-                        ? "bg-white text-black"
-                        : "bg-black/60 text-white backdrop-blur"
-                  }`}
+                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${isCompleted
+                    ? "cursor-not-allowed bg-black/70 text-zinc-500"
+                    : isSelected
+                      ? "bg-white text-black"
+                      : "bg-black/60 text-white backdrop-blur"
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock
@@ -1614,7 +1765,7 @@ window.history.back();
                     }
                     value={
                       comments[
-                        image.id
+                      image.id
                       ] || ""
                     }
                     onClick={(e) =>
@@ -1626,11 +1777,10 @@ window.history.back();
                         e.target.value,
                       );
                     }}
-                    className={`mt-2 w-full rounded-lg border px-3 py-2 text-xs text-white outline-none backdrop-blur placeholder:text-zinc-500 ${
-                      isCompleted
-                        ? "cursor-not-allowed border-zinc-800 bg-black/60 text-zinc-500"
-                        : "border-zinc-700 bg-black/40"
-                    }`}
+                    className={`mt-2 w-full rounded-lg border px-3 py-2 text-xs text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
+                      ? "cursor-not-allowed border-zinc-800 bg-black/60 text-zinc-500"
+                      : "border-zinc-700 bg-black/40"
+                      }`}
                   />
                 </div>
               </div>
@@ -1645,10 +1795,10 @@ window.history.back();
       >
         {visibleCount <
           filteredImages.length && (
-          <p className="text-sm text-zinc-500">
-            Loading more photos...
-          </p>
-        )}
+            <p className="text-sm text-zinc-500">
+              Loading more photos...
+            </p>
+          )}
       </div>
 
       {/* =====================================================
@@ -1922,15 +2072,14 @@ window.history.back();
                 style={{
                   transform: `
                     translateX(
-                      ${
-                        slideDirection ===
-                        "left"
-                          ? "-40px"
-                          : slideDirection ===
-                              "right"
-                            ? "40px"
-                            : "0px"
-                      }
+                      ${slideDirection ===
+                      "left"
+                      ? "-40px"
+                      : slideDirection ===
+                        "right"
+                        ? "40px"
+                        : "0px"
+                    }
                     )
                     scale(${zoom})
                   `,
@@ -1986,7 +2135,7 @@ window.history.back();
                   }
                   value={
                     comments[
-                      currentImage.id
+                    currentImage.id
                     ] || ""
                   }
                   onChange={(e) => {
@@ -2019,11 +2168,10 @@ window.history.back();
                         );
                       }, 800);
                   }}
-                  className={`max-h-28 min-h-[52px] flex-1 resize-none rounded-2xl border px-4 py-3 text-sm text-white outline-none backdrop-blur placeholder:text-zinc-500 ${
-                    isCompleted
-                      ? "cursor-not-allowed border-zinc-800 bg-zinc-900/80 text-zinc-500"
-                      : "border-zinc-700 bg-zinc-900/80"
-                  }`}
+                  className={`max-h-28 min-h-[52px] flex-1 resize-none rounded-2xl border px-4 py-3 text-sm text-white outline-none backdrop-blur placeholder:text-zinc-500 ${isCompleted
+                    ? "cursor-not-allowed border-zinc-800 bg-zinc-900/80 text-zinc-500"
+                    : "border-zinc-700 bg-zinc-900/80"
+                    }`}
                 />
 
                 <button
@@ -2035,23 +2183,22 @@ window.history.back();
                       currentImage.id,
                     )
                   }
-                  className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${
-                    isCompleted
-                      ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-                      : selectedImages.includes(
-                            currentImage.id,
-                          )
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 text-white"
-                  }`}
+                  className={`flex h-[52px] min-w-[52px] items-center justify-center rounded-2xl text-sm font-bold transition ${isCompleted
+                    ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
+                    : selectedImages.includes(
+                      currentImage.id,
+                    )
+                      ? "bg-white text-black"
+                      : "bg-zinc-800 text-white"
+                    }`}
                 >
                   {isCompleted ? (
                     <Lock
                       size={17}
                     />
                   ) : selectedImages.includes(
-                      currentImage.id,
-                    ) ? (
+                    currentImage.id,
+                  ) ? (
                     getSelectionNumber(
                       currentImage.id,
                     )
@@ -2069,15 +2216,14 @@ window.history.back();
           ===================================================== */}
 
       <div
-        className={`fixed left-4 z-[200] ${
-          activeImage !==
-            null &&
+        className={`fixed left-4 z-[200] ${activeImage !==
+          null &&
           currentImage
-            ? "bottom-24"
-            : hasUnsavedChanges
-              ? "bottom-20 md:bottom-4"
-              : "bottom-4"
-        }`}
+          ? "bottom-24"
+          : hasUnsavedChanges
+            ? "bottom-20 md:bottom-4"
+            : "bottom-4"
+          }`}
       >
         <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/80 px-2 py-1 text-xs text-white backdrop-blur-md shadow-lg">
           <div className="flex items-center gap-1">
@@ -2091,7 +2237,7 @@ window.history.back();
               }
 
               {maxSelections !==
-              null
+                null
                 ? ` / ${maxSelections}`
                 : ` / ${images.length}`}
             </span>
@@ -2116,19 +2262,24 @@ window.history.back();
     PICKNOVATE FOOTER
     ===================================================== */}
 
-<div className="border-t border-zinc-900 bg-black py-10">
-  <div className="flex justify-center">
-    {superAdminLogoUrl && (
-      <Image
-        src={superAdminLogoUrl}
-        alt="Picknovate"
-        width={96}
-        height={96}
-        className="h-20 w-20 object-contain opacity-90 sm:h-24 sm:w-24"
-      />
-    )}
-  </div>
-</div>
+      <div className="border-t border-white/10 bg-black px-5 py-10 sm:py-12">
+        <div className="flex flex-col items-center justify-center">
+          <p className="text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-600">
+            Powered by
+          </p>
+
+          {superAdminLogoUrl && (
+            <img
+              src={superAdminLogoUrl}
+              alt="Picknovate"
+              width={140}
+              height={140}
+              loading="eager"
+              className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

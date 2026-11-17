@@ -31,34 +31,34 @@ export default function EventForm({
 }: EventFormProps) {
     const router = useRouter();
     const [eventLimitReached, setEventLimitReached] = useState(false);
-const [checkingEventLimit, setCheckingEventLimit] = useState(
-    mode === "create",
-);
+    const [checkingEventLimit, setCheckingEventLimit] = useState(
+        mode === "create",
+    );
 
-useEffect(() => {
-    if (mode !== "create") {
-        return;
-    }
-
-    const checkLimit = async () => {
-        const response = await checkEventLimit();
-
-        if (!response.success) {
-            alert(response.message ?? "Unable to check event limit.");
-            setEventLimitReached(true);
-            setCheckingEventLimit(false);
+    useEffect(() => {
+        if (mode !== "create") {
             return;
         }
 
-        if (!response.allowed) {
-            setEventLimitReached(true);
-        }
+        const checkLimit = async () => {
+            const response = await checkEventLimit();
 
-        setCheckingEventLimit(false);
-    };
+            if (!response.success) {
+                alert(response.message ?? "Unable to check event limit.");
+                setEventLimitReached(true);
+                setCheckingEventLimit(false);
+                return;
+            }
 
-    checkLimit();
-}, [mode]);
+            if (!response.allowed) {
+                setEventLimitReached(true);
+            }
+
+            setCheckingEventLimit(false);
+        };
+
+        checkLimit();
+    }, [mode]);
 
     const [clientName, setClientName] = useState(
         initialData?.clientName ?? "",
@@ -164,8 +164,65 @@ useEffect(() => {
         eventType === "Other" ? customEventType : eventType;
 
     const handleSubmit = async () => {
-        if (!clientName || !eventName || !eventType || !eventDate) {
-            alert("Please fill all required fields");
+        setValidationError(null);
+        if (isSubmitting) return;
+
+        if (!clientName.trim()) {
+            setValidationError("Please enter the client name.");
+            scrollToMissingField(clientNameRef);
+            return;
+        }
+
+        if (!eventName.trim()) {
+            setValidationError("Please enter the event name.");
+            scrollToMissingField(eventNameRef);
+            return;
+        }
+
+        if (!eventType) {
+            setValidationError("Please select an event category.");
+            scrollToMissingField(eventTypeRef);
+            return;
+        }
+
+        if (
+            eventType === "Other" &&
+            !customEventType.trim()
+        ) {
+            setValidationError("Please enter the custom event type.");
+            scrollToMissingField(customEventTypeRef);
+            return;
+        }
+
+        if (!eventDate) {
+            setValidationError("Please select the event date.");
+            scrollToMissingField(eventDateRef);
+            return;
+        }
+
+        // Phone number validation
+        if (phoneNumber.trim()) {
+            if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
+                setValidationError(
+                    "Please enter a valid 10-digit mobile number."
+                );
+                return;
+            }
+        }
+
+        // Email validation
+        if (email.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!emailRegex.test(email.trim())) {
+                setValidationError("Please enter a valid email address.");
+                return;
+            }
+        }
+
+        if (mode === "create" && !coverImage) {
+            setValidationError("Please select a cover image.");
+            scrollToMissingField(coverImageRef);
             return;
         }
 
@@ -265,44 +322,44 @@ useEffect(() => {
     };
 
     if (checkingEventLimit) {
-    return (
-        <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
-            <div className="text-center">
-                <Loader2
-                    size={28}
-                    className="mx-auto animate-spin text-zinc-400"
-                />
-                <p className="mt-3 text-zinc-400">
-                    Checking event limit...
-                </p>
+        return (
+            <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
+                <div className="text-center">
+                    <Loader2
+                        size={28}
+                        className="mx-auto animate-spin text-zinc-400"
+                    />
+                    <p className="mt-3 text-zinc-400">
+                        Checking event limit...
+                    </p>
+                </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
 
-if (eventLimitReached) {
-    return (
-        <div className="mx-auto max-w-3xl">
-            <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-8 text-center">
-                <h1 className="text-2xl font-bold text-red-400">
-                    Event Limit Reached
-                </h1>
+    if (eventLimitReached) {
+        return (
+            <div className="mx-auto max-w-3xl">
+                <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-8 text-center">
+                    <h1 className="text-2xl font-bold text-red-400">
+                        Event Limit Reached
+                    </h1>
 
-                <p className="mt-3 text-zinc-400">
-                    You have reached your maximum number of events.
-                    Please contact the administrator to increase your limit.
-                </p>
+                    <p className="mt-3 text-zinc-400">
+                        You have reached your maximum number of events.
+                        Please contact the administrator to increase your limit.
+                    </p>
 
-                <button
-                    onClick={() => router.push("/events")}
-                    className="mt-6 rounded-xl bg-white px-6 py-3 font-medium text-black hover:opacity-90"
-                >
-                    Back to Events
-                </button>
+                    <button
+                        onClick={() => router.push("/events")}
+                        className="mt-6 rounded-xl bg-white px-6 py-3 font-medium text-black hover:opacity-90"
+                    >
+                        Back to Events
+                    </button>
+                </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
 
     return (
         <div className="mx-auto max-w-3xl">
@@ -424,9 +481,20 @@ if (eventLimitReached) {
                         type="tel"
                         value={phoneNumber}
                         placeholder="9876543210"
-                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        maxLength={10}
+                        onChange={(e) => {
+                            setPhoneNumber(e.target.value.replace(/\D/g, ""));
+                        }}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+
+                    {validationError === "Please enter a valid 10-digit mobile number." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
+
                 </div>
 
                 <div>
@@ -441,6 +509,12 @@ if (eventLimitReached) {
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-white"
                     />
+
+                    {validationError === "Please enter a valid email address." && (
+                        <p className="mt-2 text-xs font-medium text-red-400">
+                            {validationError}
+                        </p>
+                    )}
                 </div>
 
                 <div>

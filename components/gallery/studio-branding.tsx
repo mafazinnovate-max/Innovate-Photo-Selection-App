@@ -56,12 +56,12 @@ export default function StudioBranding({
                   `,
                 }}
               >
-                <Image
+                <img
                   src={studio.logoUrl}
                   alt={studio.name}
                   width={176}
                   height={176}
-                  priority
+                  draggable={false}
                   className="h-[176px] w-[176px] max-w-none object-contain"
                 />
               </div>
@@ -74,19 +74,19 @@ export default function StudioBranding({
             </div>
           )}
         </div>
-{/* Studio Name */}
-<div className="relative mt-4 max-w-[90%] overflow-hidden">
-  <h2 className="animate-[fadeInUp_0.8s_ease-out] break-words bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text px-4 text-center text-2xl font-semibold tracking-[0.08em] text-transparent sm:text-3xl md:text-4xl">
-    {studio.name}
-  </h2>
+        {/* Studio Name */}
+        <div className="relative mt-4 max-w-[90%] overflow-hidden">
+          <h2 className="animate-[fadeInUp_0.8s_ease-out] break-words bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text px-4 text-center text-2xl font-semibold tracking-[0.08em] text-transparent sm:text-3xl md:text-4xl">
+            {studio.name}
+          </h2>
 
-  {/* Elegant animated divider */}
-  <div className="mx-auto mt-4 flex items-center justify-center gap-2">
-    <span className="h-px w-8 bg-gradient-to-r from-transparent to-zinc-600 sm:w-12" />
-    <span className="h-1 w-1 animate-pulse rounded-full bg-zinc-400" />
-    <span className="h-px w-8 bg-gradient-to-l from-transparent to-zinc-600 sm:w-12" />
-  </div>
-</div>
+          {/* Elegant animated divider */}
+          <div className="mx-auto mt-4 flex items-center justify-center gap-2">
+            <span className="h-px w-8 bg-gradient-to-r from-transparent to-zinc-600 sm:w-12" />
+            <span className="h-1 w-1 animate-pulse rounded-full bg-zinc-400" />
+            <span className="h-px w-8 bg-gradient-to-l from-transparent to-zinc-600 sm:w-12" />
+          </div>
+        </div>
 
         {/* Contact Information */}
         <div className="mt-6 flex w-full max-w-2xl flex-col items-center gap-4 text-sm text-zinc-300">

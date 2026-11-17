@@ -21,10 +21,57 @@ export default async function FolderPage({
 }: FolderPageProps) {
   const { shareId, folderId } = await params;
 
+  // Fetch studio details for the access modal
+  const event = await prisma.event.findUnique({
+    where: { shareId },
+    select: {
+      studio: {
+        select: {
+          name: true,
+          logoUrl: true,
+          logoStorageKey: true,
+          logoOptimizedKey: true,
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return <div>Folder not found</div>;
+  }
+
+  // Generate signed URL for the studio logo
+  let studioLogoUrl = event.studio?.logoUrl ?? null;
+
+  const studioLogoKey =
+    event.studio?.logoOptimizedKey ||
+    event.studio?.logoStorageKey;
+
+  if (studioLogoKey) {
+    try {
+      studioLogoUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: studioLogoKey,
+        }),
+        { expiresIn: 3600 }
+      );
+    } catch (error) {
+      console.error("Failed to generate studio logo URL:", error);
+    }
+  }
+
   const hasAccess = await hasGalleryAccess(shareId);
 
   if (!hasAccess) {
-    return <GalleryAccessModal shareId={shareId} />;
+    return (
+      <GalleryAccessModal
+        shareId={shareId}
+        studioName={event.studio?.name ?? "Studio"}
+        studioLogoUrl={studioLogoUrl}
+      />
+    );
   }
 
   const folder = await prisma.folder.findFirst({
@@ -50,6 +97,8 @@ export default async function FolderPage({
             select: {
               name: true,
               logoUrl: true,
+              logoStorageKey: true,
+              logoOptimizedKey: true,
               logoZoom: true,
               logoPositionX: true,
               logoPositionY: true,
@@ -80,6 +129,100 @@ export default async function FolderPage({
   if (!folder) {
     return <div>Folder not found</div>;
   }
+
+  // Generate private R2 signed URL for Studio Logo
+  let studioBrandingData = folder.event.studio;
+
+  if (studioBrandingData) {
+    const studioLogoKey =
+      studioBrandingData.logoOptimizedKey ||
+      studioBrandingData.logoStorageKey;
+
+    if (studioLogoKey) {
+      try {
+        const studioLogoUrl = await getSignedUrl(
+          r2,
+          new GetObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: studioLogoKey,
+          }),
+          { expiresIn: 3600 }
+        );
+
+        studioBrandingData = {
+          ...studioBrandingData,
+          logoUrl: studioLogoUrl,
+        };
+      } catch (error) {
+        console.error(
+          "Failed to generate Studio logo URL:",
+          error
+        );
+      }
+    }
+  }
+
+  // Generate private R2 signed URLs for client gallery
+  const imagesWithSignedUrls = await Promise.all(
+    folder.images.map(async (image) => {
+      const fullImageKey = image.optimizedKey || image.storageKey;
+
+      const thumbnailKey =
+        image.thumbnailKey ||
+        image.optimizedKey ||
+        image.storageKey;
+
+      // Legacy images fallback
+      if (!fullImageKey) {
+        return {
+          ...image,
+          imageUrl: image.imageUrl,
+          thumbnailUrl: image.imageUrl,
+        };
+      }
+
+      try {
+        const [fullImageUrl, thumbnailUrl] = await Promise.all([
+          getSignedUrl(
+            r2,
+            new GetObjectCommand({
+              Bucket: R2_BUCKET_NAME,
+              Key: fullImageKey,
+            }),
+            { expiresIn: 3600 }
+          ),
+
+          thumbnailKey
+            ? getSignedUrl(
+              r2,
+              new GetObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: thumbnailKey,
+              }),
+              { expiresIn: 3600 }
+            )
+            : Promise.resolve(image.imageUrl),
+        ]);
+
+        return {
+          ...image,
+          imageUrl: fullImageUrl,
+          thumbnailUrl,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to generate client image URLs for ${image.id}:`,
+          error
+        );
+
+        return {
+          ...image,
+          imageUrl: "",
+          thumbnailUrl: "",
+        };
+      }
+    })
+  );
 
   let maxSelections: number | null = null;
 
@@ -113,40 +256,40 @@ export default async function FolderPage({
   const categoryFolders =
     folder.event.galleryMode === "bride_groom" && folder.parentId
       ? await prisma.folder.findMany({
-          where: {
-            eventId: folder.eventId,
-            parentId: folder.parentId,
-          },
-          select: {
-            id: true,
-            name: true,
-            images: {
-              where: {
-                isSelected: true,
-              },
-              select: {
-                id: true,
-              },
+        where: {
+          eventId: folder.eventId,
+          parentId: folder.parentId,
+        },
+        select: {
+          id: true,
+          name: true,
+          images: {
+            where: {
+              isSelected: true,
+            },
+            select: {
+              id: true,
             },
           },
-        })
+        },
+      })
       : await prisma.folder.findMany({
-          where: {
-            id: folder.id,
-          },
-          select: {
-            id: true,
-            name: true,
-            images: {
-              where: {
-                isSelected: true,
-              },
-              select: {
-                id: true,
-              },
+        where: {
+          id: folder.id,
+        },
+        select: {
+          id: true,
+          name: true,
+          images: {
+            where: {
+              isSelected: true,
+            },
+            select: {
+              id: true,
             },
           },
-        });
+        },
+      });
 
   const selectionSummary: SelectionCategory[] =
     categoryFolders.map((category) => ({
@@ -165,7 +308,7 @@ export default async function FolderPage({
       parentId={folder.parentId}
       selectionSummary={selectionSummary}
       selectionStatus={folder.selectionStatus}
-      studio={folder.event.studio}
+      studio={studioBrandingData}
     />
   );
 }

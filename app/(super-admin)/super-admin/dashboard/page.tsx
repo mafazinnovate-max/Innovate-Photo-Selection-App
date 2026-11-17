@@ -212,7 +212,7 @@ export default function SuperAdminDashboardPage() {
                                     <div className="flex min-w-0 items-center gap-3">
                                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
                                             <img
-                                                src={studio.logoUrl || ""}
+                                                src={studio.logoUrl || undefined}
                                                 alt={`${studio.name} logo`}
                                                 className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
                                                     }`}
