@@ -4,6 +4,9 @@ import { CheckCircle2, Clock3, Heart, } from "lucide-react";
 import { hasGalleryAccess } from "@/lib/gallery-access";
 import GalleryAccessModal from "@/components/gallery/gallery-access-modal";
 import FolderLink from "@/components/gallery/folder-link";
+import { r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 interface GalleryPageProps {
   params: Promise<{ shareId: string }>;
@@ -126,6 +129,9 @@ export default async function GalleryPage({
         take: 1,
         select: {
           imageUrl: true,
+          storageKey: true,
+          optimizedKey: true,
+          thumbnailKey: true,
         },
       },
     },
@@ -133,6 +139,59 @@ export default async function GalleryPage({
       createdAt: "desc",
     },
   });
+
+  // Generate R2 thumbnail URLs for folder cards
+  const foldersWithSignedUrls = await Promise.all(
+    folders.map(async (folder) => {
+      const image = folder.images[0];
+
+      if (!image) {
+        return {
+          ...folder,
+          previewImageUrl: null,
+        };
+      }
+
+      const thumbnailKey =
+        image.thumbnailKey ||
+        image.optimizedKey ||
+        image.storageKey;
+
+      // Legacy image fallback
+      if (!thumbnailKey) {
+        return {
+          ...folder,
+          previewImageUrl: image.imageUrl,
+        };
+      }
+
+      try {
+        const previewImageUrl = await getSignedUrl(
+          r2,
+          new GetObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: thumbnailKey,
+          }),
+          { expiresIn: 3600 }
+        );
+
+        return {
+          ...folder,
+          previewImageUrl,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to generate folder thumbnail URL for ${folder.id}:`,
+          error
+        );
+
+        return {
+          ...folder,
+          previewImageUrl: null,
+        };
+      }
+    })
+  );
 
   const selectedImages = await prisma.image.findMany({
     where: {
@@ -202,232 +261,234 @@ export default async function GalleryPage({
           </>
         )}
 
-        <div className="relative flex min-h-[280px] flex-col justify-end px-6 py-10 sm:px-8 sm:py-14 md:min-h-[320px]">
-          <div className="max-w-2xl">
-            <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-zinc-300 backdrop-blur">
-              Photo Selection Gallery
-            </span>
+        <div className="relative flex min-h-[420px] flex-col justify-end px-6 py-8 sm:min-h-[460px] sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-12 lg:py-12">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            {/* Event Information */}
+            <div className="min-w-0 max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-black/35 px-3 py-1.5 backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.8)]" />
+                <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-amber-200">
+                  Private Photo Gallery
+                </span>
+              </div>
 
-            <h1 className="mt-4 text-3xl font-bold sm:text-4xl md:text-5xl">
-              {event.name}
-            </h1>
+              <h1 className="mt-5 break-words text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
+                {event.name}
+              </h1>
 
-            <p className="mt-4 max-w-xl text-sm leading-6 tracking-wide text-zinc-300 sm:text-base sm:leading-7">
-              Choose the moments that matter most.
-            </p>
-
-            <div className="mt-6">
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
-                Client
+              <p className="mt-4 max-w-xl text-sm leading-6 tracking-wide text-zinc-300 sm:text-base sm:leading-7">
+                Choose the moments that matter most.
               </p>
 
-              <p className="mt-1.5 break-words text-sm font-medium text-zinc-200 sm:text-base">
-                {event.clientName}
+              <div className="mt-6">
+                <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+                  Client
+                </p>
+
+                <p className="mt-1.5 break-words text-sm font-medium text-zinc-200 sm:text-base">
+                  {event.clientName}
+                </p>
+              </div>
+            </div>
+
+            {/* Existing Selection Limit - unchanged */}
+            {maxSelections && (
+              <div className="w-full shrink-0 lg:max-w-[300px]">
+                <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
+                      <Heart size={18} strokeWidth={1.8} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
+                        Selection Limit
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-zinc-300">
+                        Choose up to{" "}
+                        <span className="font-semibold text-white">
+                          {maxSelections}
+                        </span>{" "}
+                        photos for your selection.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Selection Summary */}
+      <div className="mx-auto mt-10 max-w-7xl px-5">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-2xl shadow-black/20">
+          {/* Summary Header */}
+          <div className="flex flex-col gap-6 p-6 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+            {/* Your Selection */}
+            <div className="flex items-center gap-4 lg:min-w-[250px]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
+                <Heart size={19} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold tracking-wide text-white">
+                  Your Selection
+                </p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  A quick look at your photo choices
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Selection Limit */}
+            {maxSelections && (
+              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 sm:px-5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                  <Heart size={16} strokeWidth={1.8} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
+                    Selection Limit
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-zinc-200">
+                    Choose up to{" "}
+                    <span className="font-bold text-amber-300">
+                      {maxSelections}
+                    </span>{" "}
+                    photos
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Total Selected */}
+            <div className="flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.08] px-5 py-4 sm:px-6">
+              <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
+                Photos Selected
+              </p>
+
+              <span className="h-6 w-px bg-amber-400/20" />
+
+              <p className="text-3xl font-bold leading-none tracking-tight text-amber-300 tabular-nums">
+                {totalSelected}
               </p>
             </div>
           </div>
 
-          {/* Existing Selection Limit - unchanged */}
-          {maxSelections && (
-            <div className="w-full shrink-0 lg:max-w-[300px]">
-              <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
-                    <Heart size={18} strokeWidth={1.8} />
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
-                      Selection Limit
-                    </p>
-
-                    <p className="mt-2 text-sm leading-6 text-zinc-300">
-                      Choose up to{" "}
-                      <span className="font-semibold text-white">
-                        {maxSelections}
-                      </span>{" "}
-                      photos for your selection.
+          {/* Folder Summary */}
+          <div className="border-t border-white/5">
+            {folders.map((folder, index) => (
+              <div
+                key={folder.id}
+                className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
+                  }`}
+              >
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="min-w-0 max-w-full">
+                    <p className="break-words text-sm font-medium text-zinc-200 sm:truncate">
+                      {folder.name}
                     </p>
                   </div>
+
+                  {folder.selectionStatus === "COMPLETED" ? (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-green-300">
+                      <CheckCircle2 size={12} strokeWidth={1.8} />
+                      Selection Complete
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/15 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-amber-300">
+                      <Clock3 size={12} strokeWidth={1.8} />
+                      Selection in Progress
+                    </span>
+                  )}
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold text-white">
+                    {selectedCounts.get(folder.id) ?? 0}
+                  </p>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                    Photos Selected
+                  </p>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Folder Grid */}
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4">
+        {foldersWithSignedUrls.map((folder) => (
+          <FolderLink
+            key={folder.id}
+            href={`/gallery/${shareId}/folder/${folder.id}`}
+          >
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img
+                src={
+                  folder.previewImageUrl ||
+                  "https://placehold.co/600x400/111/FFF?text=No+Image"
+                }
+                alt={folder.name}
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+              />
             </div>
+
+            <div className="p-5">
+              <h2 className="text-xl font-semibold">
+                {folder.name}
+              </h2>
+
+              <p className="mt-2 text-sm text-zinc-400">
+                <span className="font-medium text-white">
+                  {selectedCounts.get(folder.id) ?? 0}
+                </span>
+                <span className="ml-2 text-zinc-500">
+                  Photos Selected
+                </span>
+              </p>
+
+              <div className="mt-4">
+                {folder.selectionStatus === "COMPLETED" ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-300">
+                    <CheckCircle2 size={14} />
+                    Selection Complete
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+                    <Clock3 size={14} />
+                    Selection in Progress
+                  </div>
+                )}
+              </div>
+            </div>
+          </FolderLink>
+        ))}
+      </div>
+
+      {/* Picknovate Branding */}
+      <div className="border-t border-white/10 bg-black px-5 py-10 sm:py-12">
+        <div className="flex flex-col items-center justify-center">
+          <p className="text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-600">
+            Powered by
+          </p>
+
+          {superAdmin?.logoUrl && (
+            <img
+              src={superAdmin.logoUrl}
+              alt="Picknovate"
+              width={140}
+              height={140}
+              loading="eager"
+              className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
+            />
           )}
         </div>
       </div>
     </div>
-
-      {/* Selection Summary */ }
-  <div className="mx-auto mt-10 max-w-7xl px-5">
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-2xl shadow-black/20">
-      {/* Summary Header */}
-      <div className="flex flex-col gap-6 p-6 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
-        {/* Your Selection */}
-        <div className="flex items-center gap-4 lg:min-w-[250px]">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
-            <Heart size={19} strokeWidth={1.8} />
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-amber-300">
-              Photo Selection Limit
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">
-              A quick look at your photo choices
-            </p>
-          </div>
-        </div>
-
-        {/* Additional Selection Limit */}
-        {maxSelections && (
-          <div className="flex flex-1 items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 sm:px-5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
-              <Heart size={16} strokeWidth={1.8} />
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
-                Selection Limit
-              </p>
-              <p className="mt-1 text-sm font-medium text-zinc-200">
-                Choose up to{" "}
-                <span className="font-bold text-amber-300">
-                  {maxSelections}
-                </span>{" "}
-                photos
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Total Selected */}
-        <div className="flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.08] px-5 py-4 sm:px-6">
-          <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
-            Photos Selected
-          </p>
-
-          <span className="h-6 w-px bg-amber-400/20" />
-
-          <p className="text-3xl font-bold leading-none tracking-tight text-amber-300 tabular-nums">
-            {totalSelected}
-          </p>
-        </div>
-      </div>
-
-      {/* Folder Summary */}
-      <div className="border-t border-white/5">
-        {folders.map((folder, index) => (
-          <div
-            key={folder.id}
-            className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
-              }`}
-          >
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <div className="min-w-0 max-w-full">
-                <p className="break-words text-sm font-medium text-zinc-200 sm:truncate">
-                  {folder.name}
-                </p>
-              </div>
-
-              {folder.selectionStatus === "COMPLETED" ? (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-medium text-green-300">
-                  <CheckCircle2 size={12} />
-                  Client Selected Photos
-                </span>
-              ) : (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
-                  <Clock3 size={12} />
-                  Client Selecting Photos
-                </span>
-              )}
-            </div>
-
-            <div className="shrink-0 text-right">
-              <p className="text-sm font-semibold text-white">
-                {selectedCounts.get(folder.id) ?? 0}
-              </p>
-              <p className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
-                Photos Selected
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-      </div >
-
-    {/* Folder Grid */ }
-    < div className = "mx-auto grid max-w-7xl gap-5 px-5 py-10 md:grid-cols-2 xl:grid-cols-4" >
-    {
-      folders.map((folder) => (
-        <FolderLink
-          key={folder.id}
-          href={`/gallery/${shareId}/folder/${folder.id}`}
-        >
-          <div className="relative aspect-[4/3] overflow-hidden">
-            <img
-              src={
-                folder.images[0]?.imageUrl ||
-                "https://placehold.co/600x400/111/FFF?text=No+Image"
-              }
-              alt={folder.name}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-            />
-          </div>
-
-          <div className="p-5">
-            <h2 className="text-xl font-semibold">
-              {folder.name}
-            </h2>
-
-            <p className="mt-2 text-sm text-zinc-400">
-              <span className="font-medium text-white">
-                {selectedCounts.get(folder.id) ?? 0}
-              </span>
-              <span className="ml-2 text-zinc-500">
-                Photos Selected
-              </span>
-            </p>
-
-            <div className="mt-4">
-              {folder.selectionStatus === "COMPLETED" ? (
-                <div className="inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-300">
-                  <CheckCircle2 size={14} />
-                  Client Selected Photos
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
-                  <Clock3 size={14} />
-                  Client Selecting Photos
-                </div>
-              )}
-            </div>
-          </div>
-        </FolderLink>
-      ))
-    }
-      </div >
-
-    {/* Picknovate Branding */ }
-    < div className = "border-t border-white/10 bg-black px-5 py-10 sm:py-12" >
-      <div className="flex flex-col items-center justify-center">
-        <p className="text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-600">
-          Powered by
-        </p>
-
-        {superAdmin?.logoUrl && (
-          <img
-            src={superAdmin.logoUrl}
-            alt="Picknovate"
-            width={140}
-            height={140}
-            loading="eager"
-            className="h-28 w-28 object-contain opacity-90 sm:h-32 sm:w-32"
-          />
-        )}
-      </div>
-      </div >
-    </div >
   );
 }
