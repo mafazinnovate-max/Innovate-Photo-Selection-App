@@ -152,7 +152,7 @@ export default async function GalleryPage({
   for (const image of selectedImages) {
     selectedCounts.set(
       image.folderId,
-      (selectedCounts.get(image.folderId) ?? 0) + 1,
+      (selectedCounts.get(image.folderId) ?? 0) + 1
     );
   }
 
@@ -197,7 +197,6 @@ export default async function GalleryPage({
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
 
-
             {/* Subtle gold atmosphere */}
             <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
           </>
@@ -213,90 +212,149 @@ export default async function GalleryPage({
               {event.name}
             </h1>
 
-            <p className="mt-3 text-zinc-300">
-              Select your favorite memories ✨
+            <p className="mt-4 max-w-xl text-sm leading-6 tracking-wide text-zinc-300 sm:text-base sm:leading-7">
+              Choose the moments that matter most.
             </p>
 
-            <p className="mt-5 text-sm text-zinc-400">
-              Client:{" "}
-              <span className="font-medium text-zinc-200">
+            <div className="mt-6">
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-500">
+                Client
+              </p>
+
+              <p className="mt-1.5 break-words text-sm font-medium text-zinc-200 sm:text-base">
                 {event.clientName}
-              </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Existing Selection Limit - unchanged */}
+          {maxSelections && (
+            <div className="w-full shrink-0 lg:max-w-[300px]">
+              <div className="rounded-2xl border border-amber-400/20 bg-black/45 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
+                    <Heart size={18} strokeWidth={1.8} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
+                      Selection Limit
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-zinc-300">
+                      Choose up to{" "}
+                      <span className="font-semibold text-white">
+                        {maxSelections}
+                      </span>{" "}
+                      photos for your selection.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+      {/* Selection Summary */ }
+  <div className="mx-auto mt-10 max-w-7xl px-5">
+    <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-2xl shadow-black/20">
+      {/* Summary Header */}
+      <div className="flex flex-col gap-6 p-6 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+        {/* Your Selection */}
+        <div className="flex items-center gap-4 lg:min-w-[250px]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/15 bg-amber-400/10 text-amber-300">
+            <Heart size={19} strokeWidth={1.8} />
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-amber-300">
+              Photo Selection Limit
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              A quick look at your photo choices
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="relative mx-3 mb-5 flex justify-center md:mx-0 lg:mb-0 lg:justify-end lg:pr-8">
+        {/* Additional Selection Limit */}
         {maxSelections && (
-          <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-xl backdrop-blur-xl">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xl">
-                📸
-              </div>
+          <div className="flex flex-1 items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 sm:px-5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+              <Heart size={16} strokeWidth={1.8} />
+            </div>
 
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-amber-300">
-                  Photo Selection Limit
-                </p>
-
-                <p className="mt-1 text-sm leading-6 text-zinc-200">
-                  You can select up to{" "}
-                  <span className="font-bold text-white">
-                    {maxSelections}
-                  </span>{" "}
-                  photos.
-                </p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">
+                Selection Limit
+              </p>
+              <p className="mt-1 text-sm font-medium text-zinc-200">
+                Choose up to{" "}
+                <span className="font-bold text-amber-300">
+                  {maxSelections}
+                </span>{" "}
+                photos
+              </p>
             </div>
           </div>
         )}
-      </div>
-    </div>
-      </div >
 
-    {/* Selection Summary */ }
-    < div className = "mx-auto mt-8 max-w-7xl px-5" >
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-lg font-semibold text-white">
-          Your Selection Summary
-        </h2>
+        {/* Total Selected */}
+        <div className="flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.08] px-5 py-4 sm:px-6">
+          <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
+            Photos Selected
+          </p>
 
-        <p className="mt-2 text-2xl font-bold text-amber-300">
-          {totalSelected} Photos Selected
-        </p>
+          <span className="h-6 w-px bg-amber-400/20" />
 
-        <div className="mt-4 space-y-3">
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              className="flex items-center justify-between border-t border-zinc-800 pt-3"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span className="truncate text-sm text-zinc-300">
-                  {folder.name}
-                </span>
-
-                {folder.selectionStatus === "COMPLETED" ? (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-medium text-green-300">
-                    <CheckCircle2 size={12} />
-                    Client Selected Photos
-                  </span>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
-                    <Clock3 size={12} />
-                    Client Selecting Photos
-                  </span>
-                )}
-              </div>
-
-              <span className="ml-3 font-semibold text-white">
-                {selectedCounts.get(folder.id) ?? 0}
-              </span>
-            </div>
-          ))}
+          <p className="text-3xl font-bold leading-none tracking-tight text-amber-300 tabular-nums">
+            {totalSelected}
+          </p>
         </div>
       </div>
+
+      {/* Folder Summary */}
+      <div className="border-t border-white/5">
+        {folders.map((folder, index) => (
+          <div
+            key={folder.id}
+            className={`flex items-center justify-between gap-4 px-6 py-4 sm:px-7 ${index !== 0 ? "border-t border-white/5" : ""
+              }`}
+          >
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="min-w-0 max-w-full">
+                <p className="break-words text-sm font-medium text-zinc-200 sm:truncate">
+                  {folder.name}
+                </p>
+              </div>
+
+              {folder.selectionStatus === "COMPLETED" ? (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[11px] font-medium text-green-300">
+                  <CheckCircle2 size={12} />
+                  Client Selected Photos
+                </span>
+              ) : (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
+                  <Clock3 size={12} />
+                  Client Selecting Photos
+                </span>
+              )}
+            </div>
+
+            <div className="shrink-0 text-right">
+              <p className="text-sm font-semibold text-white">
+                {selectedCounts.get(folder.id) ?? 0}
+              </p>
+              <p className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                Photos Selected
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
       </div >
 
     {/* Folder Grid */ }
@@ -324,7 +382,12 @@ export default async function GalleryPage({
             </h2>
 
             <p className="mt-2 text-sm text-zinc-400">
-              {folder._count.images} Photos
+              <span className="font-medium text-white">
+                {selectedCounts.get(folder.id) ?? 0}
+              </span>
+              <span className="ml-2 text-zinc-500">
+                Photos Selected
+              </span>
             </p>
 
             <div className="mt-4">

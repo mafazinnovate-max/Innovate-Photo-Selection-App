@@ -25,12 +25,18 @@ type PortfolioPhoto = {
   publicId?: string;
 };
 
+function getPortfolioPhotoSelectionKey(photo: PortfolioPhoto): string {
+  return photo.id ?? photo.publicId ?? photo.preview;
+}
+
 type ProfileData = {
   studioName: string;
   logoUrl: string;
+  logoStorageKey: string;
   description: string;
   shortTagline: string;
   coverPhotoUrl: string;
+  coverStorageKey: string;
   ownerName: string;
   ownerPhone: string;
   phoneNumber: string;
@@ -92,9 +98,11 @@ const premiumHighlights = [
 const emptyProfile: ProfileData = {
   studioName: "",
   logoUrl: "",
+  logoStorageKey: "",
   description: "",
   shortTagline: "",
   coverPhotoUrl: "",
+  coverStorageKey: "",
   ownerName: "",
   ownerPhone: "",
   phoneNumber: "",
@@ -369,6 +377,12 @@ export default function ProfilePage() {
     PortfolioPhoto[]
   >([]);
 
+  const [selectedPortfolioPhotoKeys, setSelectedPortfolioPhotoKeys] =
+    useState<Set<string>>(() => new Set());
+
+  const [showDeleteConfirmation, setShowDeleteConfirmation] =
+    useState(false);
+
   const [previewPhoto, setPreviewPhoto] =
     useState<PortfolioPhoto | null>(null);
 
@@ -579,9 +593,11 @@ export default function ProfilePage() {
       setProfile({
         studioName: savedProfile.studioName ?? "",
         logoUrl: savedProfile.logoUrl ?? "",
+        logoStorageKey: savedProfile.logoStorageKey ?? "",
         description: savedProfile.description ?? "",
         shortTagline: savedProfile.shortTagline ?? "",
         coverPhotoUrl: savedProfile.coverPhotoUrl ?? "",
+        coverStorageKey: savedProfile.coverStorageKey ?? "",
         ownerName: savedProfile.ownerName ?? "",
         ownerPhone: savedProfile.ownerPhone ?? "",
         phoneNumber: savedProfile.phoneNumber ?? "",
@@ -704,10 +720,11 @@ export default function ProfilePage() {
       setUploadingLogo(true);
       setError("");
       setMessage("");
-
       const result = await uploadMedia(file, "logo");
 
       updateField("logoUrl", result.url);
+      updateField("logoStorageKey", result.publicId);
+
       setMessage("Logo uploaded.");
     } catch (uploadError) {
       console.error("Logo upload error:", uploadError);
@@ -741,6 +758,8 @@ export default function ProfilePage() {
       const result = await uploadMedia(file, "cover");
 
       updateField("coverPhotoUrl", result.url);
+      updateField("coverStorageKey", result.publicId);
+
       setMessage("Cover photo uploaded.");
     } catch (uploadError) {
       console.error("Cover upload error:", uploadError);
@@ -844,6 +863,32 @@ export default function ProfilePage() {
     }
   }
 
+  function togglePortfolioPhotoSelection(photo: PortfolioPhoto) {
+    const key = getPortfolioPhotoSelectionKey(photo);
+
+    setSelectedPortfolioPhotoKeys((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
+  }
+
+  function selectAllPortfolioPhotos() {
+    setSelectedPortfolioPhotoKeys(
+      new Set(portfolioPhotos.map(getPortfolioPhotoSelectionKey))
+    );
+  }
+
+  function clearPortfolioPhotoSelection() {
+    setSelectedPortfolioPhotoKeys(new Set());
+  }
+
   async function removePortfolioPhoto(
     photo: PortfolioPhoto
   ) {
@@ -912,6 +957,117 @@ export default function ProfilePage() {
       );
     }
   }
+
+
+  async function removeSelectedPortfolioPhotos() {
+    const selectedPhotos = portfolioPhotos.filter((photo) =>
+      selectedPortfolioPhotoKeys.has(
+        getPortfolioPhotoSelectionKey(photo)
+      )
+    );
+
+    if (selectedPhotos.length === 0) return;
+
+    setError("");
+    setMessage("");
+
+    const results = await Promise.all(
+      selectedPhotos.map(async (photo) => {
+        const key = getPortfolioPhotoSelectionKey(photo);
+
+        try {
+          if (photo.publicId) {
+            const response = await fetch("/api/profile/media", {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                publicId: photo.publicId,
+              }),
+            });
+
+            if (!response.ok) {
+              const data = await response.json().catch(() => null);
+
+              throw new Error(
+                data?.error || "Failed to remove portfolio photo"
+              );
+            }
+          }
+
+          return { photo, key, success: true as const };
+        } catch (error) {
+          console.error("Bulk portfolio deletion error:", error);
+
+          return {
+            photo,
+            key,
+            success: false as const,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to remove portfolio photo",
+          };
+        }
+      })
+    );
+
+    const successfulResults = results.filter(
+      (result) => result.success
+    );
+
+    const failedResults = results.filter(
+      (result) => !result.success
+    );
+
+    const successfulKeys = new Set(
+      successfulResults.map((result) => result.key)
+    );
+
+    successfulResults.forEach(({ photo }) => {
+      if (photo.preview.startsWith("blob:")) {
+        URL.revokeObjectURL(photo.preview);
+      }
+    });
+
+    setPortfolioPhotos((current) =>
+      current.filter(
+        (photo) =>
+          !successfulKeys.has(
+            getPortfolioPhotoSelectionKey(photo)
+          )
+      )
+    );
+
+    setSelectedPortfolioPhotoKeys((current) => {
+      const next = new Set(current);
+
+      successfulKeys.forEach((key) => next.delete(key));
+
+      return next;
+    });
+
+    if (
+      previewPhoto &&
+      successfulKeys.has(
+        getPortfolioPhotoSelectionKey(previewPhoto)
+      )
+    ) {
+      setPreviewPhoto(null);
+    }
+
+    if (failedResults.length > 0) {
+      setError(
+        `${successfulResults.length} photo(s) deleted successfully. ${failedResults.length} photo(s) could not be deleted. They remain selected so you can retry. ${failedResults[0].error}`
+      );
+    } else {
+      setMessage(
+        `${successfulResults.length} photo(s) deleted successfully.`
+      );
+    }
+  }
+
 
   async function clearPortfolio() {
     try {
@@ -1052,9 +1208,11 @@ export default function ProfilePage() {
       }, 2200);
   }
 
-  async function saveProfile() {
+  async function saveProfile(
+    photosToSave: PortfolioPhoto[] = portfolioPhotos
+  ) {
     if (saving) {
-      return;
+      return false;
     }
 
     setError("");
@@ -1062,7 +1220,7 @@ export default function ProfilePage() {
     setShowSuccessToast(false);
 
     if (!validateRequiredFields()) {
-      return;
+      return false;
     }
 
     if (
@@ -1073,7 +1231,7 @@ export default function ProfilePage() {
       setError(
         "Please wait until all uploads are completed before saving."
       );
-      return;
+      return false;
     }
 
     try {
@@ -1091,7 +1249,7 @@ export default function ProfilePage() {
             price: item.price,
             description: item.description,
           })),
-          portfolioPhotos: portfolioPhotos.map(
+          portfolioPhotos: photosToSave.map(
             (photo) => ({
               id: photo.id,
               imageUrl: photo.imageUrl,
@@ -1118,6 +1276,9 @@ export default function ProfilePage() {
           logoUrl:
             data.profile.logoUrl ??
             current.logoUrl,
+          logoStorageKey:
+            data.profile.logoStorageKey ??
+            current.logoStorageKey,
           description:
             data.profile.description ??
             "",
@@ -1127,6 +1288,9 @@ export default function ProfilePage() {
           coverPhotoUrl:
             data.profile.coverPhotoUrl ??
             current.coverPhotoUrl,
+          coverStorageKey:
+            data.profile.coverStorageKey ??
+            current.coverStorageKey,
           ownerName:
             data.profile.ownerName ?? "",
           ownerPhone:
@@ -1176,6 +1340,8 @@ export default function ProfilePage() {
           block: "start",
         });
       });
+
+      return true;
     } catch (saveError) {
       console.error(
         "Profile save error:",
@@ -1188,12 +1354,15 @@ export default function ProfilePage() {
           : "Failed to save profile."
       );
 
+
       requestAnimationFrame(() => {
         topRef.current?.scrollIntoView({
           behavior: "auto",
           block: "start",
         });
       });
+      return false;
+
     } finally {
       setSaving(false);
     }
@@ -1315,8 +1484,8 @@ export default function ProfilePage() {
                   onClick={() => handleFreeTemplateClick(template.key)}
                   disabled={savingTemplate}
                   className={`rounded-xl border p-4 text-left transition ${isSelected
-                      ? "border-yellow-500 bg-yellow-500/10"
-                      : "border-white/10 bg-white/[0.02] hover:border-white/30"
+                    ? "border-yellow-500 bg-yellow-500/10"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/30"
                     }`}
                 >
                   <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg bg-[#202020]">
@@ -1570,8 +1739,8 @@ export default function ProfilePage() {
               onClick={handlePremiumSelect}
               aria-pressed={premiumSelected}
               className={`group mt-6 grid w-full gap-6 rounded-2xl border bg-black/40 p-4 text-left backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-black/55 hover:shadow-[0_18px_50px_rgba(212,175,55,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4af37] sm:p-5 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-8 ${premiumSelected
-                  ? "border-[#d4af37] ring-1 ring-[#d4af37]/60"
-                  : "border-[#d4af37]/30 hover:border-[#d4af37]/70"
+                ? "border-[#d4af37] ring-1 ring-[#d4af37]/60"
+                : "border-[#d4af37]/30 hover:border-[#d4af37]/70"
                 }`}
             >
               {/* LEFT: Browser preview */}
@@ -2464,15 +2633,15 @@ export default function ProfilePage() {
             </div>
 
             <div className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400">
-              {portfolioPhotos.length} / 25 photos selected
+              {portfolioPhotos.length} / 25 photos uploaded
             </div>
           </div>
 
           <label
             htmlFor="portfolioPhotos"
             className={`group mt-6 flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center transition-colors duration-200 ${portfolioPhotos.length >= 25 || uploadingPortfolio
-                ? "cursor-not-allowed border-zinc-800 bg-zinc-950 opacity-50"
-                : "cursor-pointer border-zinc-700 bg-zinc-900/40 hover:border-zinc-500 hover:bg-zinc-900/70"
+              ? "cursor-not-allowed border-zinc-800 bg-zinc-950 opacity-50"
+              : "cursor-pointer border-zinc-700 bg-zinc-900/40 hover:border-zinc-500 hover:bg-zinc-900/70"
               }`}
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 text-2xl text-zinc-500 transition-colors group-hover:border-zinc-500 group-hover:text-zinc-300">
@@ -2481,8 +2650,8 @@ export default function ProfilePage() {
 
             <p
               className={`mt-4 text-sm font-semibold ${portfolioPhotos.length >= 25
-                  ? "text-red-400"
-                  : "text-zinc-300"
+                ? "text-red-400"
+                : "text-zinc-300"
                 }`}
             >
               {portfolioPhotos.length >= 25
@@ -2530,8 +2699,8 @@ export default function ProfilePage() {
                   className="h-full rounded-full bg-emerald-400 transition-all duration-300"
                   style={{
                     width: `${portfolioUploadTotal > 0
-                        ? (portfolioUploadProgress / portfolioUploadTotal) * 100
-                        : 0
+                      ? (portfolioUploadProgress / portfolioUploadTotal) * 100
+                      : 0
                       }%`,
                   }}
                 />
@@ -2545,50 +2714,91 @@ export default function ProfilePage() {
 
           {portfolioPhotos.length > 0 && (
             <div className="mt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
-                  Selected Photos
-                </p>
 
-                <button
-                  type="button"
-                  onClick={clearPortfolio}
-                  className="text-xs font-medium text-zinc-500 transition-colors hover:text-red-400"
-                >
-                  Clear All
-                </button>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+                    Selected Photos
+                  </p>
+
+                  {selectedPortfolioPhotoKeys.size > 0 && (
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {selectedPortfolioPhotoKeys.size} photo(s) selected
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={
+                      selectedPortfolioPhotoKeys.size === portfolioPhotos.length
+                        ? clearPortfolioPhotoSelection
+                        : selectAllPortfolioPhotos
+                    }
+                    className="text-xs font-medium text-zinc-400 transition-colors hover:text-white"
+                  >
+                    {selectedPortfolioPhotoKeys.size === portfolioPhotos.length
+                      ? "Clear Selection"
+                      : "Select All"}
+                  </button>
+
+                  {selectedPortfolioPhotoKeys.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirmation(true)}
+                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:border-red-500/60 hover:bg-red-500/20"
+                    >
+                      Delete Selected ({selectedPortfolioPhotoKeys.size})
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={clearPortfolio}
+                    className="text-xs font-medium text-zinc-500 transition-colors hover:text-red-400"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
+
+
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {portfolioPhotos.map(
-                  (photo, index) => (
+                {portfolioPhotos.map((photo, index) => {
+                  const photoKey = getPortfolioPhotoSelectionKey(photo);
+                  const isSelected = selectedPortfolioPhotoKeys.has(photoKey);
+
+                  return (
                     <div
-                      key={
-                        photo.id ??
-                        photo.preview
-                      }
-                      className="group relative aspect-square overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+                      key={photo.id ?? photo.publicId ?? photo.preview}
+                      className={`group relative aspect-square overflow-hidden rounded-lg border bg-zinc-900 transition-all duration-200 ${isSelected
+                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
+                          : "border-zinc-800"
+                        }`}
                     >
                       <button
                         type="button"
-                        onClick={() =>
-                          setPreviewPhoto(photo)
-                        }
+                        onClick={() => setPreviewPhoto(photo)}
                         className="absolute inset-0 z-0"
-                        aria-label={`Preview portfolio photo ${index + 1
-                          }`}
+                        aria-label={`Preview portfolio photo ${index + 1}`}
                       >
                         <img
                           src={photo.preview}
-                          alt={`Portfolio photo ${index + 1
-                            }`}
+                          alt={`Portfolio photo ${index + 1}`}
                           loading="lazy"
                           decoding="async"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       </button>
 
-                      <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30" />
+                      <div
+                        className={`pointer-events-none absolute inset-0 transition-colors ${isSelected
+                            ? "bg-yellow-400/10"
+                            : "bg-black/0 group-hover:bg-black/30"
+                          }`}
+                      />
 
                       <div className="pointer-events-none absolute left-2 top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-md bg-black/60 px-1.5 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
                         {index + 1}
@@ -2596,19 +2806,42 @@ export default function ProfilePage() {
 
                       <button
                         type="button"
-                        onClick={() =>
-                          removePortfolioPhoto(
-                            photo
-                          )
+                        onClick={() => togglePortfolioPhotoSelection(photo)}
+                        aria-label={
+                          isSelected
+                            ? `Deselect portfolio photo ${index + 1}`
+                            : `Select portfolio photo ${index + 1}`
                         }
-                        className="absolute right-2 top-2 z-20 rounded-md bg-black/70 px-2 py-1.5 text-[10px] font-medium text-white opacity-0 backdrop-blur-sm transition-all hover:bg-red-500 group-hover:opacity-100"
+                        aria-pressed={isSelected}
+                        className={`absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-lg border shadow-lg backdrop-blur-md transition-all ${isSelected
+                            ? "border-yellow-400 bg-yellow-400 text-black"
+                            : "border-white/40 bg-black/65 text-white hover:border-white hover:bg-black/85 sm:opacity-0 sm:group-hover:opacity-100"
+                          }`}
                       >
-                        Remove
+                        {isSelected ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="h-5 w-5"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <path
+                              d="m4 10 4 4 8-8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        ) : (
+                          <span className="h-3.5 w-3.5 rounded border-2 border-current" />
+                        )}
                       </button>
                     </div>
-                  )
-                )}
+                  );
+                })}
               </div>
+
             </div>
           )}
 
@@ -2821,6 +3054,77 @@ export default function ProfilePage() {
                   Maybe Later
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirmation && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
+          role="presentation"
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirmation-title"
+            aria-describedby="delete-confirmation-description"
+            className="w-full max-w-md rounded-2xl border border-zinc-800 bg-[#141414] p-6 shadow-2xl"
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"
+                />
+              </svg>
+            </div>
+
+            <h2
+              id="delete-confirmation-title"
+              className="mt-5 text-center text-lg font-semibold text-white"
+            >
+              Delete Selected Photos?
+            </h2>
+
+            <p
+              id="delete-confirmation-description"
+              className="mt-3 text-center text-sm leading-6 text-zinc-400"
+            >
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-white">
+                {selectedPortfolioPhotoKeys.size} selected photo(s)
+              </span>
+              ? This action cannot be undone.
+            </p>
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirmation(false)}
+                className="flex-1 rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  void removeSelectedPortfolioPhotos();
+                }}
+                className="flex-1 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-600"
+              >
+                Confirm Deletion
+              </button>
             </div>
           </div>
         </div>
