@@ -85,6 +85,7 @@ model Image {
   thumbnailSize  BigInt?
 
   processingStartedAt DateTime?
+  originalDeletedAt   DateTime?
 
   folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   selections Selection[]

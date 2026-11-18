@@ -293,15 +293,54 @@ export async function GET() {
             },
         });
 
+        const imageCounts = await prisma.event.findMany({
+            where: {
+                deletedAt: null,
+            },
+            select: {
+                studioId: true,
+                folders: {
+                    select: {
+                        _count: {
+                            select: {
+                                images: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const imageCountByStudio = new Map<string, number>();
+
+        for (const event of imageCounts) {
+            const eventImageCount = event.folders.reduce(
+                (total, folder) => total + folder._count.images,
+                0
+            );
+
+            if (event.studioId) {
+                imageCountByStudio.set(
+                    event.studioId,
+                    (imageCountByStudio.get(event.studioId) ?? 0) + eventImageCount
+                );
+            }
+        }
+
         // Generate signed R2 URLs for Studio logos
         const studiosWithSignedLogos = await Promise.all(
             studios.map(async (studio) => {
+                const totalImages = imageCountByStudio.get(studio.id) ?? 0;
+
                 const logoKey =
                     studio.logoOptimizedKey ||
                     studio.logoStorageKey;
 
                 if (!logoKey) {
-                    return studio;
+                    return {
+                        ...studio,
+                        totalImages,
+                    };
                 }
 
                 try {
@@ -317,6 +356,7 @@ export async function GET() {
                     return {
                         ...studio,
                         logoUrl: signedLogoUrl,
+                        totalImages,
                     };
                 } catch (error) {
                     console.error(
@@ -324,7 +364,10 @@ export async function GET() {
                         error
                     );
 
-                    return studio;
+                    return {
+                        ...studio,
+                        totalImages,
+                    };
                 }
             })
         );

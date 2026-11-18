@@ -77,6 +77,14 @@ interface ApiStudio {
         endDate: string | null;
         storageLimitGb: number;
     }[];
+    storageUsage?: {
+        usedBytes: number;
+        usedGB: number;
+        objectCount: number;
+        storageLimitGb: number;
+        remainingGB: number;
+        usagePercentage: number;
+    } | null;
     _count?: {
         events: number;
     };
@@ -84,6 +92,14 @@ interface ApiStudio {
         customers?: number;
         images?: number;
     };
+}
+
+interface ApiStudioStorage {
+    studioId: string;
+    usedGB: number;
+    storageLimitGb: number;
+    usagePercentage: number;
+    objectCount: number;
 }
 
 const statusOptions = [
@@ -297,6 +313,34 @@ export default function StudiosPage() {
                     );
                 }
 
+                let storageUsageMap = new Map<string, ApiStudioStorage>();
+
+                try {
+                    const storageResponse = await fetch(
+                        "/api/super-admin/storage-usage",
+                        {
+                            method: "GET",
+                            cache: "no-store",
+                        }
+                    );
+
+                    const storageData = await storageResponse.json();
+
+                    if (!storageResponse.ok || !storageData.success) {
+                        throw new Error(
+                            storageData.message || "Failed to load storage usage."
+                        );
+                    }
+
+                    storageUsageMap = new Map<string, ApiStudioStorage>(
+                        (storageData.studios as ApiStudioStorage[]).map(
+                            (item) => [item.studioId, item]
+                        )
+                    );
+                } catch (error) {
+                    console.error("Failed to load storage usage:", error);
+                }
+
                 const mappedStudios: Studio[] = (
                     data.studios as ApiStudio[]
                 ).map((studio) => {
@@ -354,8 +398,8 @@ export default function StudiosPage() {
 
                         images: studio.metrics?.images ?? 0,
 
-                        // Storage usage is not currently tracked in the schema.
-                        storageUsed: null,
+                        // Actual R2 storage usage from the storage API.
+                        storageUsed: storageUsageMap.get(studio.id)?.usedGB ?? null,
 
                         storageLimit: subscription?.storageLimitGb ?? 100,
 
@@ -708,7 +752,7 @@ export default function StudiosPage() {
                                                 total + (studio.storageUsed ?? 0),
                                             0
                                         )
-                                        .toFixed(1)} GB`
+                                        .toFixed(3)} GB`
                                     : "Not tracked"}
                             </p>
                         </div>
@@ -946,19 +990,21 @@ export default function StudiosPage() {
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
-                                                            <img
-                                                                src={studio.logoUrl || ""}
-                                                                alt={`${studio.name} logo`}
-                                                                className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
-                                                                    }`}
-                                                                onError={(e) => {
-                                                                    e.currentTarget.style.display = "none";
-                                                                    const fallback = e.currentTarget.nextElementSibling;
-                                                                    if (fallback) {
-                                                                        fallback.classList.remove("hidden");
-                                                                    }
-                                                                }}
-                                                            />
+                                                            {studio.logoUrl ? (
+                                                                <img
+                                                                    src={studio.logoUrl}
+                                                                    alt={`${studio.name} logo`}
+                                                                    className="h-full w-full object-cover"
+                                                                    loading="eager"
+                                                                    onError={(e) => {
+                                                                        e.currentTarget.style.display = "none";
+                                                                        const fallback = e.currentTarget.nextElementSibling;
+                                                                        if (fallback) {
+                                                                            fallback.classList.remove("hidden");
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ) : null}
 
                                                             <span className={studio.logoUrl ? "hidden" : ""}>
                                                                 {getInitials(
@@ -1064,9 +1110,8 @@ export default function StudiosPage() {
                                                     <div className="w-36">
                                                         <div className="mb-2 flex items-center justify-between text-xs">
                                                             <span className="text-zinc-300">
-                                                                {studio.storageLimit >
-                                                                    0
-                                                                    ? `${studio.storageUsed} GB`
+                                                                {studio.storageUsed !== null && studio.storageLimit > 0
+                                                                    ? `${studio.storageUsed.toFixed(3)} GB`
                                                                     : "—"}
                                                             </span>
 
@@ -1385,9 +1430,8 @@ export default function StudiosPage() {
                                                 </p>
 
                                                 <p className="mt-1 text-sm text-zinc-300">
-                                                    {studio.storageLimit >
-                                                        0
-                                                        ? `${studio.storageUsed} GB / ${studio.storageLimit} GB`
+                                                    {studio.storageUsed !== null && studio.storageLimit > 0
+                                                        ? `${studio.storageUsed.toFixed(3)} GB / ${studio.storageLimit} GB`
                                                         : "—"}
                                                 </p>
 

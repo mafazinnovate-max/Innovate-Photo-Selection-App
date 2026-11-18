@@ -189,6 +189,7 @@ export async function processImage(imageId: string): Promise<void> {
         completed = true;
 
         // Delete original only after successful database update.
+        // Delete original only after successful database update.
         try {
             await r2.send(
                 new DeleteObjectCommand({
@@ -196,6 +197,40 @@ export async function processImage(imageId: string): Promise<void> {
                     Key: originalKey,
                 })
             );
+
+            // Verify that original object no longer exists.
+            let originalDeleted = false;
+
+            try {
+                await r2.send(
+                    new HeadObjectCommand({
+                        Bucket: R2_BUCKET_NAME,
+                        Key: originalKey,
+                    })
+                );
+            } catch (headError) {
+                const errorName =
+                    (headError as { name?: string }).name;
+
+                const httpStatus =
+                    (headError as { $metadata?: { httpStatusCode?: number } })
+                        .$metadata?.httpStatusCode;
+
+                if (errorName === "NotFound" || httpStatus === 404) {
+                    originalDeleted = true;
+                } else {
+                    throw headError;
+                }
+            }
+
+            if (originalDeleted) {
+                await prisma.image.update({
+                    where: { id: image.id },
+                    data: {
+                        originalDeletedAt: new Date(),
+                    },
+                });
+            }
         } catch (deleteError) {
             console.error(
                 `Original image cleanup failed for ${image.id}:`,

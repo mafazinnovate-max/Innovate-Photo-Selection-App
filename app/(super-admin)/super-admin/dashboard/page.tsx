@@ -23,6 +23,7 @@ interface DashboardStats {
     totalStudios: number;
     activeStudios: number;
     totalEvents: number;
+    totalStorageGB: number;
 }
 
 export default function SuperAdminDashboardPage() {
@@ -31,6 +32,7 @@ export default function SuperAdminDashboardPage() {
         totalStudios: 0,
         activeStudios: 0,
         totalEvents: 0,
+        totalStorageGB: 0,
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -54,6 +56,22 @@ export default function SuperAdminDashboardPage() {
                     );
                 }
 
+                const storageResponse = await fetch(
+                    "/api/super-admin/storage-usage",
+                    {
+                        method: "GET",
+                        cache: "no-store",
+                    }
+                );
+
+                const storageData = await storageResponse.json();
+
+                if (!storageResponse.ok || !storageData.success) {
+                    throw new Error(
+                        storageData.message || "Failed to load storage usage."
+                    );
+                }
+
                 const studioList: ApiStudio[] = data.studios ?? [];
 
                 setStudios(studioList);
@@ -68,6 +86,7 @@ export default function SuperAdminDashboardPage() {
                             total + (studio._count?.events ?? 0),
                         0
                     ),
+                    totalStorageGB: storageData.summary.totalGB,
                 });
             } catch (err) {
                 console.error("Dashboard loading error:", err);
@@ -106,8 +125,8 @@ export default function SuperAdminDashboardPage() {
         },
         {
             title: "Storage Used",
-            value: "Not tracked",
-            description: "Actual storage usage unavailable",
+            value: `${stats.totalStorageGB.toFixed(3)} GB`,
+            description: "Total R2 storage across platform",
             icon: HardDrive,
         },
     ];

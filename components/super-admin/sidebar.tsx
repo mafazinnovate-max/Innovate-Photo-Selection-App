@@ -171,6 +171,7 @@ export default function SuperAdminSidebar() {
                                 alt="Picnovate logo"
                                 width={400}
                                 height={160}
+                                priority
                                 unoptimized
                                 className="h-auto max-h-full w-auto max-w-full object-contain"
                             />
