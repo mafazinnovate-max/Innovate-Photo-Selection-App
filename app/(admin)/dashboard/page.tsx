@@ -174,7 +174,7 @@ export default async function DashboardPage() {
       },
     }),
 
-        // External Events
+    // External Events
     prisma.externalEvent.findMany({
       where: {
         studioId,
@@ -200,17 +200,17 @@ export default async function DashboardPage() {
 
   const subscriptionInfo = subscription
     ? {
-        id: subscription.id,
-        plan: subscription.plan,
-        price: subscription.price,
-        status: subscription.status,
-        startDate: subscription.startDate.toISOString(),
-        endDate: subscription.endDate?.toISOString() ?? null,
-        storageLimitGb: subscription.storageLimitGb,
-        maxEvents: subscription.maxEvents,
-        maxCustomers: subscription.maxCustomers,
-        maxImages: subscription.maxImages,
-      }
+      id: subscription.id,
+      plan: subscription.plan,
+      price: subscription.price,
+      status: subscription.status,
+      startDate: subscription.startDate.toISOString(),
+      endDate: subscription.endDate?.toISOString() ?? null,
+      storageLimitGb: subscription.storageLimitGb,
+      maxEvents: subscription.maxEvents,
+      maxCustomers: subscription.maxCustomers,
+      maxImages: subscription.maxImages,
+    }
     : null;
 
   const recentEvents = recentEventsData.map((event) => {
@@ -264,17 +264,17 @@ export default async function DashboardPage() {
        * Keep the existing behaviour exactly as it is.
        */
       categories = event.folders
-  .filter((folder) => !folder.parentId)
-  .map((folder) => ({
-    id: folder.id,
-    name: folder.name,
-    hardDiskName: folder.hardDiskName,
-    totalPhotos: folder.images.length,
-    selectedPhotos: folder.images.filter(
-      (image) => image.isSelected
-    ).length,
-    children: [],
-  }));
+        .filter((folder) => !folder.parentId)
+        .map((folder) => ({
+          id: folder.id,
+          name: folder.name,
+          hardDiskName: folder.hardDiskName,
+          totalPhotos: folder.images.length,
+          selectedPhotos: folder.images.filter(
+            (image) => image.isSelected
+          ).length,
+          children: [],
+        }));
     }
 
     const eventTotalPhotos = event.folders.reduce(
@@ -344,35 +344,35 @@ export default async function DashboardPage() {
       eventDate: event.eventDate?.toISOString() ?? null,
       createdAt: event.createdAt.toISOString(),
       deletedAt: event.deletedAt?.toISOString() ?? null,
-    galleryMode: event.galleryMode,
-folders: event.folders.map((folder) => ({
-  id: folder.id,
-  name: folder.name,
-  parentId: folder.parentId,
-  hardDiskName: folder.hardDiskName,
-  deletedAt: folder.deletedAt?.toISOString() ?? null,
-})),
-totalPhotos,
-selectedPhotos,
+      galleryMode: event.galleryMode,
+      folders: event.folders.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        parentId: folder.parentId,
+        hardDiskName: folder.hardDiskName,
+        deletedAt: folder.deletedAt?.toISOString() ?? null,
+      })),
+      totalPhotos,
+      selectedPhotos,
     };
   });
 
   const externalEvents = externalEventsData.map((event) => ({
-  id: event.id,
-  name: event.name,
-  clientName: event.clientName,
-  eventType: event.eventType,
-  description: event.description,
-  phoneNumber: event.phoneNumber,
-  email: event.email,
-  eventDate: event.eventDate?.toISOString() ?? null,
-  createdAt: event.createdAt.toISOString(),
-  deletedAt: null,
-  folders: [],
-  galleryMode: "external",
-  hardDiskName: event.hardDiskName,
-  source: "external" as const,
-}));
+    id: event.id,
+    name: event.name,
+    clientName: event.clientName,
+    eventType: event.eventType,
+    description: event.description,
+    phoneNumber: event.phoneNumber,
+    email: event.email,
+    eventDate: event.eventDate?.toISOString() ?? null,
+    createdAt: event.createdAt.toISOString(),
+    deletedAt: null,
+    folders: [],
+    galleryMode: "external",
+    hardDiskName: event.hardDiskName,
+    source: "external" as const,
+  }));
 
   const stats = [
     {
@@ -431,7 +431,7 @@ selectedPhotos,
                   </p>
 
                   <p className="mt-2 text-3xl font-bold text-white">
-                   <AnimatedStatValue value={stat.value} />
+                    <AnimatedStatValue value={stat.value} />
                   </p>
 
                   <p className="mt-1 text-xs text-zinc-500">
@@ -450,7 +450,11 @@ selectedPhotos,
 
       {/* Subscription */}
       <div>
-        <SubscriptionCard subscription={subscriptionInfo} />
+        <SubscriptionCard
+          subscription={subscriptionInfo}
+          totalEvents={totalEvents}
+          totalImages={totalPhotos}
+        />
       </div>
 
       {/* Recent Events */}
@@ -503,7 +507,7 @@ selectedPhotos,
           </p>
         </div>
 
-       <PastEvents events={[...pastEvents, ...externalEvents]} />
+        <PastEvents events={[...pastEvents, ...externalEvents]} />
       </div>
     </div>
   );

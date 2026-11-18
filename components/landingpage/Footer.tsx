@@ -3,37 +3,20 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
-const footerCols = [
-    {
-        title: "Product",
-        links: [
-            { label: "Smart Photo Selection", href: "#features" },
-            { label: "Project Records", href: "#features" },
-            { label: "Quotations & Contracts", href: "#features" },
-            { label: "Team & Payslips", href: "#features" },
-            { label: "Website Builder", href: "#website" },
-        ],
-    },
-    {
-        title: "Solutions",
-        links: [
-            { label: "Wedding Studios", href: "#" },
-            { label: "Commercial Photography", href: "#" },
-            { label: "Videographers", href: "#" },
-            { label: "Event Companies", href: "#" },
-            { label: "Pricing Plans", href: "#pricing" },
-        ],
-    },
-    {
-        title: "Company & Legal",
-        links: [
-            { label: "About Us", href: "#" },
-            { label: "FAQs", href: "#faqs" },
-            { label: "Privacy Policy", href: "#" },
-            { label: "Terms of Service", href: "#" },
-            { label: "Support & Contact", href: "#contact" },
-        ],
-    },
+const quickLinks = [
+    { label: "Home", href: "#" },
+    { label: "Features", href: "#features" },
+    { label: "Pricing", href: "#pricing" },
+    { label: "FAQs", href: "#faqs" },
+    { label: "Contact Us", href: "#contact" },
+];
+
+const solutionLinks = [
+    { label: "Audience Growth" },
+    { label: "Photo Selection"},
+    { label: "Studio Management" },
+    { label: "Client Management" },
+    { label: "Booking & Scheduling", href: "#features" },
 ];
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -52,7 +35,7 @@ export default function Footer() {
         },
         viewport: {
             once: true,
-            amount: 0.2,
+            amount: 0.15,
         },
         transition: {
             duration: reduceMotion ? 0 : 0.7,
@@ -64,9 +47,10 @@ export default function Footer() {
     return (
         <footer
             id="contact"
-            className="relative overflow-hidden bg-[#F4F1EA] text-[#14161A]"
+            className="relative isolate overflow-hidden bg-[#F4F1EA] text-[#14161A]"
         >
-            {/* Animated wave transition */}
+            {/* ANIMATED WAVE TRANSITION */}
+
             <div
                 className="pointer-events-none absolute left-0 top-0 z-0 h-[125px] w-full overflow-hidden sm:h-[155px]"
                 aria-hidden="true"
@@ -80,7 +64,8 @@ export default function Footer() {
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                 >
-                    {/* Charcoal wave */}
+                    {/* CHARCOAL WAVE */}
+
                     <path
                         d="
                             M0 0 H1440 V80
@@ -94,7 +79,8 @@ export default function Footer() {
                         fill="#14161A"
                     />
 
-                    {/* Yellow flowing accent */}
+                    {/* YELLOW FLOWING ACCENT */}
+
                     <path
                         d="
                             M0 88
@@ -112,7 +98,8 @@ export default function Footer() {
                     />
                 </svg>
 
-                {/* Subtle secondary wave */}
+                {/* SUBTLE SECONDARY WAVE */}
+
                 <div
                     className={`footer-wave-glow absolute -bottom-10 left-0 h-16 w-[200%] rounded-[50%] ${
                         reduceMotion ? "footer-wave-static" : ""
@@ -120,48 +107,53 @@ export default function Footer() {
                 />
             </div>
 
-            {/* Footer content */}
-            <div className="relative z-10 px-6 pb-6 pt-[145px] sm:px-10 sm:pt-[175px] lg:px-16">
+            {/* BRAND HEADER */}
+
+            <div className="relative z-10 px-5 pt-[145px] sm:px-8 sm:pt-[175px] lg:px-12">
                 <div className="mx-auto max-w-[1440px]">
-                    {/* Brand introduction */}
-                    <div className="grid gap-10 border-b border-[#14161A]/10 pb-12 md:grid-cols-2 md:items-start lg:gap-20">
-                        <motion.div {...reveal(0)}>
-                            <h2 className="text-3xl font-semibold tracking-[-0.06em] sm:text-4xl lg:text-5xl">
-                                Picknnovate
-                            </h2>
+                    <motion.div
+                        {...reveal(0)}
+                        className="flex flex-col justify-between gap-5 rounded-t-[26px] bg-gradient-to-r from-[#F4F1EA] via-[#F8EBCB] to-[#FFE08A] px-6 py-8 text-[#14161A] sm:flex-row sm:items-center sm:px-10 sm:py-9 lg:px-12 lg:py-10"
+                    >
+                        <h2 className="text-3xl font-bold tracking-[-0.065em] sm:text-4xl lg:text-[46px]">
+                            Picknnovate
+                        </h2>
 
-                            <p className="mt-3 text-sm font-medium text-[#14161A]/70 sm:text-base">
-                                Your creative business, simplified.
-                            </p>
-                        </motion.div>
-
-                        <motion.p
-                            {...reveal(0.12)}
-                            className="max-w-md text-sm leading-7 text-[#14161A]/65 sm:text-base"
-                        >
+                        <p className="max-w-[340px] text-xs font-medium leading-5 text-[#14161A]/75 sm:text-right sm:text-[13px] sm:leading-6">
                             One connected workspace for photography studios
                             and creative businesses.
-                        </motion.p>
-                    </div>
+                        </p>
+                    </motion.div>
+                </div>
+            </div>
 
-                    {/* Links and contact */}
-                    <div className="grid gap-12 py-12 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.15fr_1.35fr] lg:gap-10">
-                        {footerCols.map((column, index) => (
-                            <motion.div
-                                key={column.title}
-                                {...reveal(index * 0.1)}
-                            >
-                                <h3 className="mb-6 inline-block rounded-md bg-[#FFC93C] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em]">
-                                    {column.title}
+            {/* MAIN DARK FOOTER */}
+
+            <div className="relative z-10 bg-[#14161A] px-5 py-7 sm:px-8 sm:py-9 lg:px-12">
+                <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-5 lg:grid-cols-[1.65fr_0.85fr] lg:gap-7">
+
+                    {/* QUICK LINKS + SOLUTIONS CARD */}
+
+                    <motion.div
+                        {...reveal(0.08)}
+                        className="rounded-[24px] border border-white/[0.12] bg-[#17191D] p-5 shadow-[0_15px_45px_rgba(0,0,0,0.16)] sm:p-7 lg:p-9"
+                    >
+                        <div className="grid grid-cols-1 gap-8 min-[420px]:grid-cols-2 sm:gap-12">
+
+                            {/* QUICK LINKS */}
+
+                            <div>
+                                <h3 className="mb-5 inline-flex min-w-[120px] justify-center rounded-[4px] bg-[#FFC93C] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#14161A]">
+                                    Quick Links
                                 </h3>
 
-                                <ul className="space-y-4">
-                                    {column.links.map((link, linkIndex) => (
+                                <ul className="space-y-3.5">
+                                    {quickLinks.map((link, index) => (
                                         <motion.li
                                             key={link.label}
                                             initial={{
                                                 opacity: reduceMotion ? 1 : 0,
-                                                x: reduceMotion ? 0 : -8,
+                                                x: reduceMotion ? 0 : -10,
                                             }}
                                             whileInView={{
                                                 opacity: 1,
@@ -172,19 +164,21 @@ export default function Footer() {
                                                 amount: 0.3,
                                             }}
                                             transition={{
-                                                duration: reduceMotion ? 0 : 0.4,
+                                                duration: reduceMotion ? 0 : 0.45,
                                                 delay: reduceMotion
                                                     ? 0
-                                                    : index * 0.08 +
-                                                      linkIndex * 0.055,
+                                                    : index * 0.07,
                                                 ease,
                                             }}
                                         >
                                             <a
                                                 href={link.href}
-                                                className="group inline-flex items-center gap-2 text-sm text-[#14161A]/65 transition-colors duration-300 hover:text-[#14161A]"
+                                                className="group flex w-fit items-center gap-2 text-[12px] text-white/65 transition-colors duration-300 hover:text-[#FFC93C] sm:text-[13px]"
                                             >
+                                                <span className="h-1 w-1 shrink-0 rounded-full bg-[#FFC93C]" />
+
                                                 <span>{link.label}</span>
+
                                                 <span className="translate-x-[-4px] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
                                                     ↗
                                                 </span>
@@ -192,139 +186,235 @@ export default function Footer() {
                                         </motion.li>
                                     ))}
                                 </ul>
-                            </motion.div>
-                        ))}
-
-                        {/* Contact card */}
-                        <motion.div
-                            {...reveal(0.25)}
-                            whileHover={
-                                reduceMotion ? undefined : { y: -5 }
-                            }
-                            transition={{
-                                duration: 0.35,
-                                ease,
-                            }}
-                            className="rounded-[24px] bg-[#14161A] p-6 text-[#F4F1EA] shadow-[0_18px_45px_rgba(20,22,26,0.13)] sm:p-7"
-                        >
-                            <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#FFC93C]">
-                                Get in touch
-                            </p>
-
-                            <h3 className="text-xl font-semibold tracking-tight">
-                                Contact us
-                            </h3>
-
-                            <div className="mt-7 space-y-6">
-                                <div>
-                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FFC93C]">
-                                        Phone
-                                    </p>
-                                    <a
-                                        href="tel:+91XXXXXXXXXX"
-                                        className="text-sm text-white/75 transition-colors hover:text-[#FFC93C]"
-                                    >
-                                        +91 84384 30504
-                                    </a>
-                                </div>
-
-                                <div>
-                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FFC93C]">
-                                        Email
-                                    </p>
-                                    <a
-                                        href="mailto:YOUR_EMAIL_ADDRESS"
-                                        className="break-all text-sm text-white/75 transition-colors hover:text-[#FFC93C]"
-                                    >
-                                        innovateweddingcompany@gmail.com
-                                    </a>
-                                </div>
-
-                                <div>
-                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FFC93C]">
-                                        Address
-                                    </p>
-                                    <p className="text-sm leading-6 text-white/65">
-                                        Innovate Wedding Company,
-                                        Pattakasalianvilai Rd, Vattakarai,
-                                        Maravankudieruppu, Nagercoil,
-                                        Tamil Nadu 629002
-                                    </p>
-                                </div>
                             </div>
 
-                            {/* Social links */}
-                            <div className="mt-7 flex items-center gap-3">
+                            {/* SOLUTIONS */}
+
+                            <div>
+                                <h3 className="mb-5 inline-flex min-w-[120px] justify-center rounded-[4px] bg-[#FFC93C] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#14161A]">
+                                    Solutions
+                                </h3>
+
+                                <ul className="space-y-3.5">
+                                    {solutionLinks.map((link, index) => (
+                                        <motion.li
+                                            key={link.label}
+                                            initial={{
+                                                opacity: reduceMotion ? 1 : 0,
+                                                x: reduceMotion ? 0 : -10,
+                                            }}
+                                            whileInView={{
+                                                opacity: 1,
+                                                x: 0,
+                                            }}
+                                            viewport={{
+                                                once: true,
+                                                amount: 0.3,
+                                            }}
+                                            transition={{
+                                                duration: reduceMotion ? 0 : 0.45,
+                                                delay: reduceMotion
+                                                    ? 0
+                                                    : 0.12 + index * 0.07,
+                                                ease,
+                                            }}
+                                        >
+                                            <a
+                                                href={link.href}
+                                                className="group flex w-fit items-center gap-2 text-[12px] text-white/65 transition-colors duration-300 hover:text-[#FFC93C] sm:text-[13px]"
+                                            >
+                                                <span className="h-1 w-1 shrink-0 rounded-full bg-[#FFC93C]" />
+
+                                                <span>{link.label}</span>
+
+                                                <span className="translate-x-[-4px] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+                                                    ↗
+                                                </span>
+                                            </a>
+                                        </motion.li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* STAY CONNECTED */}
+
+                        <motion.div
+                            {...reveal(0.2)}
+                            className="mt-8 rounded-[15px] border border-[#FFC93C]/30 bg-[#0D0E10] p-4 sm:ml-[22%] sm:max-w-[440px] sm:p-5"
+                        >
+                            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#FFC93C]">
+                                Stay Connected
+                            </p>
+
+                            <p className="mt-2 text-[11px] leading-5 text-white/65 sm:text-xs">
+                                Follow us for creative inspiration,
+                                product updates and everything happening
+                                at Picknnovate.
+                            </p>
+
+                            <div className="mt-4 flex items-center gap-2.5">
+
                                 <motion.a
                                     href="YOUR_INSTAGRAM_URL"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     aria-label="Instagram"
                                     whileHover={
-                                        reduceMotion ? undefined : {
-                                            y: -4,
-                                            rotate: -6,
-                                        }
+                                        reduceMotion
+                                            ? undefined
+                                            : { y: -4, rotate: -6 }
                                     }
-                                    whileTap={{ scale: 0.92 }}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] text-lg font-semibold text-[#FFC93C] transition-colors hover:border-[#FFC93C]/50 hover:bg-[#FFC93C]/10"
+                                    whileTap={
+                                        reduceMotion
+                                            ? undefined
+                                            : { scale: 0.92 }
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-lg text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
                                 >
                                     ◎
                                 </motion.a>
 
                                 <motion.a
                                     href="YOUR_LINKEDIN_URL"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     aria-label="LinkedIn"
                                     whileHover={
-                                        reduceMotion ? undefined : {
-                                            y: -4,
-                                            rotate: 6,
-                                        }
+                                        reduceMotion
+                                            ? undefined
+                                            : { y: -4, rotate: 5 }
                                     }
-                                    whileTap={{ scale: 0.92 }}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C]/50 hover:bg-[#FFC93C]/10"
+                                    whileTap={
+                                        reduceMotion
+                                            ? undefined
+                                            : { scale: 0.92 }
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
                                 >
                                     in
                                 </motion.a>
 
                                 <motion.a
                                     href="YOUR_YOUTUBE_URL"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     aria-label="YouTube"
                                     whileHover={
-                                        reduceMotion ? undefined : {
-                                            y: -4,
-                                            rotate: -6,
-                                        }
+                                        reduceMotion
+                                            ? undefined
+                                            : { y: -4, rotate: -5 }
                                     }
-                                    whileTap={{ scale: 0.92 }}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C]/50 hover:bg-[#FFC93C]/10"
+                                    whileTap={
+                                        reduceMotion
+                                            ? undefined
+                                            : { scale: 0.92 }
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
                                 >
                                     ▶
                                 </motion.a>
+
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
 
-                    {/* Copyright */}
+                    {/* CONTACT CARD */}
+
                     <motion.div
-                        {...reveal(0)}
-                        className="flex flex-col gap-3 border-t border-[#14161A]/10 pt-6 text-center text-xs text-[#14161A]/50 sm:flex-row sm:items-center sm:justify-between sm:text-left"
+                        {...reveal(0.18)}
+                        whileHover={
+                            reduceMotion
+                                ? undefined
+                                : {
+                                      y: -5,
+                                      transition: { duration: 0.3, ease },
+                                  }
+                        }
+                        className="rounded-[24px] border border-white/[0.12] bg-[#17191D] p-6 shadow-[0_15px_45px_rgba(0,0,0,0.16)] sm:p-7 lg:p-9"
                     >
-                        <p>
-                            © {new Date().getFullYear()} Picknnovate. All
-                            Rights Reserved.
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#FFC93C]">
+                            Contact Us
                         </p>
 
-                        <p className="font-medium tracking-wide">
-                            Made for creative businesses.
-                        </p>
+                        {/* PHONE */}
+
+                        <div className="mt-6">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FFC93C]/80">
+                                Phone
+                            </p>
+
+                            <a
+                                href="tel:+918438430504"
+                                className="inline-block text-lg font-medium tracking-tight text-white transition-colors duration-300 hover:text-[#FFC93C] sm:text-xl"
+                            >
+                                +91 84384 30504
+                            </a>
+                        </div>
+
+                        {/* EMAIL */}
+
+                        <div className="mt-7">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FFC93C]/80">
+                                Email
+                            </p>
+
+                            <a
+                                href="mailto:innovateweddingcompany@gmail.com"
+                                className="break-all text-[12px] leading-6 text-white/70 transition-colors duration-300 hover:text-[#FFC93C] sm:text-[13px]"
+                            >
+                                innovateweddingcompany@gmail.com
+                            </a>
+                        </div>
+
+                        {/* LOCATION */}
+
+                        <div className="mt-7">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FFC93C]/80">
+                                Location
+                            </p>
+
+                            <p className="text-[12px] leading-6 text-white/65 sm:text-[13px]">
+                                Innovate Wedding Company,
+                                Pattakasalianvilai Rd, Vattakarai,
+                                Maravankudieruppu, Nagercoil,
+                                Tamil Nadu 629002
+                            </p>
+                        </div>
                     </motion.div>
                 </div>
             </div>
+
+            {/* LARGE PICKNNOVATE WATERMARK */}
+
+            <div className="relative flex h-[100px] items-center justify-center overflow-hidden bg-gradient-to-r from-[#F4F1EA] via-[#F8EBCB] to-[#FFE08A] sm:h-[130px] lg:h-[155px]">
+                <motion.h2
+                    {...reveal(0)}
+                    className="whitespace-nowrap text-[clamp(4.5rem,16vw,13rem)] font-black leading-none tracking-[-0.085em] text-[#14161A]/[0.085] select-none"
+                >
+                    Picknnovate
+                </motion.h2>
+            </div>
+
+            {/* COPYRIGHT */}
+
+            <div className="bg-[#0D0E10] px-5 py-6 sm:py-7">
+                <motion.p
+                    {...reveal(0)}
+                    className="text-center text-[10px] font-medium tracking-wide text-white/45 sm:text-[11px]"
+                >
+                    © {new Date().getFullYear()} Picknnovate. All Rights Reserved.
+                </motion.p>
+            </div>
+
+            {/* FOOTER ANIMATION STYLES */}
 
             <style jsx global>{`
                 @keyframes picknovate-wave-flow {
                     from {
                         transform: translateX(0);
                     }
+
                     to {
                         transform: translateX(-50%);
                     }
@@ -335,6 +425,7 @@ export default function Footer() {
                     100% {
                         transform: translateX(0) translateY(0);
                     }
+
                     50% {
                         transform: translateX(-2%) translateY(5px);
                     }
@@ -342,12 +433,14 @@ export default function Footer() {
 
                 .footer-wave {
                     animation: picknovate-wave-flow 28s linear infinite;
+                    will-change: transform;
                 }
 
                 .footer-wave-glow {
                     background: rgba(255, 201, 60, 0.12);
                     filter: blur(22px);
                     animation: picknovate-wave-float 12s ease-in-out infinite;
+                    will-change: transform;
                 }
 
                 .footer-wave-static {
