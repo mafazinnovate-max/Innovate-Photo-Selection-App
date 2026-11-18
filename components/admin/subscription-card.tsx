@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Clock3,
-  Database,
   HardDrive,
   Image as ImageIcon,
-  Users,
 } from "lucide-react";
 
 interface SubscriptionInfo {
@@ -19,23 +17,39 @@ interface SubscriptionInfo {
   endDate: string | null;
   storageLimitGb: number;
   maxEvents: number;
-  maxCustomers: number;
   maxImages: number;
+}
+
+interface StorageInfo {
+  studioId: string;
+  usedBytes: number;
+  usedGB: number;
+  objectCount: number;
+  storageLimitGb: number;
+  remainingGB: number;
+  usagePercentage: number;
+}
+
+interface SubscriptionCardProps {
+  subscription: SubscriptionInfo | null;
+  totalEvents: number;
+  totalImages: number;
 }
 
 export default function SubscriptionCard({
   subscription,
-}: {
-  subscription: SubscriptionInfo | null;
-}) {
+  totalEvents,
+  totalImages,
+}: SubscriptionCardProps) {
   const [currentTime, setCurrentTime] = useState<number | null>(null);
 
+  const [storage, setStorage] = useState<StorageInfo | null>(null);
+  const [storageLoading, setStorageLoading] = useState(true);
+  const [storageError, setStorageError] = useState(false);
+
   /*
-   * Set the current time only after the component mounts.
-   *
-   * This prevents a server/client hydration mismatch while still
-   * allowing the subscription information to update while the page
-   * remains open.
+   * Update current time every minute.
+   * Prevents server/client hydration mismatch.
    */
   useEffect(() => {
     const updateTime = () => {
@@ -44,13 +58,55 @@ export default function SubscriptionCard({
 
     updateTime();
 
-    const interval = window.setInterval(
-      updateTime,
-      60 * 1000
-    );
+    const interval = window.setInterval(updateTime, 60 * 1000);
 
     return () => {
       window.clearInterval(interval);
+    };
+  }, []);
+
+  /*
+   * Fetch actual R2 storage usage for this studio.
+   */
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchStorageUsage = async () => {
+      try {
+        setStorageLoading(true);
+        setStorageError(false);
+
+        const response = await fetch("/api/admin/storage-usage", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.storage) {
+          throw new Error("Failed to fetch storage usage.");
+        }
+
+        if (isMounted) {
+          setStorage(data.storage);
+        }
+      } catch (error) {
+        console.error("Storage Usage Fetch Error:", error);
+
+        if (isMounted) {
+          setStorageError(true);
+        }
+      } finally {
+        if (isMounted) {
+          setStorageLoading(false);
+        }
+      }
+    };
+
+    fetchStorageUsage();
+
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -91,16 +147,12 @@ export default function SubscriptionCard({
 
   /*
    * Use startDate as the fallback during the first render.
-   *
-   * This keeps server and client rendering deterministic and avoids
-   * the hydration mismatch caused by calling new Date() directly
-   * during the initial render.
+   * This keeps server and client rendering deterministic.
    */
   const now = currentTime
     ? new Date(currentTime)
     : startDate;
 
-  let totalDays = 0;
   let remainingDays = 0;
   let remainingPercentage = 100;
   let isExpired = false;
@@ -110,77 +162,34 @@ export default function SubscriptionCard({
     const totalDuration =
       endDate.getTime() - startDate.getTime();
 
-    totalDays = Math.max(
-      1,
-      Math.ceil(
-        totalDuration /
-          (1000 * 60 * 60 * 24)
-      )
-    );
-
     remainingDays = Math.ceil(
       (endDate.getTime() - now.getTime()) /
-        (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24)
     );
 
-    isExpired =
-      now.getTime() >= endDate.getTime();
+    isExpired = now.getTime() >= endDate.getTime();
 
-    hasStarted =
-      now.getTime() >= startDate.getTime();
+    hasStarted = now.getTime() >= startDate.getTime();
 
-    /*
-     * Subscription has not started yet.
-     * Keep the bar completely full.
-     */
     if (!hasStarted) {
       remainingPercentage = 100;
-    }
-
-    /*
-     * Subscription has expired.
-     * Empty the bar completely.
-     */
-    else if (isExpired) {
+    } else if (isExpired || totalDuration <= 0) {
       remainingPercentage = 0;
-    }
-
-    /*
-     * Active subscription.
-     * Calculate the percentage of time still remaining.
-     */
-    else {
+    } else {
       const remainingDuration =
         endDate.getTime() - now.getTime();
 
       remainingPercentage = Math.min(
         100,
-        Math.max(
-          0,
-          (remainingDuration /
-            totalDuration) *
-            100
-        )
+        Math.max(0, (remainingDuration / totalDuration) * 100)
       );
     }
   }
 
-  const displayRemainingDays = Math.max(
-    remainingDays,
-    0
-  );
+  const displayRemainingDays = Math.max(remainingDays, 0);
 
   /*
-   * Bar colour:
-   *
-   * More than 10 days:
-   * Green
-   *
-   * 10 days or fewer:
-   * Gradually changes from green -> light red -> strong red
-   *
-   * 3 days or fewer:
-   * Full red
+   * Subscription progress bar color.
    */
   const getProgressBarColor = () => {
     if (isExpired) {
@@ -197,10 +206,7 @@ export default function SubscriptionCard({
 
     const dangerProgress = Math.min(
       1,
-      Math.max(
-        0,
-        (10 - displayRemainingDays) / 7
-      )
+      Math.max(0, (10 - displayRemainingDays) / 7)
     );
 
     const startColor = {
@@ -217,27 +223,23 @@ export default function SubscriptionCard({
 
     const red = Math.round(
       startColor.r +
-        (endColor.r - startColor.r) *
-          dangerProgress
+      (endColor.r - startColor.r) * dangerProgress
     );
 
     const green = Math.round(
       startColor.g +
-        (endColor.g - startColor.g) *
-          dangerProgress
+      (endColor.g - startColor.g) * dangerProgress
     );
 
     const blue = Math.round(
       startColor.b +
-        (endColor.b - startColor.b) *
-          dangerProgress
+      (endColor.b - startColor.b) * dangerProgress
     );
 
     return `rgb(${red}, ${green}, ${blue})`;
   };
 
-  const progressBarColor =
-    getProgressBarColor();
+  const progressBarColor = getProgressBarColor();
 
   const statusText = isExpired
     ? "Subscription Ended"
@@ -246,6 +248,105 @@ export default function SubscriptionCard({
       : subscription.status === "Active"
         ? "Active"
         : subscription.status;
+
+  /*
+   * Storage calculations.
+   */
+  const usedGB = storage?.usedGB ?? 0;
+
+  const storageLimit =
+    storage?.storageLimitGb ?? subscription.storageLimitGb;
+
+  const remainingGB = Math.max(storageLimit - usedGB, 0);
+
+  const storagePercentage =
+    storageLimit > 0
+      ? Math.min((usedGB / storageLimit) * 100, 100)
+      : 0;
+
+  const getStorageColor = () => {
+    if (storagePercentage >= 90) {
+      return {
+        bar: "bg-red-500",
+        text: "text-red-400",
+        badge:
+          "border-red-900/60 bg-red-950/30 text-red-400",
+        label: "Almost Full",
+      };
+    }
+
+    if (storagePercentage >= 75) {
+      return {
+        bar: "bg-amber-500",
+        text: "text-amber-400",
+        badge:
+          "border-amber-900/60 bg-amber-950/30 text-amber-400",
+        label: "Running Low",
+      };
+    }
+
+    return {
+      bar: "bg-emerald-500",
+      text: "text-emerald-400",
+      badge:
+        "border-emerald-900/60 bg-emerald-950/30 text-emerald-400",
+      label: "Within Limit",
+    };
+  };
+
+  const storageColor = getStorageColor();
+
+  /*
+   * Event and image usage calculations.
+   */
+  const eventLimit = Math.max(subscription.maxEvents, 0);
+  const imageLimit = Math.max(subscription.maxImages, 0);
+
+  const eventPercentage =
+    eventLimit > 0
+      ? Math.min((totalEvents / eventLimit) * 100, 100)
+      : 0;
+
+  const imagePercentage =
+    imageLimit > 0
+      ? Math.min((totalImages / imageLimit) * 100, 100)
+      : 0;
+
+  const remainingEvents = Math.max(eventLimit - totalEvents, 0);
+  const remainingImages = Math.max(imageLimit - totalImages, 0);
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) {
+      return {
+        bar: "bg-red-500",
+        text: "text-red-400",
+        badge:
+          "border-red-900/60 bg-red-950/30 text-red-400",
+        label: "Almost Full",
+      };
+    }
+
+    if (percentage >= 75) {
+      return {
+        bar: "bg-amber-500",
+        text: "text-amber-400",
+        badge:
+          "border-amber-900/60 bg-amber-950/30 text-amber-400",
+        label: "Running Low",
+      };
+    }
+
+    return {
+      bar: "bg-emerald-500",
+      text: "text-emerald-400",
+      badge:
+        "border-emerald-900/60 bg-emerald-950/30 text-emerald-400",
+      label: "Within Limit",
+    };
+  };
+
+  const eventColor = getUsageColor(eventPercentage);
+  const imageColor = getUsageColor(imagePercentage);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
@@ -270,13 +371,12 @@ export default function SubscriptionCard({
 
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
             <span
-              className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${
-                isExpired
+              className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${isExpired
                   ? "border-red-900/60 bg-red-950/30 text-red-400"
                   : subscription.status === "Active"
                     ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
                     : "border-amber-900/60 bg-amber-950/30 text-amber-400"
-              }`}
+                }`}
             >
               {statusText}
             </span>
@@ -317,14 +417,12 @@ export default function SubscriptionCard({
             </p>
 
             <p className="mt-2 text-base font-semibold text-white">
-              {endDate
-                ? formatDate(endDate)
-                : "No expiry date"}
+              {endDate ? formatDate(endDate) : "No expiry date"}
             </p>
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Subscription Progress */}
         <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -337,21 +435,15 @@ export default function SubscriptionCard({
                   ? "Your subscription period has ended."
                   : !hasStarted
                     ? "Your subscription has not started yet."
-                    : `${displayRemainingDays} ${
-                        displayRemainingDays === 1
-                          ? "day"
-                          : "days"
-                      } remaining`}
+                    : `${displayRemainingDays} ${displayRemainingDays === 1 ? "day" : "days"
+                    } remaining`}
               </p>
             </div>
 
             {!isExpired && endDate ? (
               <span className="text-sm font-semibold text-white">
                 {displayRemainingDays}{" "}
-                {displayRemainingDays === 1
-                  ? "day"
-                  : "days"}{" "}
-                left
+                {displayRemainingDays === 1 ? "day" : "days"} left
               </span>
             ) : null}
           </div>
@@ -361,121 +453,214 @@ export default function SubscriptionCard({
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
                 width: `${remainingPercentage}%`,
-                backgroundColor:
-                  progressBarColor,
+                backgroundColor: progressBarColor,
               }}
             />
           </div>
 
           <div className="mt-2 flex justify-between text-[11px] text-zinc-600">
-            <span>
-              {formatDate(startDate)}
-            </span>
+            <span>{formatDate(startDate)}</span>
 
             <span>
-              {endDate
-                ? formatDate(endDate)
-                : "No expiry"}
+              {endDate ? formatDate(endDate) : "No expiry"}
             </span>
           </div>
         </div>
 
-        {/* Limits */}
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Limits and Usage */}
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {/* Storage Usage */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-zinc-400" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-zinc-400" />
 
-              <span className="text-xs text-zinc-500">
-                Storage
-              </span>
+                <span className="text-xs text-zinc-500">
+                  Storage Usage
+                </span>
+              </div>
+
+              {!storageLoading &&
+                !storageError &&
+                storageLimit > 0 && (
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[9px] font-medium ${storageColor.badge}`}
+                  >
+                    {storageColor.label}
+                  </span>
+                )}
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
-              {subscription.storageLimitGb} GB
-            </p>
+            {storageLoading ? (
+              <div className="mt-4 animate-pulse space-y-3">
+                <div className="h-7 w-32 rounded bg-zinc-800" />
+                <div className="h-2 w-full rounded-full bg-zinc-800" />
 
-            <p className="mt-1 text-xs text-zinc-600">
-              R2 storage limit
-            </p>
+                <div className="flex justify-between">
+                  <div className="h-3 w-16 rounded bg-zinc-800" />
+                  <div className="h-3 w-20 rounded bg-zinc-800" />
+                </div>
+              </div>
+            ) : storageError ? (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-red-400">
+                  Unable to load usage
+                </p>
+
+                <p className="mt-1 text-xs text-zinc-600">
+                  Please refresh the page to try again.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <p className="text-2xl font-bold tracking-tight text-white">
+                    {usedGB.toFixed(3)}
+                  </p>
+
+                  <p className="text-xs text-zinc-500">
+                    / {storageLimit.toLocaleString("en-IN")} GB
+                  </p>
+                </div>
+
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${storageColor.bar}`}
+                    style={{
+                      width: `${storagePercentage}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span
+                    className={`text-[11px] font-medium ${storageColor.text}`}
+                  >
+                    {storagePercentage.toFixed(1)}% used
+                  </span>
+
+                  <span className="text-right text-[11px] text-zinc-500">
+                    {remainingGB.toFixed(3)} GB left
+                  </span>
+                </div>
+
+                <p className="mt-3 border-t border-zinc-800 pt-3 text-[11px] text-zinc-600">
+                  {storage?.objectCount.toLocaleString("en-IN") ?? 0} R2 objects
+                </p>
+              </>
+            )}
           </div>
 
+          {/* Events Usage */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-zinc-400" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-zinc-400" />
 
-              <span className="text-xs text-zinc-500">
-                Events
-              </span>
-            </div>
+                <span className="text-xs text-zinc-500">
+                  Events Usage
+                </span>
+              </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
-              {subscription.maxEvents.toLocaleString(
-                "en-IN"
+              {eventLimit > 0 && (
+                <span
+                  className={`rounded-full border px-2 py-1 text-[9px] font-medium ${eventColor.badge}`}
+                >
+                  {eventColor.label}
+                </span>
               )}
-            </p>
-
-            <p className="mt-1 text-xs text-zinc-600">
-              Maximum events
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-zinc-400" />
-
-              <span className="text-xs text-zinc-500">
-                Customers
-              </span>
             </div>
 
-            <p className="mt-2 text-xl font-bold text-white">
-              {subscription.maxCustomers.toLocaleString(
-                "en-IN"
-              )}
-            </p>
-
-            <p className="mt-1 text-xs text-zinc-600">
-              Maximum customers
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="h-4 w-4 text-zinc-400" />
-
-              <span className="text-xs text-zinc-500">
-                Images
-              </span>
-            </div>
-
-            <p className="mt-2 text-xl font-bold text-white">
-              {subscription.maxImages.toLocaleString(
-                "en-IN"
-              )}
-            </p>
-
-            <p className="mt-1 text-xs text-zinc-600">
-              Maximum images
-            </p>
-          </div>
-        </div>
-
-        {/* R2 placeholder */}
-        <div className="mt-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/50 p-4">
-          <div className="flex items-start gap-3">
-            <Database className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
-
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-zinc-300">
-                R2 Storage Usage
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <p className="text-2xl font-bold tracking-tight text-white">
+                {totalEvents.toLocaleString("en-IN")}
               </p>
 
-              <p className="mt-1 text-xs leading-5 text-zinc-600">
-                Used storage will be connected when
-                the R2 storage integration is completed.
+              <p className="text-xs text-zinc-500">
+                / {eventLimit.toLocaleString("en-IN")}
               </p>
             </div>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ease-out ${eventColor.bar}`}
+                style={{
+                  width: `${eventPercentage}%`,
+                }}
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className={`text-[11px] font-medium ${eventColor.text}`}>
+                {eventPercentage.toFixed(1)}% used
+              </span>
+
+              <span className="text-right text-[11px] text-zinc-500">
+                {eventLimit > 0
+                  ? `${remainingEvents.toLocaleString("en-IN")} left`
+                  : "No limit configured"}
+              </span>
+            </div>
+
+            <p className="mt-3 border-t border-zinc-800 pt-3 text-[11px] text-zinc-600">
+              Active studio events
+            </p>
+          </div>
+
+          {/* Images Usage */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-zinc-400" />
+
+                <span className="text-xs text-zinc-500">
+                  Images Usage
+                </span>
+              </div>
+
+              {imageLimit > 0 && (
+                <span
+                  className={`rounded-full border px-2 py-1 text-[9px] font-medium ${imageColor.badge}`}
+                >
+                  {imageColor.label}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <p className="text-2xl font-bold tracking-tight text-white">
+                {totalImages.toLocaleString("en-IN")}
+              </p>
+
+              <p className="text-xs text-zinc-500">
+                / {imageLimit.toLocaleString("en-IN")}
+              </p>
+            </div>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ease-out ${imageColor.bar}`}
+                style={{
+                  width: `${imagePercentage}%`,
+                }}
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className={`text-[11px] font-medium ${imageColor.text}`}>
+                {imagePercentage.toFixed(1)}% used
+              </span>
+
+              <span className="text-right text-[11px] text-zinc-500">
+                {imageLimit > 0
+                  ? `${remainingImages.toLocaleString("en-IN")} left`
+                  : "No limit configured"}
+              </span>
+            </div>
+
+            <p className="mt-3 border-t border-zinc-800 pt-3 text-[11px] text-zinc-600">
+              Images across active events
+            </p>
           </div>
         </div>
       </div>

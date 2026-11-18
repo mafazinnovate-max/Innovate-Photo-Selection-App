@@ -16,11 +16,8 @@ import {
     Phone,
     ShieldCheck,
     User,
-    Users,
     Activity,
     Ban,
-    Trash2,
-    MoreVertical,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -126,6 +123,33 @@ export default function ViewStudioPage() {
                 const subscription = raw.Subscription?.[0];
                 const metrics = result.metrics ?? {};
 
+                let storageUsed: number | null = null;
+
+                try {
+                    const storageResponse = await fetch(
+                        "/api/super-admin/storage-usage",
+                        {
+                            method: "GET",
+                            cache: "no-store",
+                        }
+                    );
+
+                    const storageData = await storageResponse.json();
+
+                    if (storageResponse.ok && storageData.success) {
+                        const studioStorage = storageData.studios?.find(
+                            (item: { studioId: string }) => item.studioId === raw.id
+                        );
+
+                        storageUsed =
+                            typeof studioStorage?.usedGB === "number"
+                                ? studioStorage.usedGB
+                                : null;
+                    }
+                } catch (storageError) {
+                    console.error("Failed to load studio storage usage:", storageError);
+                }
+
                 const allowedPlans = [
                     "Basic",
                     "Professional",
@@ -165,8 +189,7 @@ export default function ViewStudioPage() {
                     customers: Number(metrics.customers ?? 0),
                     images: Number(metrics.images ?? 0),
 
-                    // Image model doesn't currently store file sizes.
-                    storageUsed: null,
+                    storageUsed,
                     storageLimit: Number(
                         subscription?.storageLimitGb ?? 100
                     ),
@@ -486,7 +509,7 @@ export default function ViewStudioPage() {
                     value={
                         studio.storageUsed === null
                             ? "Not tracked"
-                            : `${studio.storageUsed} GB`
+                            : `${studio.storageUsed.toFixed(3)} GB`
                     }
                     description={`Limit: ${studio.storageLimit} GB`}
                 />
@@ -612,7 +635,7 @@ export default function ViewStudioPage() {
                                 used={
                                     studio.storageUsed === null
                                         ? "Not tracked"
-                                        : `${studio.storageUsed} GB`
+                                        : `${studio.storageUsed.toFixed(3)} GB`
                                 }
                                 limit={`${studio.storageLimit} GB`}
                                 percentage={storagePercentage}

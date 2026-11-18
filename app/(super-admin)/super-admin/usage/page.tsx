@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     AlertTriangle,
@@ -13,223 +13,279 @@ import {
     HardDrive,
     ImageIcon,
     Search,
-    Users,
     X,
 } from "lucide-react";
 
-type UsageStatus = "Healthy" | "Warning" | "Critical";
+type UsageStatus = "Healthy" | "Warning" | "Critical" | "Not tracked";
 
 type StudioUsage = {
     id: string;
     studioName: string;
     adminName: string;
-    plan: "Basic" | "Professional" | "Enterprise";
+    plan: string;
     storageUsed: number;
     storageLimit: number;
     images: number;
     maxImages: number;
     events: number;
     maxEvents: number;
-    customers: number;
-    maxCustomers: number;
     status: UsageStatus;
 };
 
-const studioUsageData: StudioUsage[] = [
-    {
-        id: "studio-001",
-        studioName: "Innovate Wedding Studio",
-        adminName: "Mafaz Malik",
-        plan: "Professional",
-        storageUsed: 67.4,
-        storageLimit: 100,
-        images: 48260,
-        maxImages: 100000,
-        events: 28,
-        maxEvents: 50,
-        customers: 46,
-        maxCustomers: 500,
-        status: "Healthy",
-    },
-    {
-        id: "studio-002",
-        studioName: "Royal Moments",
-        adminName: "Arun Kumar",
-        plan: "Enterprise",
-        storageUsed: 184.6,
-        storageLimit: 200,
-        images: 142850,
-        maxImages: 200000,
-        events: 76,
-        maxEvents: 100,
-        customers: 128,
-        maxCustomers: 1000,
-        status: "Warning",
-    },
-    {
-        id: "studio-003",
-        studioName: "Dream Frame Studio",
-        adminName: "Vishnu Raj",
-        plan: "Basic",
-        storageUsed: 8.2,
-        storageLimit: 25,
-        images: 8420,
-        maxImages: 25000,
-        events: 8,
-        maxEvents: 15,
-        customers: 12,
-        maxCustomers: 100,
-        status: "Healthy",
-    },
-    {
-        id: "studio-004",
-        studioName: "Golden Lens Photography",
-        adminName: "Sanjay Kumar",
-        plan: "Professional",
-        storageUsed: 91.8,
-        storageLimit: 100,
-        images: 78240,
-        maxImages: 100000,
-        events: 43,
-        maxEvents: 50,
-        customers: 74,
-        maxCustomers: 500,
-        status: "Critical",
-    },
-    {
-        id: "studio-005",
-        studioName: "Moments by Hari",
-        adminName: "Hari Prasad",
-        plan: "Basic",
-        storageUsed: 18.4,
-        storageLimit: 25,
-        images: 17480,
-        maxImages: 25000,
-        events: 12,
-        maxEvents: 15,
-        customers: 21,
-        maxCustomers: 100,
-        status: "Warning",
-    },
-    {
-        id: "studio-006",
-        studioName: "Pixel Stories",
-        adminName: "Rahul Menon",
-        plan: "Enterprise",
-        storageUsed: 248.7,
-        storageLimit: 300,
-        images: 214620,
-        maxImages: 300000,
-        events: 92,
-        maxEvents: 150,
-        customers: 184,
-        maxCustomers: 1500,
-        status: "Healthy",
-    },
-    {
-        id: "studio-007",
-        studioName: "Elegant Clicks",
-        adminName: "Naveen Joseph",
-        plan: "Professional",
-        storageUsed: 72.6,
-        storageLimit: 100,
-        images: 63480,
-        maxImages: 100000,
-        events: 31,
-        maxEvents: 50,
-        customers: 52,
-        maxCustomers: 500,
-        status: "Healthy",
-    },
-    {
-        id: "studio-008",
-        studioName: "Forever Frames",
-        adminName: "Joel Mathew",
-        plan: "Basic",
-        storageUsed: 23.7,
-        storageLimit: 25,
-        images: 22960,
-        maxImages: 25000,
-        events: 14,
-        maxEvents: 15,
-        customers: 38,
-        maxCustomers: 100,
-        status: "Critical",
-    },
-    {
-        id: "studio-009",
-        studioName: "Classic Wedding Works",
-        adminName: "Ajith Kumar",
-        plan: "Professional",
-        storageUsed: 42.8,
-        storageLimit: 100,
-        images: 36820,
-        maxImages: 100000,
-        events: 19,
-        maxEvents: 50,
-        customers: 34,
-        maxCustomers: 500,
-        status: "Healthy",
-    },
-    {
-        id: "studio-010",
-        studioName: "White Rose Photography",
-        adminName: "Deepak Raj",
-        plan: "Basic",
-        storageUsed: 21.2,
-        storageLimit: 25,
-        images: 19840,
-        maxImages: 25000,
-        events: 13,
-        maxEvents: 15,
-        customers: 29,
-        maxCustomers: 100,
-        status: "Warning",
-    },
-    {
-        id: "studio-011",
-        studioName: "Candid Tales",
-        adminName: "Praveen Kumar",
-        plan: "Professional",
-        storageUsed: 58.3,
-        storageLimit: 100,
-        images: 51420,
-        maxImages: 100000,
-        events: 26,
-        maxEvents: 50,
-        customers: 47,
-        maxCustomers: 500,
-        status: "Healthy",
-    },
-    {
-        id: "studio-012",
-        studioName: "Elite Wedding Studio",
-        adminName: "Mohammed Asif",
-        plan: "Enterprise",
-        storageUsed: 276.4,
-        storageLimit: 300,
-        images: 268420,
-        maxImages: 300000,
-        events: 118,
-        maxEvents: 150,
-        customers: 246,
-        maxCustomers: 1500,
-        status: "Warning",
-    },
-];
+type ApiStudio = {
+    id: string;
+    name: string;
+    admins?: {
+        name?: string | null;
+    }[];
+    Subscription?: {
+        plan?: string | null;
+        storageLimitGb?: number | null;
+        maxImages?: number | null;
+        maxEvents?: number | null;
+    }[];
+    _count?: {
+        events?: number;
+    };
+    totalImages?: number;
+};
+
+type ApiStorageStudio = {
+    studioId: string;
+    usedGB: number;
+    storageLimitGb: number;
+};
+
+type StudiosResponse = {
+    success: boolean;
+    message?: string;
+    studios: ApiStudio[];
+};
+
+type StorageResponse = {
+    success: boolean;
+    message?: string;
+    summary: {
+        totalGB: number;
+        privateBucket: {
+            totalBytes: number;
+            totalGB: number;
+            objectCount: number;
+        };
+        publicBucket: {
+            totalBytes: number;
+            totalGB: number;
+            objectCount: number;
+        };
+        unassigned: {
+            totalBytes: number;
+            totalGB: number;
+        };
+        studioCount: number;
+    };
+    studios: ApiStorageStudio[];
+    lastUpdated?: string;
+};
+
+type UsageFilter =
+    | "All"
+    | "Healthy"
+    | "Warning"
+    | "Critical"
+    | "Not tracked";
+
+function getUsageStatus(
+    storageUsed: number,
+    storageLimit: number,
+    images: number,
+    maxImages: number,
+    events: number,
+    maxEvents: number
+): UsageStatus {
+    const percentages: number[] = [];
+
+    if (storageLimit > 0) {
+        percentages.push((storageUsed / storageLimit) * 100);
+    }
+
+    if (maxImages > 0) {
+        percentages.push((images / maxImages) * 100);
+    }
+
+    if (maxEvents > 0) {
+        percentages.push((events / maxEvents) * 100);
+    }
+
+    if (percentages.length === 0) {
+        return "Not tracked";
+    }
+
+    const highestPercentage = Math.max(...percentages);
+
+    if (highestPercentage >= 90) return "Critical";
+    if (highestPercentage >= 75) return "Warning";
+
+    return "Healthy";
+}
 
 export default function UsagePage() {
     const router = useRouter();
 
+    const [studios, setStudios] = useState<StudioUsage[]>([]);
+    const [platformStorageUsed, setPlatformStorageUsed] = useState(0);
+    const [privateStorage, setPrivateStorage] = useState(0);
+    const [publicStorage, setPublicStorage] = useState(0);
+    const [unassignedStorage, setUnassignedStorage] = useState(0);
+    const [totalR2Objects, setTotalR2Objects] = useState(0);
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [refreshKey, setRefreshKey] = useState(0);
+
     const [search, setSearch] = useState("");
-    const [usageFilter, setUsageFilter] = useState<
-        "All" | "Healthy" | "Warning" | "Critical"
-    >("All");
+    const [usageFilter, setUsageFilter] = useState<UsageFilter>("All");
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadUsageData() {
+            try {
+                setIsLoading(true);
+                setError("");
+
+                const [studiosResponse, storageResponse] = await Promise.all([
+                    fetch("/api/super-admin/studios", {
+                        cache: "no-store",
+                    }),
+                    fetch("/api/super-admin/storage-usage", {
+                        cache: "no-store",
+                    }),
+                ]);
+
+                const [studiosData, storageData]: [
+                    StudiosResponse,
+                    StorageResponse
+                ] = await Promise.all([
+                    studiosResponse.json(),
+                    storageResponse.json(),
+                ]);
+
+                if (!studiosResponse.ok || !studiosData.success) {
+                    throw new Error(
+                        studiosData.message || "Failed to fetch studio details."
+                    );
+                }
+
+                if (!storageResponse.ok || !storageData.success) {
+                    throw new Error(
+                        storageData.message || "Failed to fetch storage usage."
+                    );
+                }
+
+                const storageMap = new Map(
+                    (storageData.studios ?? []).map((item) => [
+                        item.studioId,
+                        item,
+                    ])
+                );
+
+                const usageData: StudioUsage[] = studiosData.studios.map(
+                    (studio) => {
+                        const subscription = studio.Subscription?.[0];
+                        const storage = storageMap.get(studio.id);
+
+                        const storageUsed = Number(storage?.usedGB ?? 0);
+
+                        const storageLimit = Number(
+                            subscription?.storageLimitGb ??
+                            storage?.storageLimitGb ??
+                            0
+                        );
+
+                        const images = Number(studio.totalImages ?? 0);
+                        const maxImages = Number(subscription?.maxImages ?? 0);
+
+                        const events = Number(studio._count?.events ?? 0);
+                        const maxEvents = Number(subscription?.maxEvents ?? 0);
+
+                        return {
+                            id: studio.id,
+                            studioName: studio.name,
+                            adminName: studio.admins?.[0]?.name || "No Admin",
+                            plan: subscription?.plan || "No Plan",
+                            storageUsed,
+                            storageLimit,
+                            images,
+                            maxImages,
+                            events,
+                            maxEvents,
+                            status: getUsageStatus(
+                                storageUsed,
+                                storageLimit,
+                                images,
+                                maxImages,
+                                events,
+                                maxEvents
+                            ),
+                        };
+                    }
+                );
+
+                if (cancelled) return;
+
+                setStudios(usageData);
+
+                setPlatformStorageUsed(
+                    Number(storageData.summary?.totalGB ?? 0)
+                );
+
+                setPrivateStorage(
+                    Number(storageData.summary?.privateBucket?.totalGB ?? 0)
+                );
+
+                setPublicStorage(
+                    Number(storageData.summary?.publicBucket?.totalGB ?? 0)
+                );
+
+                setUnassignedStorage(
+                    Number(storageData.summary?.unassigned?.totalGB ?? 0)
+                );
+
+                setTotalR2Objects(
+                    Number(storageData.summary?.privateBucket?.objectCount ?? 0) +
+                    Number(storageData.summary?.publicBucket?.objectCount ?? 0)
+                );
+
+                setLastUpdated(storageData.lastUpdated ?? null);
+            } catch (err) {
+                if (cancelled) return;
+
+                console.error("Usage page fetch error:", err);
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Something went wrong while loading usage data."
+                );
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadUsageData();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [refreshKey]);
 
     const filteredStudios = useMemo(() => {
         const query = search.trim().toLowerCase();
 
-        return studioUsageData.filter((studio) => {
+        return studios.filter((studio) => {
             const matchesSearch =
                 !query ||
                 studio.studioName.toLowerCase().includes(query) ||
@@ -241,38 +297,33 @@ export default function UsagePage() {
 
             return matchesSearch && matchesFilter;
         });
-    }, [search, usageFilter]);
+    }, [studios, search, usageFilter]);
 
-    const totalStorageUsed = studioUsageData.reduce(
+    const totalStorageUsed = studios.reduce(
         (sum, studio) => sum + studio.storageUsed,
         0
     );
 
-    const totalStorageLimit = studioUsageData.reduce(
+    const totalStorageLimit = studios.reduce(
         (sum, studio) => sum + studio.storageLimit,
         0
     );
 
-    const totalImages = studioUsageData.reduce(
+    const totalImages = studios.reduce(
         (sum, studio) => sum + studio.images,
         0
     );
 
-    const totalEvents = studioUsageData.reduce(
+    const totalEvents = studios.reduce(
         (sum, studio) => sum + studio.events,
         0
     );
 
-    const totalCustomers = studioUsageData.reduce(
-        (sum, studio) => sum + studio.customers,
-        0
-    );
-
-    const warningCount = studioUsageData.filter(
+    const warningCount = studios.filter(
         (studio) => studio.status === "Warning"
     ).length;
 
-    const criticalCount = studioUsageData.filter(
+    const criticalCount = studios.filter(
         (studio) => studio.status === "Critical"
     ).length;
 
@@ -281,9 +332,152 @@ export default function UsagePage() {
             ? (totalStorageUsed / totalStorageLimit) * 100
             : 0;
 
-    const highestStorageStudios = [...studioUsageData]
+    const highestStorageStudios = [...studios]
         .sort((a, b) => b.storageUsed - a.storageUsed)
         .slice(0, 5);
+
+    if (isLoading) {
+        return (
+            <div className="space-y-8 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                        <div className="h-7 w-48 rounded-lg bg-zinc-800" />
+                        <div className="h-4 w-72 rounded bg-zinc-800/70" />
+                    </div>
+                    <div className="h-10 w-36 rounded-xl bg-zinc-800" />
+                </div>
+
+                {/* Summary Cards Skeleton */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {[1, 2, 3].map((item) => (
+                        <div
+                            key={item}
+                            className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="h-4 w-28 rounded bg-zinc-800" />
+                                <div className="h-10 w-10 rounded-xl bg-zinc-800" />
+                            </div>
+                            <div className="mt-5 h-8 w-32 rounded-lg bg-zinc-800" />
+                            <div className="mt-3 h-3 w-40 rounded bg-zinc-800/70" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Storage Overview Skeleton */}
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
+                    <div className="h-5 w-40 rounded bg-zinc-800" />
+                    <div className="mt-5 h-3 w-full rounded-full bg-zinc-800" />
+                    <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        {[1, 2, 3, 4].map((item) => (
+                            <div key={item} className="space-y-2">
+                                <div className="h-3 w-20 rounded bg-zinc-800" />
+                                <div className="h-6 w-24 rounded bg-zinc-800" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Highest Storage Consumers Skeleton */}
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
+                    <div className="h-5 w-52 rounded bg-zinc-800" />
+                    <div className="mt-6 space-y-5">
+                        {[1, 2, 3, 4, 5].map((item) => (
+                            <div key={item} className="space-y-3">
+                                <div className="flex justify-between">
+                                    <div className="h-4 w-32 rounded bg-zinc-800" />
+                                    <div className="h-4 w-20 rounded bg-zinc-800" />
+                                </div>
+                                <div className="h-2 w-full rounded-full bg-zinc-800" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Studio Usage Table Skeleton */}
+                <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50">
+                    <div className="flex items-center justify-between border-b border-zinc-800 p-5">
+                        <div className="h-5 w-36 rounded bg-zinc-800" />
+                        <div className="h-10 w-56 rounded-xl bg-zinc-800" />
+                    </div>
+
+                    {/* Desktop Rows */}
+                    <div className="hidden md:block">
+                        <div className="grid grid-cols-6 gap-4 border-b border-zinc-800 px-6 py-4">
+                            {[1, 2, 3, 4, 5, 6].map((item) => (
+                                <div key={item} className="h-3 w-16 rounded bg-zinc-800" />
+                            ))}
+                        </div>
+
+                        <div className="divide-y divide-zinc-800/70">
+                            {[1, 2, 3, 4, 5].map((item) => (
+                                <div
+                                    key={item}
+                                    className="grid grid-cols-6 items-center gap-4 px-6 py-5"
+                                >
+                                    {[1, 2, 3, 4, 5, 6].map((col) => (
+                                        <div
+                                            key={col}
+                                            className={`h-4 rounded bg-zinc-800 ${col === 1 ? "w-28" : "w-16"
+                                                }`}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="space-y-4 p-4 md:hidden">
+                        {[1, 2, 3].map((item) => (
+                            <div
+                                key={item}
+                                className="rounded-xl border border-zinc-800 p-4"
+                            >
+                                <div className="h-4 w-36 rounded bg-zinc-800" />
+                                <div className="mt-4 grid grid-cols-2 gap-4">
+                                    {[1, 2, 3, 4].map((col) => (
+                                        <div key={col} className="space-y-2">
+                                            <div className="h-3 w-16 rounded bg-zinc-800" />
+                                            <div className="h-5 w-20 rounded bg-zinc-800" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
+                        <AlertTriangle size={22} />
+                    </div>
+
+                    <h2 className="mt-4 text-lg font-semibold text-white">
+                        Unable to Load Usage Data
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                        {error}
+                    </p>
+
+                    <button
+                        onClick={() => setRefreshKey((value) => value + 1)}
+                        className="mt-6 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -309,8 +503,7 @@ export default function UsagePage() {
                             </h1>
 
                             <p className="mt-1 text-sm text-zinc-400">
-                                Monitor storage, images, events and customer usage across all
-                                studios.
+                                Monitor storage, images and events across all studios.
                             </p>
                         </div>
                     </div>
@@ -319,7 +512,7 @@ export default function UsagePage() {
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
                     <p className="text-xs text-zinc-500">Studios Monitored</p>
                     <p className="mt-1 text-lg font-semibold text-white">
-                        {studioUsageData.length}
+                        {studios.length}
                     </p>
                 </div>
             </div>
@@ -328,8 +521,8 @@ export default function UsagePage() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <SummaryCard
                     title="Storage Used"
-                    value={`${totalStorageUsed.toFixed(1)} GB`}
-                    subtitle={`of ${totalStorageLimit.toFixed(0)} GB`}
+                    value={`${totalStorageUsed.toFixed(3)} GB`}
+                    subtitle={`of ${totalStorageLimit.toFixed(0)} GB allocated`}
                     icon={HardDrive}
                     progress={overallStoragePercentage}
                 />
@@ -344,15 +537,15 @@ export default function UsagePage() {
                 <SummaryCard
                     title="Total Events"
                     value={formatNumber(totalEvents)}
-                    subtitle="Active and completed"
+                    subtitle="Non-deleted events"
                     icon={CalendarDays}
                 />
 
                 <SummaryCard
-                    title="Total Customers"
-                    value={formatNumber(totalCustomers)}
-                    subtitle="Across all studios"
-                    icon={Users}
+                    title="Platform R2 Storage"
+                    value={`${platformStorageUsed.toFixed(3)} GB`}
+                    subtitle="Includes private and public buckets"
+                    icon={HardDrive}
                 />
             </div>
 
@@ -368,12 +561,12 @@ export default function UsagePage() {
                             <div>
                                 <p className="font-semibold text-white">
                                     {criticalCount} studio
-                                    {criticalCount > 1 ? "s" : ""} near storage limit
+                                    {criticalCount > 1 ? "s" : ""} at critical usage
                                 </p>
 
                                 <p className="mt-1 text-sm leading-6 text-zinc-400">
-                                    These studios are using more than 90% of their allocated
-                                    storage. Consider upgrading their storage limit.
+                                    These studios have reached 90% or more of their storage,
+                                    image or event limits. Consider increasing their limits.
                                 </p>
                             </div>
                         </div>
@@ -392,8 +585,8 @@ export default function UsagePage() {
                                 </p>
 
                                 <p className="mt-1 text-sm leading-6 text-zinc-400">
-                                    These studios are using between 75% and 90% of their
-                                    allocated storage.
+                                    These studios are using between 75% and 90% of at least
+                                    one allocated resource.
                                 </p>
                             </div>
                         </div>
@@ -407,11 +600,12 @@ export default function UsagePage() {
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
                             <h2 className="text-lg font-semibold text-white">
-                                Overall Storage
+                                Studio Storage Overview
                             </h2>
 
                             <p className="mt-1 text-sm text-zinc-500">
-                                Storage consumption across all registered studios.
+                                Storage consumption compared with the total storage allocated
+                                to registered studios.
                             </p>
                         </div>
 
@@ -420,7 +614,7 @@ export default function UsagePage() {
                                 {overallStoragePercentage.toFixed(1)}%
                             </p>
 
-                            <p className="text-xs text-zinc-500">storage utilized</p>
+                            <p className="text-xs text-zinc-500">studio storage utilized</p>
                         </div>
                     </div>
                 </div>
@@ -428,7 +622,7 @@ export default function UsagePage() {
                 <div className="p-6">
                     <div className="mb-3 flex items-center justify-between text-sm">
                         <span className="text-zinc-400">
-                            {totalStorageUsed.toFixed(1)} GB used
+                            {totalStorageUsed.toFixed(3)} GB used
                         </span>
 
                         <span className="text-zinc-500">
@@ -439,10 +633,10 @@ export default function UsagePage() {
                     <div className="h-4 overflow-hidden rounded-full bg-zinc-800">
                         <div
                             className={`h-full rounded-full transition-all ${overallStoragePercentage >= 90
-                                    ? "bg-red-500"
-                                    : overallStoragePercentage >= 75
-                                        ? "bg-yellow-500"
-                                        : "bg-white"
+                                ? "bg-red-500"
+                                : overallStoragePercentage >= 75
+                                    ? "bg-yellow-500"
+                                    : "bg-white"
                                 }`}
                             style={{
                                 width: `${Math.min(overallStoragePercentage, 100)}%`,
@@ -450,25 +644,52 @@ export default function UsagePage() {
                         />
                     </div>
 
-                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         <UsageStat
-                            label="Used"
-                            value={`${totalStorageUsed.toFixed(1)} GB`}
+                            label="Studio Storage Used"
+                            value={`${totalStorageUsed.toFixed(3)} GB`}
                         />
 
                         <UsageStat
-                            label="Available"
+                            label="Available Studio Storage"
                             value={`${Math.max(
                                 totalStorageLimit - totalStorageUsed,
                                 0
-                            ).toFixed(1)} GB`}
+                            ).toFixed(3)} GB`}
                         />
 
                         <UsageStat
-                            label="Total Limit"
+                            label="Total Studio Storage Limit"
                             value={`${totalStorageLimit.toFixed(0)} GB`}
                         />
+
+                        <UsageStat
+                            label="Private Bucket"
+                            value={`${privateStorage.toFixed(3)} GB`}
+                        />
+
+                        <UsageStat
+                            label="Public Bucket"
+                            value={`${publicStorage.toFixed(3)} GB`}
+                        />
+
+                        <UsageStat
+                            label="Unassigned Storage"
+                            value={`${unassignedStorage.toFixed(3)} GB`}
+                        />
+
+                        <UsageStat
+                            label="Total R2 Objects"
+                            value={formatNumber(totalR2Objects)}
+                        />
                     </div>
+
+                    {lastUpdated && (
+                        <p className="mt-5 text-right text-[11px] text-zinc-600">
+                            Storage last updated:{" "}
+                            {new Date(lastUpdated).toLocaleString("en-IN")}
+                        </p>
+                    )}
                 </div>
             </section>
 
@@ -486,77 +707,83 @@ export default function UsagePage() {
                     </div>
                 </div>
 
-                <div className="divide-y divide-zinc-800">
-                    {highestStorageStudios.map((studio, index) => {
-                        const percentage =
-                            studio.storageLimit > 0
-                                ? (studio.storageUsed / studio.storageLimit) * 100
-                                : 0;
+                {highestStorageStudios.length > 0 ? (
+                    <div className="divide-y divide-zinc-800">
+                        {highestStorageStudios.map((studio, index) => {
+                            const percentage =
+                                studio.storageLimit > 0
+                                    ? (studio.storageUsed / studio.storageLimit) * 100
+                                    : 0;
 
-                        return (
-                            <div
-                                key={studio.id}
-                                className="flex flex-col gap-4 p-5 transition hover:bg-zinc-900/40 lg:flex-row lg:items-center"
-                            >
-                                <div className="flex items-center gap-4 lg:w-[35%]">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-sm font-semibold text-zinc-400">
-                                        #{index + 1}
+                            return (
+                                <div
+                                    key={studio.id}
+                                    className="flex flex-col gap-4 p-5 transition hover:bg-zinc-900/40 lg:flex-row lg:items-center"
+                                >
+                                    <div className="flex items-center gap-4 lg:w-[35%]">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-sm font-semibold text-zinc-400">
+                                            #{index + 1}
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p className="truncate font-medium text-white">
+                                                {studio.studioName}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-zinc-500">
+                                                {studio.adminName} · {studio.plan}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="min-w-0">
-                                        <p className="truncate font-medium text-white">
-                                            {studio.studioName}
-                                        </p>
+                                    <div className="flex-1">
+                                        <div className="mb-2 flex items-center justify-between text-xs">
+                                            <span className="text-zinc-400">
+                                                {studio.storageUsed.toFixed(3)} GB used
+                                            </span>
 
-                                        <p className="mt-1 text-xs text-zinc-500">
-                                            {studio.adminName} · {studio.plan}
-                                        </p>
-                                    </div>
-                                </div>
+                                            <span className="text-zinc-500">
+                                                {studio.storageLimit} GB
+                                            </span>
+                                        </div>
 
-                                <div className="flex-1">
-                                    <div className="mb-2 flex items-center justify-between text-xs">
-                                        <span className="text-zinc-400">
-                                            {studio.storageUsed.toFixed(1)} GB used
-                                        </span>
-
-                                        <span className="text-zinc-500">
-                                            {studio.storageLimit} GB
-                                        </span>
-                                    </div>
-
-                                    <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                                        <div
-                                            className={`h-full rounded-full ${percentage >= 90
+                                        <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+                                            <div
+                                                className={`h-full rounded-full ${percentage >= 90
                                                     ? "bg-red-500"
                                                     : percentage >= 75
                                                         ? "bg-yellow-500"
                                                         : "bg-white"
-                                                }`}
-                                            style={{
-                                                width: `${Math.min(percentage, 100)}%`,
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between gap-6 lg:w-36 lg:justify-end">
-                                    <div>
-                                        <p className="text-right text-sm font-semibold text-white">
-                                            {percentage.toFixed(1)}%
-                                        </p>
-
-                                        <p className="text-right text-xs text-zinc-500">
-                                            utilized
-                                        </p>
+                                                    }`}
+                                                style={{
+                                                    width: `${Math.min(percentage, 100)}%`,
+                                                }}
+                                            />
+                                        </div>
                                     </div>
 
-                                    <StatusBadge status={studio.status} />
+                                    <div className="flex items-center justify-between gap-6 lg:w-36 lg:justify-end">
+                                        <div>
+                                            <p className="text-right text-sm font-semibold text-white">
+                                                {percentage.toFixed(1)}%
+                                            </p>
+
+                                            <p className="text-right text-xs text-zinc-500">
+                                                utilized
+                                            </p>
+                                        </div>
+
+                                        <StatusBadge status={studio.status} />
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <p className="p-8 text-center text-sm text-zinc-500">
+                        No storage usage available.
+                    </p>
+                )}
             </section>
 
             {/* Search / Filters */}
@@ -574,7 +801,6 @@ export default function UsagePage() {
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row">
-                            {/* Search */}
                             <div className="relative">
                                 <Search
                                     size={17}
@@ -599,10 +825,9 @@ export default function UsagePage() {
                                 )}
                             </div>
 
-                            {/* Filter */}
                             <FilterSelect
                                 value={usageFilter}
-                                onChange={(value) => setUsageFilter(value)}
+                                onChange={setUsageFilter}
                             />
                         </div>
                     </div>
@@ -610,14 +835,13 @@ export default function UsagePage() {
 
                 {/* Desktop Table */}
                 <div className="hidden overflow-x-auto lg:block">
-                    <table className="w-full min-w-[1100px]">
+                    <table className="w-full min-w-[1050px]">
                         <thead>
                             <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wider text-zinc-500">
                                 <th className="px-6 py-4 font-medium">Studio</th>
                                 <th className="px-6 py-4 font-medium">Storage</th>
                                 <th className="px-6 py-4 font-medium">Images</th>
                                 <th className="px-6 py-4 font-medium">Events</th>
-                                <th className="px-6 py-4 font-medium">Customers</th>
                                 <th className="px-6 py-4 font-medium">Status</th>
                                 <th className="px-6 py-4 font-medium text-right">
                                     Action
@@ -628,16 +852,19 @@ export default function UsagePage() {
                         <tbody>
                             {filteredStudios.map((studio) => {
                                 const storagePercentage =
-                                    (studio.storageUsed / studio.storageLimit) * 100;
+                                    studio.storageLimit > 0
+                                        ? (studio.storageUsed / studio.storageLimit) * 100
+                                        : 0;
 
                                 const imagePercentage =
-                                    (studio.images / studio.maxImages) * 100;
+                                    studio.maxImages > 0
+                                        ? (studio.images / studio.maxImages) * 100
+                                        : 0;
 
                                 const eventPercentage =
-                                    (studio.events / studio.maxEvents) * 100;
-
-                                const customerPercentage =
-                                    (studio.customers / studio.maxCustomers) * 100;
+                                    studio.maxEvents > 0
+                                        ? (studio.events / studio.maxEvents) * 100
+                                        : 0;
 
                                 return (
                                     <tr
@@ -686,14 +913,6 @@ export default function UsagePage() {
                                         </td>
 
                                         <td className="px-6 py-5">
-                                            <ResourceUsage
-                                                used={studio.customers}
-                                                limit={studio.maxCustomers}
-                                                percentage={customerPercentage}
-                                            />
-                                        </td>
-
-                                        <td className="px-6 py-5">
                                             <StatusBadge status={studio.status} />
                                         </td>
 
@@ -720,16 +939,19 @@ export default function UsagePage() {
                 <div className="divide-y divide-zinc-800 lg:hidden">
                     {filteredStudios.map((studio) => {
                         const storagePercentage =
-                            (studio.storageUsed / studio.storageLimit) * 100;
+                            studio.storageLimit > 0
+                                ? (studio.storageUsed / studio.storageLimit) * 100
+                                : 0;
 
                         const imagePercentage =
-                            (studio.images / studio.maxImages) * 100;
+                            studio.maxImages > 0
+                                ? (studio.images / studio.maxImages) * 100
+                                : 0;
 
                         const eventPercentage =
-                            (studio.events / studio.maxEvents) * 100;
-
-                        const customerPercentage =
-                            (studio.customers / studio.maxCustomers) * 100;
+                            studio.maxEvents > 0
+                                ? (studio.events / studio.maxEvents) * 100
+                                : 0;
 
                         return (
                             <div key={studio.id} className="p-5">
@@ -740,7 +962,7 @@ export default function UsagePage() {
                                         </p>
 
                                         <p className="mt-1 text-xs text-zinc-500">
-                                            {studio.adminName}
+                                            {studio.adminName} · {studio.plan}
                                         </p>
                                     </div>
 
@@ -752,7 +974,7 @@ export default function UsagePage() {
                                         <span className="text-zinc-400">Storage</span>
 
                                         <span className="text-zinc-500">
-                                            {studio.storageUsed.toFixed(1)} /{" "}
+                                            {studio.storageUsed.toFixed(3)} /{" "}
                                             {studio.storageLimit} GB
                                         </span>
                                     </div>
@@ -760,10 +982,10 @@ export default function UsagePage() {
                                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
                                         <div
                                             className={`h-full rounded-full ${storagePercentage >= 90
-                                                    ? "bg-red-500"
-                                                    : storagePercentage >= 75
-                                                        ? "bg-yellow-500"
-                                                        : "bg-white"
+                                                ? "bg-red-500"
+                                                : storagePercentage >= 75
+                                                    ? "bg-yellow-500"
+                                                    : "bg-white"
                                                 }`}
                                             style={{
                                                 width: `${Math.min(storagePercentage, 100)}%`,
@@ -772,7 +994,7 @@ export default function UsagePage() {
                                     </div>
                                 </div>
 
-                                <div className="mt-5 grid grid-cols-3 gap-3">
+                                <div className="mt-5 grid grid-cols-2 gap-3">
                                     <MiniUsage
                                         label="Images"
                                         value={formatNumber(studio.images)}
@@ -785,13 +1007,6 @@ export default function UsagePage() {
                                         value={formatNumber(studio.events)}
                                         limit={formatNumber(studio.maxEvents)}
                                         percentage={eventPercentage}
-                                    />
-
-                                    <MiniUsage
-                                        label="Customers"
-                                        value={formatNumber(studio.customers)}
-                                        limit={formatNumber(studio.maxCustomers)}
-                                        percentage={customerPercentage}
                                     />
                                 </div>
 
@@ -843,19 +1058,19 @@ export default function UsagePage() {
                 <InfoCard
                     icon={HardDrive}
                     title="Storage"
-                    description="Tracks actual media storage consumed by all studios. Database storage is not included."
+                    description="Tracks actual R2 storage consumed by individual studios and platform-wide private and public bucket usage."
                 />
 
                 <InfoCard
                     icon={ImageIcon}
                     title="Images"
-                    description="Shows the number of uploaded images compared with each studio's image limit."
+                    description="Shows uploaded image counts for non-deleted events compared with each studio's image limit."
                 />
 
                 <InfoCard
                     icon={AlertTriangle}
                     title="Usage Alerts"
-                    description="Warning starts at 75% usage and critical status starts at 90% usage."
+                    description="Warning starts at 75% usage and critical status starts at 90% usage across storage, images or events."
                 />
             </div>
         </div>
@@ -900,10 +1115,10 @@ function SummaryCard({
                     <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
                         <div
                             className={`h-full rounded-full ${progress >= 90
-                                    ? "bg-red-500"
-                                    : progress >= 75
-                                        ? "bg-yellow-500"
-                                        : "bg-white"
+                                ? "bg-red-500"
+                                : progress >= 75
+                                    ? "bg-yellow-500"
+                                    : "bg-white"
                                 }`}
                             style={{
                                 width: `${Math.min(progress, 100)}%`,
@@ -943,6 +1158,17 @@ function ResourceUsage({
     percentage: number;
     suffix?: string;
 }) {
+    if (limit <= 0) {
+        return (
+            <div className="min-w-[160px]">
+                <p className="text-xs text-zinc-500">Not tracked</p>
+                <p className="mt-1 text-[10px] text-zinc-600">
+                    No usage limit configured
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-w-[160px]">
             <div className="mb-2 flex items-center justify-between gap-3 text-xs">
@@ -960,10 +1186,10 @@ function ResourceUsage({
             <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
                 <div
                     className={`h-full rounded-full ${percentage >= 90
-                            ? "bg-red-500"
-                            : percentage >= 75
-                                ? "bg-yellow-500"
-                                : "bg-white"
+                        ? "bg-red-500"
+                        : percentage >= 75
+                            ? "bg-yellow-500"
+                            : "bg-white"
                         }`}
                     style={{
                         width: `${Math.min(percentage, 100)}%`,
@@ -1004,10 +1230,10 @@ function MiniUsage({
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-800">
                 <div
                     className={`h-full rounded-full ${percentage >= 90
-                            ? "bg-red-500"
-                            : percentage >= 75
-                                ? "bg-yellow-500"
-                                : "bg-white"
+                        ? "bg-red-500"
+                        : percentage >= 75
+                            ? "bg-yellow-500"
+                            : "bg-white"
                         }`}
                     style={{
                         width: `${Math.min(percentage, 100)}%`,
@@ -1023,16 +1249,18 @@ function StatusBadge({
 }: {
     status: UsageStatus;
 }) {
-    const styles = {
+    const styles: Record<UsageStatus, string> = {
         Healthy: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
         Warning: "border-yellow-500/20 bg-yellow-500/10 text-yellow-400",
         Critical: "border-red-500/20 bg-red-500/10 text-red-400",
+        "Not tracked": "border-zinc-700 bg-zinc-800/60 text-zinc-400",
     };
 
-    const icons = {
+    const icons: Record<UsageStatus, React.ElementType> = {
         Healthy: ArrowDown,
         Warning: ArrowUp,
         Critical: AlertTriangle,
+        "Not tracked": AlertTriangle,
     };
 
     const Icon = icons[status];
@@ -1051,23 +1279,15 @@ function FilterSelect({
     value,
     onChange,
 }: {
-    value: "All" | "Healthy" | "Warning" | "Critical";
-    onChange: (
-        value: "All" | "Healthy" | "Warning" | "Critical"
-    ) => void;
+    value: UsageFilter;
+    onChange: (value: UsageFilter) => void;
 }) {
     return (
         <div className="relative">
             <select
                 value={value}
                 onChange={(event) =>
-                    onChange(
-                        event.target.value as
-                        | "All"
-                        | "Healthy"
-                        | "Warning"
-                        | "Critical"
-                    )
+                    onChange(event.target.value as UsageFilter)
                 }
                 className="h-10 appearance-none rounded-xl border border-zinc-800 bg-zinc-900 pl-4 pr-10 text-sm text-zinc-300 outline-none transition focus:border-zinc-600"
             >
@@ -1075,6 +1295,7 @@ function FilterSelect({
                 <option value="Healthy">Healthy</option>
                 <option value="Warning">Warning</option>
                 <option value="Critical">Critical</option>
+                <option value="Not tracked">Not tracked</option>
             </select>
 
             <ChevronDown

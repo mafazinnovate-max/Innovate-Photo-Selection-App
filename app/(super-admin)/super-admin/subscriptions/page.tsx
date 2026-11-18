@@ -99,7 +99,10 @@ function getDisplayStatus(studioIsActive: boolean, endDate: string | null, subsc
     return "Active";
 }
 
-function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
+function mapStudioToSubscription(
+    studio: StudioApiRecord,
+    storageUsageMap: Map<string, number>
+): Subscription {
     const latestSubscription = studio.Subscription?.[0];
     const admin = studio.admins?.[0];
 
@@ -113,7 +116,7 @@ function mapStudioToSubscription(studio: StudioApiRecord): Subscription {
         status: getDisplayStatus(studio.isActive, latestSubscription?.endDate ?? null, latestSubscription?.status),
         startDate: latestSubscription?.startDate ?? "",
         endDate: latestSubscription?.endDate ?? "",
-        storageUsed: null,
+        storageUsed: storageUsageMap.get(studio.id) ?? null,
         price: latestSubscription?.price ?? null,
         storageLimit: latestSubscription?.storageLimitGb ?? 0,
         events: studio._count?.events ?? 0,
@@ -195,8 +198,43 @@ export default function SubscriptionsPage() {
                     throw new Error(result.message || "Failed to load subscriptions.");
                 }
 
+                let storageUsageMap = new Map<string, number>();
+
+                try {
+                    const storageResponse = await fetch(
+                        "/api/super-admin/storage-usage",
+                        {
+                            method: "GET",
+                            cache: "no-store",
+                        }
+                    );
+
+                    const storageData = await storageResponse.json();
+
+                    if (storageResponse.ok && storageData.success) {
+                        storageUsageMap = new Map<string, number>(
+                            (storageData.studios as Array<{
+                                studioId: string;
+                                usedGB: number;
+                            }>).map((item) => [
+                                item.studioId,
+                                item.usedGB,
+                            ])
+                        );
+                    }
+                } catch (storageError) {
+                    console.error(
+                        "Failed to load subscription storage usage:",
+                        storageError
+                    );
+                }
+
                 if (!cancelled) {
-                    setSubscriptions((result.studios as StudioApiRecord[]).map(mapStudioToSubscription));
+                    setSubscriptions(
+                        (result.studios as StudioApiRecord[]).map(
+                            (studio) => mapStudioToSubscription(studio, storageUsageMap)
+                        )
+                    );
                 }
             } catch (error) {
                 if (!cancelled) {
@@ -673,7 +711,9 @@ export default function SubscriptionsPage() {
                                                         </span>
 
                                                         <span className="text-zinc-300">
-                                                            {subscription.storageUsed === null ? "Not tracked" : subscription.storageUsed} / {subscription.storageLimit} GB
+                                                            {subscription.storageUsed === null
+                                                                ? "Not tracked"
+                                                                : subscription.storageUsed.toFixed(3)} / {subscription.storageLimit} GB
                                                         </span>
                                                     </div>
 
@@ -885,7 +925,9 @@ export default function SubscriptionsPage() {
                                     </p>
 
                                     <p className="mt-2 text-sm text-zinc-300">
-                                        {subscription.storageUsed === null ? "Not tracked" : `${subscription.storageUsed} GB / ${subscription.storageLimit} GB`}
+                                        {subscription.storageUsed === null
+                                            ? "Not tracked"
+                                            : `${subscription.storageUsed.toFixed(3)} GB / ${subscription.storageLimit} GB`}
                                     </p>
 
                                     {subscription.storageUsed !== null && (
@@ -1033,7 +1075,7 @@ export default function SubscriptionsPage() {
                 <InfoCard
                     icon={<AlertCircle size={18} />}
                     title="Renewal Attention"
-                    description="Active, expiring-soon and inactive studio subscriptions are highlighted automatically."
+                    description="Event limits are loaded from each studio plan. Storage usage is tracked directly from Cloudflare R2."
                 />
             </div>
         </div>
