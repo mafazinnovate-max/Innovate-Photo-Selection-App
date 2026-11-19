@@ -14,6 +14,7 @@ import BuiltAroundYouSection from "@/components/landingpage/BuiltAroundYouSectio
 import FAQCTASection from "@/components/landingpage/FAQCTASection";
 import Footer from "@/components/landingpage/Footer";
 
+
 const inter = Inter({
     subsets: ["latin"],
     weight: ["400", "500", "600", "700", "800"],

@@ -1,6 +1,8 @@
 
 "use client";
 
+import WaterRippleCard from "./WaterRippleCard";
+import KoiPond from "./KoiPond";
 import { useState } from "react";
 import {
     AnimatePresence,
@@ -210,7 +212,7 @@ export default function FAQCTASection() {
             {/* Final CTA */}
             <section className="overflow-hidden">
                 <div className="mx-auto w-full max-w-7xl px-6 pb-16 sm:px-8 lg:px-10">
-                    <motion.div
+                    <WaterRippleCard
                         initial={
                             reduceMotion
                                 ? false
@@ -231,6 +233,8 @@ export default function FAQCTASection() {
                         }}
                         className="relative flex flex-col justify-between gap-10 overflow-hidden rounded-3xl bg-[#FFC93C] p-6 text-[#14161A] sm:rounded-[28px] sm:p-12 md:min-h-[300px] lg:flex-row lg:items-center"
                     >
+
+                         <KoiPond />
                         {/* Decorative background detail */}
                         {!reduceMotion && (
                             <motion.div
@@ -279,7 +283,7 @@ export default function FAQCTASection() {
                                 </span>
                             </a>
                         </div>
-                    </motion.div>
+                    </WaterRippleCard>
                 </div>
             </section>
         </>
