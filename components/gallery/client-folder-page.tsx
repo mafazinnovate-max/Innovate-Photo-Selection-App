@@ -3,7 +3,16 @@
 import { completeCategory } from "@/actions/complete-category";
 import { reopenCategory } from "@/actions/reopen-category";
 import { saveSelections } from "@/actions/save-selections";
-import { ArrowLeft, Check, LocateFixedIcon, Lock, PhoneCall, Unlock, } from "lucide-react";
+import SelectedAlbumPreview from "@/components/gallery/selected-album-preview";
+import {
+  ArrowLeft,
+  BookOpen,
+  Check,
+  LocateFixedIcon,
+  Lock,
+  PhoneCall,
+  Unlock,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -83,6 +92,7 @@ export default function ClientFolderPage({
   );
 
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [showAlbumPreview, setShowAlbumPreview] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -466,6 +476,15 @@ export default function ClientFolderPage({
 
   const visibleImages =
     filteredImages.slice(0, visibleCount);
+
+    const selectedAlbumImages = selectedImages
+  .map((id) => images.find((image) => image.id === id))
+  .filter((image): image is GalleryImage => Boolean(image))
+  .map(({ id, imageUrl, fileName }) => ({
+    id,
+    imageUrl,
+    fileName,
+  }));
 
   const getSelectionNumber = (
     imageId: string,
@@ -1292,7 +1311,7 @@ export default function ClientFolderPage({
               <p className="mt-1 text-sm text-zinc-400">
                 {isCompleted
                   ? "Your photo selection has been completed."
-                  : "Select your favorite photos"}
+                  : "Select your favourite photos"}
               </p>
             </div>
 
@@ -1638,6 +1657,19 @@ export default function ClientFolderPage({
                     </span>
                   </button>
                 </div>
+
+                {/* <button
+  type="button"
+  onClick={() => setShowAlbumPreview(true)}
+  disabled={selectedAlbumImages.length === 0}
+  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3.5 text-sm font-semibold text-amber-200 transition hover:border-amber-400/50 hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+>
+  <BookOpen size={17} />
+  View Selected Photos as Album
+  <span className="text-xs text-amber-200/60">
+    ({selectedAlbumImages.length})
+  </span>
+</button> */}
 
                 {/* Submit Selection */}
                 {hasUnsavedChanges && (
@@ -2318,6 +2350,14 @@ export default function ClientFolderPage({
           )}
         </div>
       </div>
+
+            {showAlbumPreview && (
+        <SelectedAlbumPreview
+          images={selectedAlbumImages}
+          onClose={() => setShowAlbumPreview(false)}
+        />
+      )}
+      
     </div>
   );
 }

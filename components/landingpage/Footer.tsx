@@ -47,9 +47,13 @@ export default function Footer() {
     return (
         <footer
             id="contact"
-            className="relative isolate overflow-hidden bg-[#F4F1EA] text-[#14161A]"
+            className="relative isolate overflow-hidden text-[#14161A]"
         >
             {/* ANIMATED WAVE TRANSITION */}
+                        <div
+                aria-hidden="true"
+                className="absolute inset-x-0 bottom-0 top-[100px] z-0 bg-[#F4F1EA] sm:top-[130px]"
+            />
 
             <div
                 className="pointer-events-none absolute left-0 top-0 z-0 h-[125px] w-full overflow-hidden sm:h-[155px]"
@@ -68,16 +72,15 @@ export default function Footer() {
 
                     <path
                         d="
-                            M0 0 H1440 V80
-                            C1200 120 960 35 720 80
-                            C480 125 240 40 0 80 Z
-
-                            M1440 0 H2880 V80
-                            C2640 120 2400 35 2160 80
-                            C1920 125 1680 40 1440 80 Z
+                            M0 80
+                            C240 40 480 125 720 80
+                            C960 35 1200 120 1440 80
+                            C1680 40 1920 125 2160 80
+                            C2400 35 2640 120 2880 80
+                            V180 H0 Z
                         "
-                        fill="#14161A"
-                    />
+                        fill="#F4F1EA"
+/>
 
                     {/* YELLOW FLOWING ACCENT */}
 

@@ -198,6 +198,23 @@ export default async function DashboardPage() {
     }),
   ]);
 
+    // Images uploaded during the current subscription period.
+  const subscriptionPeriodImages = subscription?.endDate
+    ? await prisma.image.count({
+        where: {
+          createdAt: {
+            gte: subscription.startDate,
+            lte: subscription.endDate,
+          },
+          folder: {
+            event: {
+              studioId,
+            },
+          },
+        },
+      })
+    : 0;
+
   const subscriptionInfo = subscription
     ? {
       id: subscription.id,
@@ -453,7 +470,7 @@ export default async function DashboardPage() {
         <SubscriptionCard
           subscription={subscriptionInfo}
           totalEvents={totalEvents}
-          totalImages={totalPhotos}
+          totalImages={subscriptionPeriodImages}
         />
       </div>
 
