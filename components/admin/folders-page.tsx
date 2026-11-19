@@ -99,6 +99,23 @@ export default function FoldersPage({
   const menuRef = useRef<HTMLDivElement>(null);
   const createdFolderRef = useRef<HTMLDivElement>(null);
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [cardHeight, setCardHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+  const el = contentRef.current;
+  if (!el) return;
+
+  const observer = new ResizeObserver(() => {
+    setCardHeight(el.offsetHeight);
+  });
+
+  observer.observe(el);
+  setCardHeight(el.offsetHeight);
+
+  return () => observer.disconnect();
+}, []);
+
   useEffect(() => {
     if (event.galleryMode === "single") {
       setMaxSelections(event.maxSelections?.toString() ?? "");
@@ -413,23 +430,30 @@ export default function FoldersPage({
 
   return (
     <div className="relative mx-auto mt-4 w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-zinc-800 sm:mt-6 sm:rounded-3xl lg:mt-10">
+          <div
+      className="relative w-full overflow-hidden transition-[height] duration-500 ease-in-out motion-reduce:transition-none"
+      style={{ height: cardHeight }}
+    >
       {/* BACKGROUND */}
       {event.coverImageUrl && (
-        <>
-          <img
-            src={event.coverImageUrl}
-            alt={event.name}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{
-              objectPosition: `center ${event.coverPosition ?? 50}%`,
-            }}
-          />
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                  <img
+                    src={event.coverImageUrl}
+                    alt={event.name}
+                    className="absolute left-1/2 top-1/2 h-auto min-h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
+                    style={{ objectPosition: "center 50%" }}
+                  />
+              </div>
 
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
-        </>
-      )}
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
+            </>
+          )}
 
-      <div className="relative min-w-0 p-3 sm:p-5 md:p-6 lg:p-8">
+                    <div
+                ref={contentRef}
+                className="relative min-w-0 p-3 sm:p-5 md:p-6 lg:p-8"
+              >
 
         {/* HEADER */}
         <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1388,6 +1412,7 @@ export default function FoldersPage({
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -926,19 +926,20 @@ function clearPortfolioPhotoSelection() {
       URL.revokeObjectURL(photo.preview);
     }
 
-    setPortfolioPhotos((current) =>
-      current.filter((item) => {
-        if (photo.id) {
-          return item.id !== photo.id;
-        }
+  const remainingPhotos = portfolioPhotos.filter((item) => {
+    if (photo.id) {
+      return item.id !== photo.id;
+    }
 
-        if (photo.publicId) {
-          return item.publicId !== photo.publicId;
-        }
+    if (photo.publicId) {
+      return item.publicId !== photo.publicId;
+    }
 
-        return item.preview !== photo.preview;
-      })
-    );
+    return item.preview !== photo.preview;
+  });
+
+  setPortfolioPhotos(remainingPhotos);
+  await saveProfile(remainingPhotos);
 
     if (
       previewPhoto?.id === photo.id ||
@@ -1033,14 +1034,15 @@ async function removeSelectedPortfolioPhotos() {
     }
   });
 
-  setPortfolioPhotos((current) =>
-    current.filter(
-      (photo) =>
-        !successfulKeys.has(
-          getPortfolioPhotoSelectionKey(photo)
-        )
-    )
+  const remainingPhotos = portfolioPhotos.filter(
+    (photo) => !successfulKeys.has(getPortfolioPhotoSelectionKey(photo))
   );
+
+  setPortfolioPhotos(remainingPhotos);
+
+  if (successfulResults.length > 0) {
+    await saveProfile(remainingPhotos);
+  }
 
   setSelectedPortfolioPhotoKeys((current) => {
     const next = new Set(current);
@@ -1094,8 +1096,9 @@ async function removeSelectedPortfolioPhotos() {
         }
       }
 
-      setPortfolioPhotos([]);
-      setPreviewPhoto(null);
+    setPortfolioPhotos([]);
+    setPreviewPhoto(null);
+    await saveProfile([]);
     } catch (clearError) {
       console.error(
         "Portfolio clear error:",
