@@ -2,19 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-    FileText,
-    ReceiptText,
-    History,
-    Settings,
-    Plus,
-    Search,
-    ChevronLeft,
-    Trash2,
-    Download,
-    ArrowLeft,
-    Pencil,
-} from "lucide-react";
+import { FileText, ReceiptText, History, Settings, Plus, Search, ChevronLeft, Trash2, Download, ArrowLeft, Pencil } from "lucide-react";
 
 import DocumentRichTextEditor from "@/components/admin/DocumentRichTextEditor";
 import DocumentPreview from "./DocumentPreview";
@@ -538,8 +526,8 @@ export default function ContractPage() {
                                 setDocumentMessage("");
                             }}
                             className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm transition ${isActive
-                                    ? "bg-white text-black"
-                                    : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                ? "bg-white text-black"
+                                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
                                 }`}
                         >
                             <Icon size={16} />
@@ -659,8 +647,8 @@ export default function ContractPage() {
                                 type="button"
                                 onClick={() => setDocumentType("contract")}
                                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition ${documentType === "contract"
-                                        ? "bg-white text-black"
-                                        : "text-zinc-400 hover:text-white"
+                                    ? "bg-white text-black"
+                                    : "text-zinc-400 hover:text-white"
                                     }`}
                             >
                                 <FileText size={14} />
@@ -671,8 +659,8 @@ export default function ContractPage() {
                                 type="button"
                                 onClick={() => setDocumentType("quotation")}
                                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition ${documentType === "quotation"
-                                        ? "bg-white text-black"
-                                        : "text-zinc-400 hover:text-white"
+                                    ? "bg-white text-black"
+                                    : "text-zinc-400 hover:text-white"
                                     }`}
                             >
                                 <ReceiptText size={14} />
@@ -1010,8 +998,8 @@ export default function ContractPage() {
                         <div className="flex flex-col-reverse gap-3 border-t border-zinc-800 pt-5 sm:flex-row sm:items-center sm:justify-between">
                             <p
                                 className={`text-sm ${documentMessage.toLowerCase().includes("successfully")
-                                        ? "text-green-400"
-                                        : "text-zinc-400"
+                                    ? "text-green-400"
+                                    : "text-zinc-400"
                                     }`}
                             >
                                 {documentMessage ||
