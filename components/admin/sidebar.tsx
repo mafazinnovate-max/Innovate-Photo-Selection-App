@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   UserRound,
   FileText,
+  Star,
 } from "lucide-react";
 
 interface SubscriptionInfo {
@@ -47,6 +48,11 @@ const menuItems = [
     name: "Settings",
     href: "/settings",
     icon: Settings,
+  },
+  {
+    name: "Reviews",
+    href: "/reviews",
+    icon: Star,
   },
 ];
 
