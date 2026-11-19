@@ -150,11 +150,84 @@ export async function POST(request: Request) {
             });
         }
 
-        // 6. Generate a unique R2 object key
+        // 6. Check latest subscription and its validity
+        const subscription = await prisma.subscription.findFirst({
+            where: {
+                studioId: admin.studioId,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            select: {
+                maxImages: true,
+                status: true,
+                startDate: true,
+                endDate: true,
+            },
+        });
+
+        if (!subscription) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "No subscription found for this studio.",
+                },
+                { status: 403 }
+            );
+        }
+
+        const now = new Date();
+
+        if (
+            subscription.status !== "Active" ||
+            !subscription.endDate ||
+            now < subscription.startDate ||
+            now > subscription.endDate
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Your subscription is not active or has expired.",
+                },
+                { status: 403 }
+            );
+        }
+
+        // Count only images uploaded during the current subscription period.
+        // Images from previous subscription periods remain untouched.
+        // Archived events are included so archiving cannot free upload capacity.
+        const currentImageCount = await prisma.image.count({
+            where: {
+                createdAt: {
+                    gte: subscription.startDate,
+                    lte: subscription.endDate,
+                },
+                folder: {
+                    event: {
+                        studioId: admin.studioId,
+                    },
+                },
+            },
+        });
+
+        if (currentImageCount >= subscription.maxImages) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: `Your studio has reached its image upload limit of ${subscription.maxImages.toLocaleString("en-IN")} images.`,
+                    limitReached: true,
+                    maxImages: subscription.maxImages,
+                    currentImages: currentImageCount,
+                },
+                { status: 403 }
+            );
+        }
+
+        // 7. Generate a unique R2 object key
         const safeFileName = fileName
             .trim()
             .replace(/[\/\\]/g, "-")
-            .replace(/[^\w.-]/g, "-")
+            .replace(/[^\w\.-]/g, "-")
             .replace(/-+/g, "-")
             .slice(0, 150);
 
@@ -164,7 +237,7 @@ export async function POST(request: Request) {
             `/folders/${folder.id}` +
             `/${randomUUID()}-${safeFileName || "image"}`;
 
-        // 7. Generate temporary direct-upload URL
+        // 8. Generate temporary direct-upload URL
         const command = new PutObjectCommand({
             Bucket: R2_BUCKET_NAME,
             Key: storageKey,
