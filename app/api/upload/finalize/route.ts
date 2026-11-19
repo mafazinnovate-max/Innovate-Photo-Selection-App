@@ -1,3 +1,4 @@
+
 import { after, NextResponse } from "next/server";
 import { processImage } from "@/lib/process-image";
 import {
@@ -11,6 +12,23 @@ import { r2, R2_BUCKET_NAME } from "@/lib/r2";
 import { verifyAuthToken } from "@/lib/auth";
 
 export const runtime = "nodejs";
+
+class StudioImageLimitError extends Error {
+    constructor(
+        public maxImages: number,
+        public currentImages: number
+    ) {
+        super("STUDIO_IMAGE_LIMIT_REACHED");
+        this.name = "StudioImageLimitError";
+    }
+}
+
+class StudioSubscriptionError extends Error {
+    constructor() {
+        super("STUDIO_SUBSCRIPTION_NOT_ACTIVE");
+        this.name = "StudioSubscriptionError";
+    }
+}
 
 export async function POST(request: Request) {
     let uploadedKey: string | null = null;
@@ -220,26 +238,142 @@ export async function POST(request: Request) {
             });
         }
 
-        // 8. Create pending image record
-        const image = await prisma.image.create({
-            data: {
-                imageUrl: storageKey,
-                publicId: storageKey,
-                folderId: folder.id,
-                eventId: folder.eventId,
-                fileName: fileName.trim(),
-                fileHash: normalizedHash,
-                storageKey,
-                originalSize: BigInt(fileSize),
-                processingStatus: "PENDING",
-                processingAttempts: 0,
-            },
-            select: {
-                id: true,
-                fileName: true,
-                processingStatus: true,
-            },
+        // 8. Atomically enforce subscription-period image limit
+        // and create image
+        const result = await prisma.$transaction(async (tx) => {
+            // Lock this studio row so concurrent finalizations are serialized
+            await tx.$queryRaw`
+                SELECT "id"
+                FROM "Studio"
+                WHERE "id" = ${admin.studioId}
+                FOR UPDATE
+            `;
+
+            // Recheck duplicates after acquiring the lock
+            const duplicateImage = await tx.image.findUnique({
+                where: {
+                    eventId_fileHash: {
+                        eventId: folder.eventId,
+                        fileHash: normalizedHash,
+                    },
+                },
+                select: {
+                    id: true,
+                    fileName: true,
+                    processingStatus: true,
+                },
+            });
+
+            if (duplicateImage) {
+                return {
+                    duplicate: true as const,
+                    image: duplicateImage,
+                };
+            }
+
+            // Use the latest subscription
+            const subscription = await tx.subscription.findFirst({
+                where: {
+                    studioId: admin.studioId,
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                select: {
+                    maxImages: true,
+                    status: true,
+                    startDate: true,
+                    endDate: true,
+                },
+            });
+
+            if (!subscription) {
+                throw new StudioSubscriptionError();
+            }
+
+            const now = new Date();
+
+            // Reject inactive, expired, or not-yet-started subscriptions
+            if (
+                subscription.status !== "Active" ||
+                !subscription.endDate ||
+                now < subscription.startDate ||
+                now > subscription.endDate
+            ) {
+                throw new StudioSubscriptionError();
+            }
+
+            // Count only images uploaded during the latest subscription period.
+            // Images from older periods remain untouched and do not consume quota.
+            const currentImageCount = await tx.image.count({
+                where: {
+                    createdAt: {
+                        gte: subscription.startDate,
+                        lte: subscription.endDate,
+                    },
+                    folder: {
+                        event: {
+                            studioId: admin.studioId,
+                        },
+                    },
+                },
+            });
+
+            if (currentImageCount >= subscription.maxImages) {
+                throw new StudioImageLimitError(
+                    subscription.maxImages,
+                    currentImageCount
+                );
+            }
+
+            // Create the image only after the quota check passes
+            const image = await tx.image.create({
+                data: {
+                    imageUrl: storageKey,
+                    publicId: storageKey,
+                    folderId: folder.id,
+                    eventId: folder.eventId,
+                    fileName: fileName.trim(),
+                    fileHash: normalizedHash,
+                    storageKey,
+                    originalSize: BigInt(fileSize),
+                    processingStatus: "PENDING",
+                    processingAttempts: 0,
+                },
+                select: {
+                    id: true,
+                    fileName: true,
+                    processingStatus: true,
+                },
+            });
+
+            return {
+                duplicate: false as const,
+                image,
+            };
         });
+
+        // 9. Handle duplicate discovered during the transaction
+        if (result.duplicate) {
+            await r2.send(
+                new DeleteObjectCommand({
+                    Bucket: R2_BUCKET_NAME,
+                    Key: storageKey,
+                })
+            );
+
+            uploadedKey = null;
+
+            return NextResponse.json({
+                success: true,
+                duplicate: true,
+                imageId: result.image.id,
+                fileName: result.image.fileName,
+                processingStatus: result.image.processingStatus,
+            });
+        }
+
+        const image = result.image;
 
         // Database now owns this R2 object
         uploadedKey = null;
@@ -257,7 +391,7 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error("Image finalize failed:", error);
 
-        // 9. Clean up orphaned upload if database creation failed
+        // 10. Clean up orphaned upload if database creation failed
         if (uploadedKey) {
             try {
                 await r2.send(
@@ -272,6 +406,31 @@ export async function POST(request: Request) {
                     cleanupError
                 );
             }
+        }
+
+        // Handle studio-wide image limit
+        if (error instanceof StudioImageLimitError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    limitReached: true,
+                    message: `Your studio has reached its image upload limit of ${error.maxImages.toLocaleString("en-IN")} images.`,
+                    maxImages: error.maxImages,
+                    currentImages: error.currentImages,
+                },
+                { status: 403 }
+            );
+        }
+
+        // Handle missing, inactive, or expired subscription
+        if (error instanceof StudioSubscriptionError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Your subscription is not active or has expired.",
+                },
+                { status: 403 }
+            );
         }
 
         // Handle concurrent duplicate uploads

@@ -20,12 +20,15 @@ export default async function GalleryPage({
   const { shareId } = await params;
   const { parentId } = (await searchParams) || {};
 
-  const event = await prisma.event.findUnique({
-    where: { shareId },
-    include: {
-      studio: true,
-    },
-  });
+ const event = await prisma.event.findFirst({
+  where: {
+    shareId,
+    deletedAt: null,
+  },
+  include: {
+    studio: true,
+  },
+});
 
   const superAdmin = await prisma.superAdmin.findFirst({
     select: {
@@ -115,6 +118,7 @@ export default async function GalleryPage({
     where: {
       eventId: event.id,
       parentId: parentId ?? null,
+      deletedAt: null,
     },
     select: {
       id: true,

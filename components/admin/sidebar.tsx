@@ -49,11 +49,11 @@ const menuItems = [
     href: "/settings",
     icon: Settings,
   },
-  {
-    name: "Reviews",
-    href: "/reviews",
-    icon: Star,
-  },
+  // {
+  //   name: "Reviews",
+  //   href: "/reviews",
+  //   icon: Star,
+  // },
 ];
 
 export default function Sidebar({
