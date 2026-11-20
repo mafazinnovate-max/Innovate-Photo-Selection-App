@@ -60,21 +60,40 @@ export default function UploadDropzone({
   const [uploadedCount, setUploadedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const filesRef = useRef<UploadFile[]>([]);
+  const BATCH_SIZE = 5;
+
+const pendingFilesRef = useRef<File[]>([]);
+
+    const pendingProgressRef = useRef<Map<number, number>>(new Map());
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
+  filesRef.current = files;
+}, [files]);
+
+useEffect(() => {
+  return () => {
+    pendingFilesRef.current = [];
+  };
+}, []);
 
   // Revoke remaining preview URLs when the component unmounts.
-  useEffect(() => {
-    return () => {
-      filesRef.current.forEach((item) => {
-        URL.revokeObjectURL(item.preview);
-      });
-    };
-  }, []);
+ useEffect(() => {
+  return () => {
+    if (progressTimerRef.current !== null) {
+      clearInterval(progressTimerRef.current);
+    }
+
+    pendingProgressRef.current.clear();
+
+    filesRef.current.forEach((item) => {
+      URL.revokeObjectURL(item.preview);
+    });
+  };
+}, []);
 
   useEffect(() => {
     if (!hasProcessingImages) return;
@@ -86,28 +105,64 @@ export default function UploadDropzone({
     return () => clearInterval(interval);
   }, [hasProcessingImages, router]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const mappedFiles: UploadFile[] = acceptedFiles.map((file) => ({
+ const onDrop = useCallback((acceptedFiles: File[]) => {
+  const currentFiles = filesRef.current;
+
+  const newFiles = [
+    ...pendingFilesRef.current,
+    ...acceptedFiles,
+  ];
+
+  const activeSlots = Math.max(
+    0,
+    BATCH_SIZE - currentFiles.length
+  );
+
+  const activeFiles = newFiles.slice(0, activeSlots);
+  const waitingFiles = newFiles.slice(activeSlots);
+
+  pendingFilesRef.current = waitingFiles;
+  setPendingCount(waitingFiles.length);
+
+  if (activeFiles.length > 0) {
+    const mappedFiles: UploadFile[] = activeFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
       progress: 0,
       status: "pending",
     }));
 
-    setFiles((prev) => [...prev, ...mappedFiles]);
-  }, []);
+    const updatedFiles = [...currentFiles, ...mappedFiles];
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => {
-      const item = prev[index];
+    filesRef.current = updatedFiles;
+    setFiles(updatedFiles);
+  }
+}, []);
 
-      if (item) {
-        URL.revokeObjectURL(item.preview);
-      }
+const removeFile = (index: number) => {
+  const currentFiles = filesRef.current;
+  const item = currentFiles[index];
 
-      return prev.filter((_, i) => i !== index);
+  if (!item) return;
+
+  URL.revokeObjectURL(item.preview);
+
+  const remaining = currentFiles.filter((_, i) => i !== index);
+  const nextFile = pendingFilesRef.current.shift();
+  setPendingCount(pendingFilesRef.current.length);
+
+  if (nextFile) {
+    remaining.push({
+      file: nextFile,
+      preview: URL.createObjectURL(nextFile),
+      progress: 0,
+      status: "pending",
     });
-  };
+  }
+
+  filesRef.current = remaining;
+  setFiles(remaining);
+};
 
   const getFileHash = async (file: File): Promise<string> => {
     const fileBuffer = await file.arrayBuffer();
@@ -123,14 +178,49 @@ export default function UploadDropzone({
   };
 
   const updateFile = (
-    index: number,
-    updates: Partial<UploadFile>
-  ) => {
+  index: number,
+  updates: Partial<UploadFile>
+) => {
+  setFiles((prev) =>
+    prev.map((item, i) =>
+      i === index ? { ...item, ...updates } : item
+    )
+  );
+};
+  const flushProgressUpdates = () => {
+    if (pendingProgressRef.current.size === 0) return;
+
+    const updates = new Map(pendingProgressRef.current);
+    pendingProgressRef.current.clear();
+
     setFiles((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, ...updates } : item
-      )
+      prev.map((item, index) => {
+        const progress = updates.get(index);
+
+        return progress === undefined
+          ? item
+          : { ...item, progress };
+      })
     );
+  };
+
+  const queueProgressUpdate = (index: number, progress: number) => {
+    pendingProgressRef.current.set(index, progress);
+
+    if (progressTimerRef.current !== null) return;
+
+    progressTimerRef.current = setInterval(() => {
+      flushProgressUpdates();
+    }, 150);
+  };
+
+  const stopProgressUpdates = () => {
+    if (progressTimerRef.current !== null) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+
+    flushProgressUpdates();
   };
 
   // Direct browser-to-R2 upload with actual progress.
@@ -191,6 +281,7 @@ export default function UploadDropzone({
     index: number
   ): Promise<boolean> => {
     try {
+      
       const file = fileItem.file;
 
       updateFile(index, {
@@ -257,12 +348,11 @@ export default function UploadDropzone({
       await uploadToR2(
         presignData.uploadUrl,
         file,
-        (progress) => {
-          updateFile(index, {
-            progress,
-          });
+                (progress) => {
+          queueProgressUpdate(index, progress);
         }
       );
+      flushProgressUpdates();
 
       updateFile(index, {
         status: "processing",
@@ -324,6 +414,8 @@ export default function UploadDropzone({
 
       return true;
     } catch (error) {
+
+       flushProgressUpdates();
       console.error(
         `Upload failed for ${fileItem.file.name}:`,
         error
@@ -354,18 +446,25 @@ export default function UploadDropzone({
       },
     });
 
-  const uploadAll = async () => {
-    const CONCURRENT_UPLOADS = 10;
+ const uploadAll = async () => {
+  const CONCURRENT_UPLOADS = BATCH_SIZE;
 
-    if (isUploading || files.length === 0) return;
+  const initialBatch = filesRef.current;
 
-    setIsUploading(true);
-    setUploadedCount(0);
-    setFailedCount(0);
-    setTotalCount(files.length);
+  if (isUploading || initialBatch.length === 0) return;
 
-    try {
-      const queue = files.map((file, index) => ({
+  setIsUploading(true);
+  setUploadedCount(0);
+  setFailedCount(0);
+  setTotalCount(
+    initialBatch.length + pendingFilesRef.current.length
+  );
+
+  try {
+    let currentBatch = initialBatch;
+
+    while (currentBatch.length > 0) {
+      const queue = currentBatch.map((file, index) => ({
         file,
         index,
       }));
@@ -396,33 +495,54 @@ export default function UploadDropzone({
 
       await Promise.all(workers);
 
-      // Give the user a moment to see the final statuses.
+      stopProgressUpdates();
+
       await new Promise((resolve) =>
         setTimeout(resolve, 1500)
       );
 
-      // Remove successful uploads from the queue.
-      setFiles((prev) => {
-        const remaining = prev.filter(
-          (_, index) => !successfulIndexes.has(index)
-        );
+      const failedFiles = currentBatch.filter(
+        (_, index) => !successfulIndexes.has(index)
+      );
 
-        prev.forEach((item, index) => {
-          if (successfulIndexes.has(index)) {
-            URL.revokeObjectURL(item.preview);
-          }
-        });
-
-        return remaining;
+      currentBatch.forEach((item, index) => {
+        if (successfulIndexes.has(index)) {
+          URL.revokeObjectURL(item.preview);
+        }
       });
 
-      startTransition(() => {
-        router.refresh();
-      });
-    } finally {
-      setIsUploading(false);
+      // Keep failed images visible for retry.
+      if (failedFiles.length > 0) {
+        filesRef.current = failedFiles;
+        setFiles(failedFiles);
+        break;
+      }
+
+      // Load the next batch only after this batch succeeds.
+      const nextBatch = pendingFilesRef.current
+        .splice(0, BATCH_SIZE)
+        .map((file) => ({
+          file,
+          preview: URL.createObjectURL(file),
+          progress: 0,
+          status: "pending" as const,
+        }));
+
+        setPendingCount(pendingFilesRef.current.length);
+
+      filesRef.current = nextBatch;
+      setFiles(nextBatch);
+
+      currentBatch = nextBatch;
     }
-  };
+
+    startTransition(() => {
+      router.refresh();
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const completedCount = uploadedCount + failedCount;
 
@@ -502,9 +622,12 @@ export default function UploadDropzone({
       {files.length > 0 && (
         <div className="mt-8">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xl font-semibold">
-              Upload Queue
-            </h3>
+           <h3 className="text-xl font-semibold">
+  Upload Queue
+  <span className="ml-2 text-sm font-normal text-zinc-400">
+    ({files.length + pendingCount} images)
+  </span>
+</h3>
 
             <button
               onClick={uploadAll}
