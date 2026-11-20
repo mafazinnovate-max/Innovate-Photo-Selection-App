@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -48,6 +47,8 @@ interface FinalizeResponse {
   error?: string;
 }
 
+const MAX_FILES_PER_UPLOAD = 450;
+
 export default function UploadDropzone({
   folderId,
   hasProcessingImages,
@@ -61,6 +62,7 @@ export default function UploadDropzone({
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
 
   const filesRef = useRef<UploadFile[]>([]);
   const BATCH_SIZE = 5;
@@ -108,9 +110,31 @@ useEffect(() => {
  const onDrop = useCallback((acceptedFiles: File[]) => {
   const currentFiles = filesRef.current;
 
+  // Files already in the queue = visible batch + waiting files
+  const queuedTotal =
+    currentFiles.length + pendingFilesRef.current.length;
+
+  const remainingSlots = Math.max(
+    0,
+    MAX_FILES_PER_UPLOAD - queuedTotal
+  );
+
+  const allowedFiles = acceptedFiles.slice(0, remainingSlots);
+  const skipped = acceptedFiles.length - allowedFiles.length;
+
+  if (skipped > 0) {
+    setLimitMessage(
+      `You can upload a maximum of ${MAX_FILES_PER_UPLOAD} images at a time. ${allowedFiles.length} image${allowedFiles.length === 1 ? " was" : "s were"} added and ${skipped} ${skipped === 1 ? "was" : "were"} skipped.`
+    );
+  } else {
+    setLimitMessage(null);
+  }
+
+  if (allowedFiles.length === 0) return;
+
   const newFiles = [
     ...pendingFilesRef.current,
-    ...acceptedFiles,
+    ...allowedFiles,
   ];
 
   const activeSlots = Math.max(
@@ -144,6 +168,8 @@ const removeFile = (index: number) => {
   const item = currentFiles[index];
 
   if (!item) return;
+
+  setLimitMessage(null);
 
   URL.revokeObjectURL(item.preview);
 
@@ -580,6 +606,10 @@ const removeFile = (index: number) => {
         </div>
       </div>
 
+      <p className="mt-2 text-xs text-zinc-500">
+        {files.length + pendingCount} / {MAX_FILES_PER_UPLOAD} images selected
+      </p>
+
       {/* Upload Progress */}
       {isUploading && (
         <div className="my-6 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
@@ -724,6 +754,39 @@ const removeFile = (index: number) => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Limit Popup */}
+      {limitMessage && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setLimitMessage(null)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="limit-title"
+            className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-2xl text-amber-400">
+              ⚠
+            </div>
+
+            <h3 id="limit-title" className="text-lg font-semibold text-white">
+              Upload limit reached
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-400">{limitMessage}</p>
+
+            <button
+              onClick={() => setLimitMessage(null)}
+              className="mt-6 w-full rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

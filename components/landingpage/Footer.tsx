@@ -2,6 +2,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { FaInstagram, FaLinkedinIn, FaYoutube } from "react-icons/fa6";
 
 const quickLinks = [
     { label: "Home", href: "#" },
@@ -17,6 +18,12 @@ const solutionLinks = [
     { label: "Studio Management" },
     { label: "Client Management" },
     { label: "Booking & Scheduling", href: "#features" },
+];
+
+const socialLinks = [
+    { label: "Instagram", href: "https://www.instagram.com/picknnovate?dmpr=MWRybWQ1enI0ZTVqag==", Icon: FaInstagram, rotate: -6 },
+    { label: "LinkedIn", href: "https://www.linkedin.com/company/innovate-wedding-company/home/", Icon: FaLinkedinIn, rotate: 5 },
+    { label: "YouTube", href: "https://youtube.com/@innovateweddingcompany?si=zmgstKGU694lXGrb", Icon: FaYoutube, rotate: -5 },
 ];
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -257,68 +264,21 @@ export default function Footer() {
                             </p>
 
                             <div className="mt-4 flex items-center gap-2.5">
-
-                                <motion.a
-                                    href="YOUR_INSTAGRAM_URL"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Instagram"
-                                    whileHover={
-                                        reduceMotion
-                                            ? undefined
-                                            : { y: -4, rotate: -6 }
-                                    }
-                                    whileTap={
-                                        reduceMotion
-                                            ? undefined
-                                            : { scale: 0.92 }
-                                    }
-                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-lg text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
-                                >
-                                    ◎
-                                </motion.a>
-
-                                <motion.a
-                                    href="YOUR_LINKEDIN_URL"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="LinkedIn"
-                                    whileHover={
-                                        reduceMotion
-                                            ? undefined
-                                            : { y: -4, rotate: 5 }
-                                    }
-                                    whileTap={
-                                        reduceMotion
-                                            ? undefined
-                                            : { scale: 0.92 }
-                                    }
-                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
-                                >
-                                    in
-                                </motion.a>
-
-                                <motion.a
-                                    href="YOUR_YOUTUBE_URL"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="YouTube"
-                                    whileHover={
-                                        reduceMotion
-                                            ? undefined
-                                            : { y: -4, rotate: -5 }
-                                    }
-                                    whileTap={
-                                        reduceMotion
-                                            ? undefined
-                                            : { scale: 0.92 }
-                                    }
-                                    className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-sm font-bold text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
-                                >
-                                    ▶
-                                </motion.a>
-
-                            </div>
+    {socialLinks.map(({ label, href, Icon, rotate }) => (
+        <motion.a
+            key={label}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={label}
+            whileHover={reduceMotion ? undefined : { y: -4, rotate }}
+            whileTap={reduceMotion ? undefined : { scale: 0.92 }}
+            className="flex h-9 w-9 items-center justify-center rounded-[5px] border border-white/15 bg-white/[0.06] text-[#FFC93C] transition-colors hover:border-[#FFC93C] hover:bg-[#FFC93C]/10"
+        >
+            <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+        </motion.a>
+    ))}
+</div>
                         </motion.div>
                     </motion.div>
 
