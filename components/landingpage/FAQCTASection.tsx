@@ -273,15 +273,6 @@ export default function FAQCTASection() {
                                 </span>
                             </a>
 
-                            <a
-                                href="#pricing"
-                                className="group text-xs font-medium"
-                            >
-                                Explore plans
-                                <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">
-                                    →
-                                </span>
-                            </a>
                         </div>
                     </WaterRippleCard>
                 </div>
