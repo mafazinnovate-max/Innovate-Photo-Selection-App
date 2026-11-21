@@ -10,6 +10,7 @@ import {
   useTransition,
 } from "react";
 import { useDropzone } from "react-dropzone";
+import { useUploadNavigationGuard } from "@/components/admin/upload-navigation-guard";
 
 interface UploadFile {
   file: File;
@@ -55,9 +56,19 @@ export default function UploadDropzone({
 }: UploadDropzoneProps) {
   const router = useRouter();
 
+  const { setUploadActive, registerCancelHandler } =
+  useUploadNavigationGuard();
+
+const uploadDoneRef = useRef<Promise<void> | null>(null);
+const resolveUploadDoneRef = useRef<(() => void) | null>(null);
+const cancelUploadRef = useRef<() => void>(() => {});
+
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isRefreshing, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const cancelRequestedRef = useRef(false);
+  const activeXhrsRef = useRef<Set<XMLHttpRequest>>(new Set());
   const [uploadedCount, setUploadedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -250,6 +261,8 @@ const removeFile = (index: number) => {
   };
 
   // Direct browser-to-R2 upload with actual progress.
+  
+  // Direct browser-to-R2 upload with actual progress and cancellation support.
   const uploadToR2 = (
     uploadUrl: string,
     file: File,
@@ -258,8 +271,13 @@ const removeFile = (index: number) => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.open("PUT", uploadUrl);
+      activeXhrsRef.current.add(xhr);
 
+      const cleanup = () => {
+        activeXhrsRef.current.delete(xhr);
+      };
+
+      xhr.open("PUT", uploadUrl);
       xhr.setRequestHeader("Content-Type", file.type);
 
       xhr.upload.onprogress = (event) => {
@@ -273,6 +291,8 @@ const removeFile = (index: number) => {
       };
 
       xhr.onload = () => {
+        cleanup();
+
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -285,29 +305,32 @@ const removeFile = (index: number) => {
       };
 
       xhr.onerror = () => {
+        cleanup();
         reject(new Error("Network error during R2 upload."));
       };
 
       xhr.ontimeout = () => {
+        cleanup();
         reject(new Error("R2 upload timed out. Please retry."));
       };
 
       xhr.onabort = () => {
+        cleanup();
         reject(new Error("R2 upload was cancelled."));
       };
 
       xhr.timeout = 10 * 60 * 1000;
-
       xhr.send(file);
     });
   };
+
 
   const uploadSingleFile = async (
     fileItem: UploadFile,
     index: number
   ): Promise<boolean> => {
     try {
-      
+      if (cancelRequestedRef.current) return false;
       const file = fileItem.file;
 
       const uploadStartedAt = performance.now();
@@ -334,6 +357,7 @@ let stageStartedAt = performance.now();
       stageStartedAt = performance.now();
 const fileHash = await getFileHash(file);
 timings.hash = performance.now() - stageStartedAt;
+if (cancelRequestedRef.current) return false;
 
       // 2. Request a presigned R2 upload URL.
 
@@ -364,6 +388,7 @@ timings.hash = performance.now() - stageStartedAt;
           "Unable to prepare image upload."
         );
       }
+      if (cancelRequestedRef.current) return false;
 
       // 3. Duplicate already exists in this event.
       if (presignData.duplicate) {
@@ -472,10 +497,16 @@ flushProgressUpdates();
       return true;
     } catch (error) {
 
-       flushProgressUpdates();
-      console.error(
-        `Upload failed for ${fileItem.file.name}:`,
-        error
+      flushProgressUpdates();
+
+  // Cancellation is not an upload failure.
+  if (cancelRequestedRef.current) {
+    return false;
+  }
+
+  console.error(
+    `Upload failed for ${fileItem.file.name}:`,
+    error
       );
 
       const message =
@@ -503,14 +534,55 @@ flushProgressUpdates();
       },
     });
 
+
+  const cancelUpload = () => {
+    if (!isUploading || cancelRequestedRef.current) return;
+
+    cancelRequestedRef.current = true;
+    setIsCancelling(true);
+
+    // Abort all active browser-to-R2 uploads.
+    activeXhrsRef.current.forEach((xhr) => {
+      xhr.abort();
+    });
+
+    // Stop upload progress updates.
+    stopProgressUpdates();
+  };
+
+
+    cancelUploadRef.current = cancelUpload;
+
+  useEffect(() => {
+    registerCancelHandler(async () => {
+      const uploadDone = uploadDoneRef.current;
+
+      if (!uploadDone) return;
+
+      cancelUploadRef.current();
+      await uploadDone;
+    });
+
+    return () => {
+      registerCancelHandler(null);
+    };
+  }, [registerCancelHandler]);
+
  const uploadAll = async () => {
   const CONCURRENT_UPLOADS = BATCH_SIZE;
 
   const initialBatch = filesRef.current;
 
   if (isUploading || initialBatch.length === 0) return;
+  cancelRequestedRef.current = false;
+setIsCancelling(false);
 
-  setIsUploading(true);
+uploadDoneRef.current = new Promise<void>((resolve) => {
+  resolveUploadDoneRef.current = resolve;
+});
+
+setUploadActive(true);
+setIsUploading(true);
   setUploadedCount(0);
   setFailedCount(0);
   setTotalCount(
@@ -532,11 +604,14 @@ flushProgressUpdates();
         {
           length: Math.min(CONCURRENT_UPLOADS, queue.length),
         },
-        async () => {
-          while (queue.length > 0) {
-            const item = queue.shift();
+       async () => {
+  while (queue.length > 0) {
+    // Stop workers from picking up another file after cancellation.
+    if (cancelRequestedRef.current) break;
 
-            if (!item) break;
+    const item = queue.shift();
+
+    if (!item) break;
 
             const success = await uploadSingleFile(
               item.file,
@@ -550,11 +625,26 @@ flushProgressUpdates();
         }
       );
 
-     await Promise.all(workers);
+await Promise.all(workers);
 
 stopProgressUpdates();
 
-      const failedFiles = currentBatch.filter(
+// Cancellation: preserve completed uploads and clear remaining selections.
+if (cancelRequestedRef.current) {
+  currentBatch.forEach((item) => {
+    URL.revokeObjectURL(item.preview);
+  });
+
+  pendingFilesRef.current = [];
+  setPendingCount(0);
+
+  filesRef.current = [];
+  setFiles([]);
+
+  break;
+}
+
+const failedFiles = currentBatch.filter(
         (_, index) => !successfulIndexes.has(index)
       );
 
@@ -593,7 +683,14 @@ stopProgressUpdates();
       router.refresh();
     });
   } finally {
+   cancelRequestedRef.current = false;
+    setIsCancelling(false);
     setIsUploading(false);
+    setUploadActive(false);
+
+    resolveUploadDoneRef.current?.();
+    resolveUploadDoneRef.current = null;
+    uploadDoneRef.current = null;
   }
 };
 
@@ -644,6 +741,15 @@ stopProgressUpdates();
             <span className="text-sm text-zinc-300">
               Upload Progress
             </span>
+
+            <button
+  type="button"
+  onClick={cancelUpload}
+  disabled={isCancelling}
+  className="rounded-lg border border-red-500 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {isCancelling ? "Cancelling..." : "Cancel Upload"}
+</button>
 
             <div className="text-right">
               <p className="text-sm font-semibold text-white">
