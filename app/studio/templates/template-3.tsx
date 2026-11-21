@@ -133,7 +133,7 @@ export default function Template3({
   return (
     <main
       id="home"
-      className="min-h-screen overflow-x-hidden bg-[#38251f] font-sans text-[#f5e9dc] selection:bg-[#d5a16f] selection:text-[#38251f]"
+      className="min-h-screen overflow-x-clip bg-[#38251f] font-sans text-[#f5e9dc] selection:bg-[#d5a16f] selection:text-[#38251f]"
     >
       {/* HEADER */}
 
