@@ -144,7 +144,7 @@ export default function EventCard({ event }: any) {
                                                     {parent.status ===
                                                         "COMPLETED"
                                                         ? "Completed"
-                                                        : "Selecting"}
+                                                        : "On Process"}
                                                 </span>
                                             </span>
                                         )
@@ -173,7 +173,7 @@ export default function EventCard({ event }: any) {
 
                         {event.selectionStatus === "COMPLETED"
                             ? "Completed"
-                            : "Selecting"}
+                            : "On Process"}
                     </span>
                 )}
 

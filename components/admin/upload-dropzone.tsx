@@ -323,6 +323,10 @@ export default function UploadDropzone({
     try {
       const file = fileItem.file;
 
+      const uploadStartedAt = performance.now();
+const timings: Record<string, number> = {};
+let stageStartedAt = performance.now();
+
       updateFile(index, {
         status: "uploading",
         progress: 0,
@@ -338,9 +342,15 @@ export default function UploadDropzone({
       }
 
       // 1. Calculate SHA-256 hash.
-      const fileHash = await getFileHash(file);
+     
+
+      stageStartedAt = performance.now();
+const fileHash = await getFileHash(file);
+timings.hash = performance.now() - stageStartedAt;
 
       // 2. Request a presigned R2 upload URL.
+
+      stageStartedAt = performance.now();
       const presignResponse = await fetch("/api/upload/presign", {
         method: "POST",
         headers: {
@@ -405,6 +415,7 @@ export default function UploadDropzone({
       });
 
       // 5. Finalize upload and create database record.
+      stageStartedAt = performance.now();
       const finalizeResponse = await fetch(
         "/api/upload/finalize",
         {
