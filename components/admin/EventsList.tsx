@@ -41,7 +41,7 @@ if (activeTab !== "All") {
         result = result.filter(
             (event) => event.selectionStatus === "COMPLETED"
         );
-    } else if (activeTab === "Selecting") {
+    } else if (activeTab === "On Process") {
         result = result.filter(
             (event) => event.selectionStatus === "SELECTING"
         );
@@ -87,7 +87,7 @@ if (activeTab !== "All") {
     ...MAIN_EVENT_TYPES,
     "Others",
     "Completed",
-    "Selecting",
+    "On Process",
 ];
 
     return (

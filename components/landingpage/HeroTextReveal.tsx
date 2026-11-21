@@ -102,7 +102,7 @@ export default function HeroTextReveal() {
 
             <span className="block overflow-hidden">
                 <span className="hero-reveal-line block">
-                    More creating.
+                    Faster Workflow.
                 </span>
             </span>
         </h1>

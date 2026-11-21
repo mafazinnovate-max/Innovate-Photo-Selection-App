@@ -310,6 +310,10 @@ const removeFile = (index: number) => {
       
       const file = fileItem.file;
 
+      const uploadStartedAt = performance.now();
+const timings: Record<string, number> = {};
+let stageStartedAt = performance.now();
+
       updateFile(index, {
         status: "uploading",
         progress: 0,
@@ -325,9 +329,15 @@ const removeFile = (index: number) => {
       }
 
       // 1. Calculate SHA-256 hash.
-      const fileHash = await getFileHash(file);
+     
+
+      stageStartedAt = performance.now();
+const fileHash = await getFileHash(file);
+timings.hash = performance.now() - stageStartedAt;
 
       // 2. Request a presigned R2 upload URL.
+
+      stageStartedAt = performance.now();
       const presignResponse = await fetch("/api/upload/presign", {
         method: "POST",
         headers: {
@@ -344,6 +354,8 @@ const removeFile = (index: number) => {
 
       const presignData =
         (await presignResponse.json()) as PresignResponse;
+
+        timings.presign = performance.now() - stageStartedAt;
 
       if (!presignResponse.ok || !presignData.success) {
         throw new Error(
@@ -371,21 +383,26 @@ const removeFile = (index: number) => {
       }
 
       // 4. Upload original file directly to R2.
-      await uploadToR2(
-        presignData.uploadUrl,
-        file,
-                (progress) => {
-          queueProgressUpdate(index, progress);
-        }
-      );
-      flushProgressUpdates();
+     stageStartedAt = performance.now();
 
+await uploadToR2(
+  presignData.uploadUrl,
+  file,
+  (progress) => {
+    queueProgressUpdate(index, progress);
+  }
+);
+
+timings.r2 = performance.now() - stageStartedAt;
+
+flushProgressUpdates();
       updateFile(index, {
         status: "processing",
         progress: 98,
       });
 
       // 5. Finalize upload and create database record.
+      stageStartedAt = performance.now();
       const finalizeResponse = await fetch(
         "/api/upload/finalize",
         {
@@ -406,6 +423,20 @@ const removeFile = (index: number) => {
 
       const finalizeData =
         (await finalizeResponse.json()) as FinalizeResponse;
+
+        timings.finalize = performance.now() - stageStartedAt;
+
+        console.log("[Upload timing]", {
+  file: file.name,
+  sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+  hashMs: Math.round(timings.hash),
+  presignMs: Math.round(timings.presign),
+  r2Ms: Math.round(timings.r2),
+  finalizeMs: Math.round(timings.finalize),
+  totalMs: Math.round(performance.now() - uploadStartedAt),
+});
+
+        timings.finalize = performance.now() - stageStartedAt;
 
       if (!finalizeResponse.ok || !finalizeData.success) {
         throw new Error(
@@ -519,13 +550,9 @@ const removeFile = (index: number) => {
         }
       );
 
-      await Promise.all(workers);
+     await Promise.all(workers);
 
-      stopProgressUpdates();
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1500)
-      );
+stopProgressUpdates();
 
       const failedFiles = currentBatch.filter(
         (_, index) => !successfulIndexes.has(index)

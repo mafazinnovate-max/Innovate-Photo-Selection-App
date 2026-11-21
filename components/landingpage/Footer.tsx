@@ -13,11 +13,11 @@ const quickLinks = [
 ];
 
 const solutionLinks = [
-    { label: "Audience Growth" },
-    { label: "Photo Selection"},
-    { label: "Studio Management" },
-    { label: "Client Management" },
-    { label: "Booking & Scheduling", href: "#features" },
+    { label: "Web Design & Development" },
+    { label: "Custom Software Development" },
+    { label: "Business Automation Solutions" },
+    { label: "Booking & Management Systems",  },
+    { label: "Digital Marketing & Audience Growth" },
 ];
 
 const socialLinks = [
@@ -230,16 +230,13 @@ export default function Footer() {
                                             }}
                                         >
                                             <a
-                                                href={link.href}
+                                                
                                                 className="group flex w-fit items-center gap-2 text-[12px] text-white/65 transition-colors duration-300 hover:text-[#FFC93C] sm:text-[13px]"
                                             >
                                                 <span className="h-1 w-1 shrink-0 rounded-full bg-[#FFC93C]" />
 
                                                 <span>{link.label}</span>
 
-                                                <span className="translate-x-[-4px] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
-                                                    ↗
-                                                </span>
                                             </a>
                                         </motion.li>
                                     ))}
