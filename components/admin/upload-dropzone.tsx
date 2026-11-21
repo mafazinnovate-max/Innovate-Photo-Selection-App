@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -10,18 +11,19 @@ import {
   useTransition,
 } from "react";
 import { useDropzone } from "react-dropzone";
+import { useUploadNavigationGuard } from "@/components/admin/upload-navigation-guard";
 
 interface UploadFile {
   file: File;
   preview: string;
   progress: number;
   status:
-  | "pending"
-  | "uploading"
-  | "processing"
-  | "completed"
-  | "duplicate"
-  | "error";
+    | "pending"
+    | "uploading"
+    | "processing"
+    | "completed"
+    | "duplicate"
+    | "error";
   uploadedUrl?: string;
   errorMessage?: string;
 }
@@ -38,6 +40,7 @@ interface PresignResponse {
   storageKey?: string;
   message?: string;
   error?: string;
+  code?: string;
 }
 
 interface FinalizeResponse {
@@ -45,12 +48,13 @@ interface FinalizeResponse {
   duplicate?: boolean;
   message?: string;
   error?: string;
+  code?: string;
 }
 
-// Thrown when the studio's image limit is reached
+// Thrown when the studio's image limit is reached.
 class UploadLimitError extends Error {}
 
-// Detects the studio limit response from the API
+// Detects the studio limit response from the API.
 const isStudioLimitError = (
   res: Response,
   data: { message?: string; error?: string; code?: string }
@@ -66,24 +70,43 @@ export default function UploadDropzone({
 }: UploadDropzoneProps) {
   const router = useRouter();
 
+  const { setUploadActive, registerCancelHandler } =
+    useUploadNavigationGuard();
+
+  // Navigation guard and cancellation refs.
+  const uploadDoneRef = useRef<Promise<void> | null>(null);
+  const resolveUploadDoneRef = useRef<(() => void) | null>(null);
+  const cancelUploadRef = useRef<() => void>(() => {});
+
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isRefreshing, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const cancelRequestedRef = useRef(false);
+  const activeXhrsRef = useRef<Set<XMLHttpRequest>>(new Set());
+
   const [uploadedCount, setUploadedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
-  const [studioLimitMessage, setStudioLimitMessage] = useState<string | null>(null);
+  const [studioLimitMessage, setStudioLimitMessage] = useState<string | null>(
+    null
+  );
 
   const filesRef = useRef<UploadFile[]>([]);
   const limitReachedRef = useRef(false);
+
   const BATCH_SIZE = 5;
 
   const pendingFilesRef = useRef<File[]>([]);
 
   const pendingProgressRef = useRef<Map<number, number>>(new Map());
-  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   useEffect(() => {
     filesRef.current = files;
@@ -123,7 +146,7 @@ export default function UploadDropzone({
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const currentFiles = filesRef.current;
 
-    // Files already in the queue = visible batch + waiting files
+    // Files already in the queue = visible batch + waiting files.
     const queuedTotal =
       currentFiles.length + pendingFilesRef.current.length;
 
@@ -188,6 +211,7 @@ export default function UploadDropzone({
 
     const remaining = currentFiles.filter((_, i) => i !== index);
     const nextFile = pendingFilesRef.current.shift();
+
     setPendingCount(pendingFilesRef.current.length);
 
     if (nextFile) {
@@ -263,7 +287,7 @@ export default function UploadDropzone({
     flushProgressUpdates();
   };
 
-  // Direct browser-to-R2 upload with actual progress.
+  // Direct browser-to-R2 upload with actual progress and cancellation support.
   const uploadToR2 = (
     uploadUrl: string,
     file: File,
@@ -272,8 +296,13 @@ export default function UploadDropzone({
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.open("PUT", uploadUrl);
+      activeXhrsRef.current.add(xhr);
 
+      const cleanup = () => {
+        activeXhrsRef.current.delete(xhr);
+      };
+
+      xhr.open("PUT", uploadUrl);
       xhr.setRequestHeader("Content-Type", file.type);
 
       xhr.upload.onprogress = (event) => {
@@ -287,6 +316,8 @@ export default function UploadDropzone({
       };
 
       xhr.onload = () => {
+        cleanup();
+
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -299,19 +330,21 @@ export default function UploadDropzone({
       };
 
       xhr.onerror = () => {
+        cleanup();
         reject(new Error("Network error during R2 upload."));
       };
 
       xhr.ontimeout = () => {
+        cleanup();
         reject(new Error("R2 upload timed out. Please retry."));
       };
 
       xhr.onabort = () => {
+        cleanup();
         reject(new Error("R2 upload was cancelled."));
       };
 
       xhr.timeout = 10 * 60 * 1000;
-
       xhr.send(file);
     });
   };
@@ -321,11 +354,9 @@ export default function UploadDropzone({
     index: number
   ): Promise<boolean> => {
     try {
-      const file = fileItem.file;
+      if (cancelRequestedRef.current) return false;
 
-      const uploadStartedAt = performance.now();
-const timings: Record<string, number> = {};
-let stageStartedAt = performance.now();
+      const file = fileItem.file;
 
       updateFile(index, {
         status: "uploading",
@@ -342,15 +373,11 @@ let stageStartedAt = performance.now();
       }
 
       // 1. Calculate SHA-256 hash.
-     
+      const fileHash = await getFileHash(file);
 
-      stageStartedAt = performance.now();
-const fileHash = await getFileHash(file);
-timings.hash = performance.now() - stageStartedAt;
+      if (cancelRequestedRef.current) return false;
 
       // 2. Request a presigned R2 upload URL.
-
-      stageStartedAt = performance.now();
       const presignResponse = await fetch("/api/upload/presign", {
         method: "POST",
         headers: {
@@ -370,17 +397,21 @@ timings.hash = performance.now() - stageStartedAt;
 
       if (isStudioLimitError(presignResponse, presignData)) {
         throw new UploadLimitError(
-          presignData.message || presignData.error || "Upload limit reached."
+          presignData.message ||
+            presignData.error ||
+            "Upload limit reached."
         );
       }
 
       if (!presignResponse.ok || !presignData.success) {
         throw new Error(
           presignData.message ||
-          presignData.error ||
-          "Unable to prepare image upload."
+            presignData.error ||
+            "Unable to prepare image upload."
         );
       }
+
+      if (cancelRequestedRef.current) return false;
 
       // 3. Duplicate already exists in this event.
       if (presignData.duplicate) {
@@ -407,7 +438,10 @@ timings.hash = performance.now() - stageStartedAt;
           queueProgressUpdate(index, progress);
         }
       );
+
       flushProgressUpdates();
+
+      if (cancelRequestedRef.current) return false;
 
       updateFile(index, {
         status: "processing",
@@ -415,7 +449,6 @@ timings.hash = performance.now() - stageStartedAt;
       });
 
       // 5. Finalize upload and create database record.
-      stageStartedAt = performance.now();
       const finalizeResponse = await fetch(
         "/api/upload/finalize",
         {
@@ -439,15 +472,17 @@ timings.hash = performance.now() - stageStartedAt;
 
       if (isStudioLimitError(finalizeResponse, finalizeData)) {
         throw new UploadLimitError(
-          finalizeData.message || finalizeData.error || "Upload limit reached."
+          finalizeData.message ||
+            finalizeData.error ||
+            "Upload limit reached."
         );
       }
 
       if (!finalizeResponse.ok || !finalizeData.success) {
         throw new Error(
           finalizeData.message ||
-          finalizeData.error ||
-          "Unable to finalize image upload."
+            finalizeData.error ||
+            "Unable to finalize image upload."
         );
       }
 
@@ -478,9 +513,15 @@ timings.hash = performance.now() - stageStartedAt;
     } catch (error) {
       flushProgressUpdates();
 
-      // Studio limit reached: show the full server message on the card too.
+      // Cancellation is not an upload failure.
+      if (cancelRequestedRef.current) {
+        return false;
+      }
+
+      // Studio limit reached: show the full server message.
       if (error instanceof UploadLimitError) {
         limitReachedRef.current = true;
+
         setStudioLimitMessage(error.message);
 
         updateFile(index, {
@@ -489,10 +530,11 @@ timings.hash = performance.now() - stageStartedAt;
         });
 
         setFailedCount((prev) => prev + 1);
+
         return false;
       }
 
-      // all other errors behave as before
+      // All other errors behave as before.
       console.error(
         `Upload failed for ${fileItem.file.name}:`,
         error
@@ -523,6 +565,41 @@ timings.hash = performance.now() - stageStartedAt;
       },
     });
 
+  // Cancel the active upload.
+  const cancelUpload = () => {
+    if (!isUploading || cancelRequestedRef.current) return;
+
+    cancelRequestedRef.current = true;
+    setIsCancelling(true);
+
+    // Abort all active browser-to-R2 uploads.
+    activeXhrsRef.current.forEach((xhr) => {
+      xhr.abort();
+    });
+
+    // Stop upload progress updates.
+    stopProgressUpdates();
+  };
+
+  cancelUploadRef.current = cancelUpload;
+
+  // Register cancellation with the upload navigation guard.
+  useEffect(() => {
+    registerCancelHandler(async () => {
+      const uploadDone = uploadDoneRef.current;
+
+      if (!uploadDone) return;
+
+      cancelUploadRef.current();
+
+      await uploadDone;
+    });
+
+    return () => {
+      registerCancelHandler(null);
+    };
+  }, [registerCancelHandler]);
+
   const uploadAll = async () => {
     const CONCURRENT_UPLOADS = BATCH_SIZE;
 
@@ -530,10 +607,22 @@ timings.hash = performance.now() - stageStartedAt;
 
     if (isUploading || initialBatch.length === 0) return;
 
-    setIsUploading(true);
+    cancelRequestedRef.current = false;
+    setIsCancelling(false);
+
     limitReachedRef.current = false;
+    setStudioLimitMessage(null);
+
+    uploadDoneRef.current = new Promise<void>((resolve) => {
+      resolveUploadDoneRef.current = resolve;
+    });
+
+    setUploadActive(true);
+    setIsUploading(true);
+
     setUploadedCount(0);
     setFailedCount(0);
+
     setTotalCount(
       initialBatch.length + pendingFilesRef.current.length
     );
@@ -555,7 +644,14 @@ timings.hash = performance.now() - stageStartedAt;
           },
           async () => {
             while (queue.length > 0) {
-              if (limitReachedRef.current) break;
+              // Stop workers from picking up another file after
+              // cancellation or when the studio limit is reached.
+              if (
+                cancelRequestedRef.current ||
+                limitReachedRef.current
+              ) {
+                break;
+              }
 
               const item = queue.shift();
 
@@ -577,6 +673,22 @@ timings.hash = performance.now() - stageStartedAt;
 
         stopProgressUpdates();
 
+        // Cancellation: preserve completed uploads and clear
+        // remaining selections.
+        if (cancelRequestedRef.current) {
+          currentBatch.forEach((item) => {
+            URL.revokeObjectURL(item.preview);
+          });
+
+          pendingFilesRef.current = [];
+          setPendingCount(0);
+
+          filesRef.current = [];
+          setFiles([]);
+
+          break;
+        }
+
         const failedFiles = currentBatch.filter(
           (_, index) => !successfulIndexes.has(index)
         );
@@ -587,8 +699,7 @@ timings.hash = performance.now() - stageStartedAt;
           }
         });
 
-        // Keep failed images visible for retry, with their latest
-        // status and error message still showing on the card.
+        // Keep failed and unprocessed images visible for retry.
         if (failedFiles.length > 0) {
           setFiles((prev) => {
             const kept = prev.filter(
@@ -596,6 +707,7 @@ timings.hash = performance.now() - stageStartedAt;
             );
 
             filesRef.current = kept;
+
             return kept;
           });
 
@@ -624,7 +736,16 @@ timings.hash = performance.now() - stageStartedAt;
         router.refresh();
       });
     } finally {
+      cancelRequestedRef.current = false;
+
+      setIsCancelling(false);
       setIsUploading(false);
+      setUploadActive(false);
+
+      resolveUploadDoneRef.current?.();
+
+      resolveUploadDoneRef.current = null;
+      uploadDoneRef.current = null;
     }
   };
 
@@ -640,13 +761,15 @@ timings.hash = performance.now() - stageStartedAt;
       {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${isDragActive
-          ? "border-white bg-zinc-800"
-          : "border-zinc-700 bg-zinc-900"
-          } ${isUploading
+        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${
+          isDragActive
+            ? "border-white bg-zinc-800"
+            : "border-zinc-700 bg-zinc-900"
+        } ${
+          isUploading
             ? "cursor-not-allowed opacity-50"
             : ""
-          }`}
+        }`}
       >
         <input
           {...getInputProps()}
@@ -679,6 +802,15 @@ timings.hash = performance.now() - stageStartedAt;
             <span className="text-sm text-zinc-300">
               Upload Progress
             </span>
+
+            <button
+              type="button"
+              onClick={cancelUpload}
+              disabled={isCancelling}
+              className="rounded-lg border border-red-500 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isCancelling ? "Cancelling..." : "Cancel Upload"}
+            </button>
 
             <div className="text-right">
               <p className="text-sm font-semibold text-white">
@@ -841,7 +973,9 @@ timings.hash = performance.now() - stageStartedAt;
               Upload limit reached
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-400">{limitMessage}</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              {limitMessage}
+            </p>
 
             <button
               onClick={() => setLimitMessage(null)}
@@ -870,11 +1004,16 @@ timings.hash = performance.now() - stageStartedAt;
               ⚠
             </div>
 
-            <h3 id="studio-limit-title" className="text-lg font-semibold text-white">
+            <h3
+              id="studio-limit-title"
+              className="text-lg font-semibold text-white"
+            >
               Image upload limit reached
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-300">{studioLimitMessage}</p>
+            <p className="mt-2 text-sm text-zinc-300">
+              {studioLimitMessage}
+            </p>
 
             <p className="mt-2 text-sm text-zinc-500">
               Remove the remaining images from the queue, or upgrade your plan to

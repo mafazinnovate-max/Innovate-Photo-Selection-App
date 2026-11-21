@@ -1,8 +1,10 @@
+
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUploadNavigationGuard } from "@/components/admin/upload-navigation-guard";
 import PicknovateLoader from "@/components/admin/picknovate-loader";
 import {
   LayoutDashboard,
@@ -62,6 +64,9 @@ export default function Sidebar({
   subscription?: SubscriptionInfo | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { requestNavigation } = useUploadNavigationGuard();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -280,7 +285,6 @@ export default function Sidebar({
           aria-label="Loading page"
         >
           <PicknovateLoader />
-
         </div>
       )}
 
@@ -299,6 +303,15 @@ export default function Sidebar({
         <Link
           href="/settings#branding"
           aria-label="Manage studio branding"
+          onClick={(event) => {
+            const blocked = requestNavigation(() => {
+              router.push("/settings#branding");
+            });
+
+            if (blocked) {
+              event.preventDefault();
+            }
+          }}
           className="flex min-w-0 max-w-[220px] items-center gap-3"
         >
           {logoLoaded && logoUrl ? (
@@ -350,6 +363,15 @@ export default function Sidebar({
           <Link
             href="/settings#branding"
             aria-label="Manage studio branding"
+            onClick={(event) => {
+              const blocked = requestNavigation(() => {
+                router.push("/settings#branding");
+              });
+
+              if (blocked) {
+                event.preventDefault();
+              }
+            }}
             className="group flex flex-col items-center"
           >
             {logoLoaded && logoUrl ? (
@@ -414,10 +436,24 @@ export default function Sidebar({
 
               return (
                 <Link
-
                   key={item.name}
                   href={item.href}
-                  onClick={() => {
+                  onClick={(event) => {
+                    const blocked = requestNavigation(() => {
+                      setIsOpen(false);
+
+                      if (pathname !== item.href) {
+                        setIsNavigating(true);
+                      }
+
+                      router.push(item.href);
+                    });
+
+                    if (blocked) {
+                      event.preventDefault();
+                      return;
+                    }
+
                     setIsOpen(false);
 
                     if (pathname !== item.href) {
@@ -601,7 +637,15 @@ export default function Sidebar({
 
               <button
                 type="button"
-                onClick={logout}
+                onClick={() => {
+                  const blocked = requestNavigation(() => {
+                    void logout();
+                  });
+
+                  if (!blocked) {
+                    void logout();
+                  }
+                }}
                 className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-600"
               >
                 Logout
