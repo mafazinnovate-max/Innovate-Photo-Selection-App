@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -18,12 +17,12 @@ interface UploadFile {
   preview: string;
   progress: number;
   status:
-    | "pending"
-    | "uploading"
-    | "processing"
-    | "completed"
-    | "duplicate"
-    | "error";
+  | "pending"
+  | "uploading"
+  | "processing"
+  | "completed"
+  | "duplicate"
+  | "error";
   uploadedUrl?: string;
   errorMessage?: string;
 }
@@ -52,7 +51,7 @@ interface FinalizeResponse {
 }
 
 // Thrown when the studio's image limit is reached.
-class UploadLimitError extends Error {}
+class UploadLimitError extends Error { }
 
 // Detects the studio limit response from the API.
 const isStudioLimitError = (
@@ -76,7 +75,7 @@ export default function UploadDropzone({
   // Navigation guard and cancellation refs.
   const uploadDoneRef = useRef<Promise<void> | null>(null);
   const resolveUploadDoneRef = useRef<(() => void) | null>(null);
-  const cancelUploadRef = useRef<() => void>(() => {});
+  const cancelUploadRef = useRef<() => void>(() => { });
 
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isRefreshing, startTransition] = useTransition();
@@ -227,7 +226,7 @@ export default function UploadDropzone({
     setFiles(remaining);
   };
 
-    // Cancel selected files before the upload starts.
+  // Cancel selected files before the upload starts.
   const cancelSelection = () => {
     if (isUploading) return;
 
@@ -416,16 +415,16 @@ export default function UploadDropzone({
       if (isStudioLimitError(presignResponse, presignData)) {
         throw new UploadLimitError(
           presignData.message ||
-            presignData.error ||
-            "Upload limit reached."
+          presignData.error ||
+          "Upload limit reached."
         );
       }
 
       if (!presignResponse.ok || !presignData.success) {
         throw new Error(
           presignData.message ||
-            presignData.error ||
-            "Unable to prepare image upload."
+          presignData.error ||
+          "Unable to prepare image upload."
         );
       }
 
@@ -491,16 +490,16 @@ export default function UploadDropzone({
       if (isStudioLimitError(finalizeResponse, finalizeData)) {
         throw new UploadLimitError(
           finalizeData.message ||
-            finalizeData.error ||
-            "Upload limit reached."
+          finalizeData.error ||
+          "Upload limit reached."
         );
       }
 
       if (!finalizeResponse.ok || !finalizeData.success) {
         throw new Error(
           finalizeData.message ||
-            finalizeData.error ||
-            "Unable to finalize image upload."
+          finalizeData.error ||
+          "Unable to finalize image upload."
         );
       }
 
@@ -779,15 +778,13 @@ export default function UploadDropzone({
       {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${
-          isDragActive
+        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${isDragActive
             ? "border-white bg-zinc-800"
             : "border-zinc-700 bg-zinc-900"
-        } ${
-          isUploading
+          } ${isUploading
             ? "cursor-not-allowed opacity-50"
             : ""
-        }`}
+          }`}
       >
         <input
           {...getInputProps()}
@@ -871,7 +868,7 @@ export default function UploadDropzone({
               </span>
             </h3>
 
-                       <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               {!isUploading && (
                 <button
                   type="button"
