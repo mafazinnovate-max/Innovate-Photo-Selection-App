@@ -20,12 +20,17 @@ type DocumentForm = {
     clientAddress: string;
     clientMobile: string;
     clientEmail: string;
+
+    celebratingNames: string;
+
+    // Legacy fields - old documents and API history compatibility
     brideName: string;
     groomName: string;
     eventName: string;
     eventDate: string;
     venue: string;
     eventTime: string;
+
     packageName: string;
     totalAmount: string;
     advanceAmount: string;
@@ -36,12 +41,16 @@ const initialForm: DocumentForm = {
     clientAddress: "",
     clientMobile: "",
     clientEmail: "",
+
+    celebratingNames: "",
+
     brideName: "",
     groomName: "",
     eventName: "",
     eventDate: "",
     venue: "",
     eventTime: "",
+
     packageName: "",
     totalAmount: "",
     advanceAmount: "",
@@ -55,6 +64,22 @@ type DocumentHistoryItem = {
     eventDate: string | null;
     createdAt: string;
 };
+
+type EventDetail = {
+    id: number;
+    name: string;
+    date: string;
+    venue: string;
+    time: string;
+};
+
+const createEmptyEventDetail = (): EventDetail => ({
+    id: Date.now() + Math.random(),
+    name: "",
+    date: "",
+    venue: "",
+    time: "",
+});
 
 type SettingsSection = "faq" | "terms" | "policies" | null;
 
@@ -90,6 +115,10 @@ export default function ContractPage() {
             title: "",
             team: "",
         },
+    ]);
+
+    const [eventDetails, setEventDetails] = useState<EventDetail[]>([
+        createEmptyEventDetail(),
     ]);
 
     const [activeSettingsEditor, setActiveSettingsEditor] =
@@ -288,12 +317,42 @@ export default function ContractPage() {
         );
     };
 
+    const updateEventDetail = (
+        id: number,
+        field: keyof Omit<EventDetail, "id">,
+        value: string
+    ) => {
+        setEventDetails((prev) =>
+            prev.map((event) =>
+                event.id === id
+                    ? { ...event, [field]: value }
+                    : event
+            )
+        );
+    };
+
+    const addEventDetail = () => {
+        setEventDetails((prev) => [
+            ...prev,
+            createEmptyEventDetail(),
+        ]);
+    };
+
+    const removeEventDetail = (id: number) => {
+        if (eventDetails.length <= 1) return;
+
+        setEventDetails((prev) =>
+            prev.filter((event) => event.id !== id)
+        );
+    };
+
     // Start a new document
     const openDocumentForm = (type: DocumentType) => {
         setEditingDocumentId(null);
         setDocumentType(type);
         setForm(initialForm);
         setSessions([createEmptySession()]);
+        setEventDetails([createEmptyEventDetail()]);
         setDocumentMessage("");
         setHistoryMessage("");
     };
@@ -345,21 +404,72 @@ export default function ContractPage() {
                 return String(value);
             };
 
+            const oldCelebratingNames = [
+                stringValue(savedData.brideName),
+                stringValue(savedData.groomName),
+            ].filter(Boolean).join(" & ");
+
             setForm({
                 clientName: stringValue(savedData.clientName),
                 clientAddress: stringValue(savedData.clientAddress),
                 clientMobile: stringValue(savedData.clientMobile),
                 clientEmail: stringValue(savedData.clientEmail),
+
+                celebratingNames:
+                    stringValue(savedData.celebratingNames) ||
+                    oldCelebratingNames,
+
                 brideName: stringValue(savedData.brideName),
                 groomName: stringValue(savedData.groomName),
+
                 eventName: stringValue(savedData.eventName),
                 eventDate: stringValue(savedData.eventDate).slice(0, 10),
                 venue: stringValue(savedData.venue),
                 eventTime: stringValue(savedData.eventTime),
+
                 packageName: stringValue(savedData.packageName),
                 totalAmount: stringValue(savedData.totalAmount),
                 advanceAmount: stringValue(savedData.advanceAmount),
             });
+
+            const savedEventDetails = Array.isArray(savedData.eventDetails)
+                ? savedData.eventDetails
+                : [];
+
+            const restoredEventDetails: EventDetail[] = savedEventDetails.map(
+                (item, index) => {
+                    const event = item as Record<string, unknown>;
+
+                    return {
+                        id: Date.now() + index,
+                        name: stringValue(event.name),
+                        date: stringValue(event.date).slice(0, 10),
+                        venue: stringValue(event.venue),
+                        time: stringValue(event.time),
+                    };
+                }
+            );
+
+            // Old documents-ku eventDetails illana, old fields use pannuvom.
+            const finalEventDetails: EventDetail[] =
+                restoredEventDetails.length > 0
+                    ? restoredEventDetails
+                    : (
+                        stringValue(savedData.eventName) ||
+                        stringValue(savedData.eventDate) ||
+                        stringValue(savedData.venue) ||
+                        stringValue(savedData.eventTime)
+                    )
+                        ? [{
+                            id: Date.now(),
+                            name: stringValue(savedData.eventName),
+                            date: stringValue(savedData.eventDate).slice(0, 10),
+                            venue: stringValue(savedData.venue),
+                            time: stringValue(savedData.eventTime),
+                        }]
+                        : [createEmptyEventDetail()];
+
+            setEventDetails(finalEventDetails);
 
             const savedSessions = Array.isArray(savedData.sessions)
                 ? savedData.sessions
@@ -412,11 +522,43 @@ export default function ContractPage() {
         setDocumentMessage("");
 
         try {
+            const cleanedEventDetails = eventDetails
+                .filter((event) =>
+                    event.name.trim() ||
+                    event.date ||
+                    event.venue.trim() ||
+                    event.time.trim()
+                )
+                .map(({ name, date, venue, time }) => ({
+                    name: name.trim(),
+                    date: date || null,
+                    venue: venue.trim(),
+                    time: time.trim(),
+                }));
+
+            // First event details are retained in legacy fields.
+            // This keeps the current API and history table compatible.
+            const primaryEvent = cleanedEventDetails[0];
+
             const documentData = {
                 ...form,
-                eventDate: form.eventDate || null,
+
+                celebratingNames: form.celebratingNames,
+
+                eventDetails: cleanedEventDetails,
+
+                eventName: primaryEvent?.name || form.eventName,
+                eventDate: primaryEvent?.date || form.eventDate || null,
+                venue: primaryEvent?.venue || form.venue,
+                eventTime: primaryEvent?.time || form.eventTime,
+
                 totalAmount: form.totalAmount,
-                advanceAmount: form.advanceAmount,
+
+                advanceAmount:
+                    documentType === "contract"
+                        ? form.advanceAmount
+                        : "",
+
                 sessions: sessions.map(({ title, team }) => ({
                     title,
                     team,
@@ -450,6 +592,8 @@ export default function ContractPage() {
                         : "Failed to save document.")
                 );
             }
+
+            setEventDetails([createEmptyEventDetail()]);
 
             const successMessage = isEditing
                 ? `${documentType === "contract" ? "Contract" : "Quotation"} updated successfully.`
@@ -751,96 +895,160 @@ export default function ContractPage() {
                                 <h3 className="font-semibold">
                                     Event Details
                                 </h3>
+
                                 <p className="mt-1 text-xs text-zinc-500">
-                                    Enter the wedding or event information.
+                                    Enter the event name and add all functions or sessions included in this document.
                                 </p>
                             </div>
 
-                            <div className="grid gap-5 sm:grid-cols-2">
+                            <div className="mb-6">
+                                <label className={labelClass}>
+                                    Celebrating Name(s)
+                                </label>
+
+                                <input
+                                    value={form.celebratingNames}
+                                    onChange={(e) =>
+                                        updateField("celebratingNames", e.target.value)
+                                    }
+                                    placeholder="e.g. Aswin & Priya / Swetha"
+                                    className={inputClass}
+                                />
+
+                                <p className="mt-2 text-xs text-zinc-500">
+                                    Enter one or more names. Suitable for weddings, birthdays, puberty ceremonies and other events.
+                                </p>
+                            </div>
+
+                            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <label className={labelClass}>
-                                        Bride Name
-                                    </label>
-                                    <input
-                                        value={form.brideName}
-                                        onChange={(e) =>
-                                            updateField("brideName", e.target.value)
-                                        }
-                                        placeholder="Enter bride name"
-                                        className={inputClass}
-                                    />
+                                    <h4 className="text-sm font-semibold text-white">
+                                        Event Schedule
+                                    </h4>
+
+                                    <p className="mt-1 text-xs text-zinc-500">
+                                        Add each function separately. You can add as many as required.
+                                    </p>
                                 </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Groom Name
-                                    </label>
-                                    <input
-                                        value={form.groomName}
-                                        onChange={(e) =>
-                                            updateField("groomName", e.target.value)
-                                        }
-                                        placeholder="Enter groom name"
-                                        className={inputClass}
-                                    />
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={addEventDetail}
+                                    className="flex items-center gap-2 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-white transition hover:bg-zinc-800"
+                                >
+                                    <Plus size={16} />
+                                    Add Event
+                                </button>
+                            </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Event Name *
-                                    </label>
-                                    <input
-                                        required
-                                        value={form.eventName}
-                                        onChange={(e) =>
-                                            updateField("eventName", e.target.value)
-                                        }
-                                        placeholder="e.g. Wedding"
-                                        className={inputClass}
-                                    />
-                                </div>
+                            <div className="space-y-4">
+                                {eventDetails.map((event, index) => (
+                                    <div
+                                        key={event.id}
+                                        className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
+                                    >
+                                        <div className="mb-4 flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-zinc-200">
+                                                    Event {index + 1}
+                                                </h4>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Event Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={form.eventDate}
-                                        onChange={(e) =>
-                                            updateField("eventDate", e.target.value)
-                                        }
-                                        className={inputClass}
-                                    />
-                                </div>
+                                                <p className="mt-1 text-xs text-zinc-500">
+                                                    Function details
+                                                </p>
+                                            </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Venue
-                                    </label>
-                                    <input
-                                        value={form.venue}
-                                        onChange={(e) =>
-                                            updateField("venue", e.target.value)
-                                        }
-                                        placeholder="Enter event venue"
-                                        className={inputClass}
-                                    />
-                                </div>
+                                            {eventDetails.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeEventDetail(event.id)}
+                                                    className="flex items-center gap-1.5 text-xs text-red-400 transition hover:text-red-300"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Event Time
-                                    </label>
-                                    <input
-                                        value={form.eventTime}
-                                        onChange={(e) =>
-                                            updateField("eventTime", e.target.value)
-                                        }
-                                        placeholder="e.g. 6:00 PM - 11:00 PM"
-                                        className={inputClass}
-                                    />
-                                </div>
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <label className={labelClass}>
+                                                    Event Name
+                                                </label>
+
+                                                <input
+                                                    value={event.name}
+                                                    onChange={(e) =>
+                                                        updateEventDetail(
+                                                            event.id,
+                                                            "name",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="e.g. Wedding / Reception / Post Wedding"
+                                                    className={inputClass}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>
+                                                    Event Date
+                                                </label>
+
+                                                <input
+                                                    type="date"
+                                                    value={event.date}
+                                                    onChange={(e) =>
+                                                        updateEventDetail(
+                                                            event.id,
+                                                            "date",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    className={inputClass}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>
+                                                    Venue
+                                                </label>
+
+                                                <input
+                                                    value={event.venue}
+                                                    onChange={(e) =>
+                                                        updateEventDetail(
+                                                            event.id,
+                                                            "venue",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="e.g. Nagercoil / Kanyakumari"
+                                                    className={inputClass}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className={labelClass}>
+                                                    Event Time
+                                                </label>
+
+                                                <input
+                                                    value={event.time}
+                                                    onChange={(e) =>
+                                                        updateEventDetail(
+                                                            event.id,
+                                                            "time",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="e.g. 08:00 AM - 02:00 PM"
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </section>
 
@@ -886,21 +1094,24 @@ export default function ContractPage() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className={labelClass}>
-                                        Advance Amount
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={form.advanceAmount}
-                                        onChange={(e) =>
-                                            updateField("advanceAmount", e.target.value)
-                                        }
-                                        placeholder="Enter advance amount"
-                                        className={inputClass}
-                                    />
-                                </div>
+                                {documentType === "contract" && (
+                                    <div>
+                                        <label className={labelClass}>
+                                            Advance Amount
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={form.advanceAmount}
+                                            onChange={(e) =>
+                                                updateField("advanceAmount", e.target.value)
+                                            }
+                                            placeholder="Enter advance amount"
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </section>
 
