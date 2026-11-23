@@ -1658,7 +1658,7 @@ export default function ClientFolderPage({
                   </button>
                 </div>
 
-                {/* <button
+                <button
   type="button"
   onClick={() => setShowAlbumPreview(true)}
   disabled={selectedAlbumImages.length === 0}
@@ -1669,7 +1669,7 @@ export default function ClientFolderPage({
   <span className="text-xs text-amber-200/60">
     ({selectedAlbumImages.length})
   </span>
-</button> */}
+</button>
 
                 {/* Submit Selection */}
                 {hasUnsavedChanges && (

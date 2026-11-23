@@ -67,7 +67,7 @@ export default function WebsiteSection() {
                     >
                         Your business.
                         <br />
-                        Your website.
+                        Your impression.
                         <br />
                         Your style.
                     </motion.h2>
@@ -122,11 +122,11 @@ export default function WebsiteSection() {
                             variants={reveal}
                             className="mt-8 text-3xl font-normal leading-[1.1] tracking-tight sm:text-5xl"
                         >
-                            Create
+                            Designed
                             <br />
-                            something
+                            to make
                             <br />
-                            worth seeing.
+                            an Impression.
                         </motion.p>
 
                        <motion.div

@@ -713,7 +713,7 @@ export default function PremiumTemplate() {
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                       />
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#6e1126]/90 via-transparent to-transparent opacity-80" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#2b1a12]/50 to-transparent" />
                     <div className="absolute bottom-0 left-0 p-5 sm:p-7">
                       <p className="text-sm italic text-[#efdcbf]/80">{photo.category}</p>
                       <h3 className="f-display mt-1 text-xl tracking-wide sm:text-2xl">{photo.title}</h3>
@@ -893,7 +893,7 @@ export default function PremiumTemplate() {
             loading="lazy"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#6e1126]/85 to-[#1c100a]/90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1c100a]/55 via-[#1c100a]/40 to-[#1c100a]/65" />
         </div>
         <div className="relative z-10 mx-auto max-w-3xl">
           <p className="f-script text-3xl text-[#efdcbf] sm:text-4xl">

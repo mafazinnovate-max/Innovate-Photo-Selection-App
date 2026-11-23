@@ -44,7 +44,7 @@ export default function EssentialsSection() {
                         <p className="mt-auto pt-8 text-3xl font-extrabold leading-[0.95] tracking-tight sm:text-4xl lg:text-[40px]">
                             PICK.
                             <br />
-                            LOVE.
+                            ENJOY.
                             <br />
                             DELIVER.
                         </p>

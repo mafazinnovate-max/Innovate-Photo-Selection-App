@@ -78,9 +78,9 @@ export default function Template2({
   };
 
   return (
-    <main className="min-h-screen overflow-hidden bg-black text-white">
+    <main className="min-h-screen overflow-x-clip bg-black text-white">
       {/* Navigation */}
-      <header className="relative z-50 border-b border-white/10 bg-black">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-black">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8 sm:py-5">
           <a
             href="#home"
