@@ -1,4 +1,4 @@
-
+import { getStudioStorageUsage } from "@/lib/storage-usage";
 import { after, NextResponse } from "next/server";
 import { processImage } from "@/lib/process-image";
 import {
@@ -20,6 +20,16 @@ class StudioImageLimitError extends Error {
     ) {
         super("STUDIO_IMAGE_LIMIT_REACHED");
         this.name = "StudioImageLimitError";
+    }
+}
+
+class StudioStorageLimitError extends Error {
+    constructor(
+        public storageLimitGb: number,
+        public currentStorageBytes: number
+    ) {
+        super("STUDIO_LIMIT_REACHED");
+        this.name = "StudioStorageLimitError";
     }
 }
 
@@ -281,6 +291,7 @@ export async function POST(request: Request) {
                 },
                 select: {
                     maxImages: true,
+                    storageLimitGb: true,
                     status: true,
                     startDate: true,
                     endDate: true,
@@ -301,6 +312,20 @@ export async function POST(request: Request) {
                 now > subscription.endDate
             ) {
                 throw new StudioSubscriptionError();
+            }
+
+            // Atomically enforce studio storage limit.
+            // The uploaded R2 object is already included in this usage.
+            const storageUsage = await getStudioStorageUsage(admin.studioId);
+
+            const storageLimitGb = Number(subscription.storageLimitGb);
+            const storageLimitBytes = storageLimitGb * (1024 ** 3);
+
+            if (storageUsage.totalBytes > storageLimitBytes) {
+                throw new StudioStorageLimitError(
+                    storageLimitGb,
+                    storageUsage.totalBytes
+                );
             }
 
             // Count only images uploaded during the latest subscription period.
@@ -351,6 +376,9 @@ export async function POST(request: Request) {
                 duplicate: false as const,
                 image,
             };
+        }, {
+            maxWait: 10000,
+            timeout: 30000,
         });
 
         // 9. Handle duplicate discovered during the transaction
@@ -406,6 +434,21 @@ export async function POST(request: Request) {
                     cleanupError
                 );
             }
+        }
+
+        // Handle studio-wide storage limit
+        if (error instanceof StudioStorageLimitError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    code: "STUDIO_LIMIT_REACHED",
+                    limitReached: true,
+                    message: `Your studio has reached its storage limit of ${error.storageLimitGb.toLocaleString("en-IN")} GB. Please upgrade your plan to upload more images.`,
+                    storageLimitGb: error.storageLimitGb,
+                    currentStorageBytes: error.currentStorageBytes,
+                },
+                { status: 403 }
+            );
         }
 
         // Handle studio-wide image limit

@@ -1,4 +1,4 @@
-
+import { getStudioStorageUsage } from "@/lib/storage-usage";
 import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -160,6 +160,7 @@ export async function POST(request: Request) {
             },
             select: {
                 maxImages: true,
+                storageLimitGb: true,
                 status: true,
                 startDate: true,
                 endDate: true,
@@ -188,6 +189,29 @@ export async function POST(request: Request) {
                 {
                     success: false,
                     message: "Your subscription is not active or has expired.",
+                },
+                { status: 403 }
+            );
+        }
+
+        // Check studio storage limit before generating upload URL
+        const storageUsage = await getStudioStorageUsage(admin.studioId);
+
+        const storageLimitGb = Number(subscription.storageLimitGb);
+        const storageLimitBytes = storageLimitGb * (1024 ** 3);
+
+        const projectedStorageBytes = storageUsage.totalBytes + fileSize;
+
+        if (projectedStorageBytes > storageLimitBytes) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    code: "STUDIO_LIMIT_REACHED",
+                    limitReached: true,
+                    message: `Your studio has reached its storage limit of ${storageLimitGb.toLocaleString("en-IN")} GB. Please upgrade your plan to upload more images.`,
+                    storageLimitGb,
+                    currentStorageBytes: storageUsage.totalBytes,
+                    incomingFileBytes: fileSize,
                 },
                 { status: 403 }
             );

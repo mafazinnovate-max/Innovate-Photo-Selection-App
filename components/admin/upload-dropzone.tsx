@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -18,12 +17,12 @@ interface UploadFile {
   preview: string;
   progress: number;
   status:
-    | "pending"
-    | "uploading"
-    | "processing"
-    | "completed"
-    | "duplicate"
-    | "error";
+  | "pending"
+  | "uploading"
+  | "processing"
+  | "completed"
+  | "duplicate"
+  | "error";
   uploadedUrl?: string;
   errorMessage?: string;
 }
@@ -52,7 +51,7 @@ interface FinalizeResponse {
 }
 
 // Thrown when the studio's image limit is reached.
-class UploadLimitError extends Error {}
+class UploadLimitError extends Error { }
 
 // Detects the studio limit response from the API.
 const isStudioLimitError = (
@@ -76,7 +75,7 @@ export default function UploadDropzone({
   // Navigation guard and cancellation refs.
   const uploadDoneRef = useRef<Promise<void> | null>(null);
   const resolveUploadDoneRef = useRef<(() => void) | null>(null);
-  const cancelUploadRef = useRef<() => void>(() => {});
+  const cancelUploadRef = useRef<() => void>(() => { });
 
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isRefreshing, startTransition] = useTransition();
@@ -225,6 +224,24 @@ export default function UploadDropzone({
 
     filesRef.current = remaining;
     setFiles(remaining);
+  };
+
+  // Cancel selected files before the upload starts.
+  const cancelSelection = () => {
+    if (isUploading) return;
+
+    // Revoke all currently visible preview URLs.
+    filesRef.current.forEach((item) => {
+      URL.revokeObjectURL(item.preview);
+    });
+
+    // Clear visible files and waiting files.
+    filesRef.current = [];
+    pendingFilesRef.current = [];
+
+    setFiles([]);
+    setPendingCount(0);
+    setLimitMessage(null);
   };
 
   const getFileHash = async (file: File): Promise<string> => {
@@ -398,16 +415,16 @@ export default function UploadDropzone({
       if (isStudioLimitError(presignResponse, presignData)) {
         throw new UploadLimitError(
           presignData.message ||
-            presignData.error ||
-            "Upload limit reached."
+          presignData.error ||
+          "Upload limit reached."
         );
       }
 
       if (!presignResponse.ok || !presignData.success) {
         throw new Error(
           presignData.message ||
-            presignData.error ||
-            "Unable to prepare image upload."
+          presignData.error ||
+          "Unable to prepare image upload."
         );
       }
 
@@ -473,16 +490,16 @@ export default function UploadDropzone({
       if (isStudioLimitError(finalizeResponse, finalizeData)) {
         throw new UploadLimitError(
           finalizeData.message ||
-            finalizeData.error ||
-            "Upload limit reached."
+          finalizeData.error ||
+          "Upload limit reached."
         );
       }
 
       if (!finalizeResponse.ok || !finalizeData.success) {
         throw new Error(
           finalizeData.message ||
-            finalizeData.error ||
-            "Unable to finalize image upload."
+          finalizeData.error ||
+          "Unable to finalize image upload."
         );
       }
 
@@ -761,15 +778,13 @@ export default function UploadDropzone({
       {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${
-          isDragActive
+        className={`flex min-h-[250px] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed transition ${isDragActive
             ? "border-white bg-zinc-800"
             : "border-zinc-700 bg-zinc-900"
-        } ${
-          isUploading
+          } ${isUploading
             ? "cursor-not-allowed opacity-50"
             : ""
-        }`}
+          }`}
       >
         <input
           {...getInputProps()}
@@ -853,13 +868,26 @@ export default function UploadDropzone({
               </span>
             </h3>
 
-            <button
-              onClick={uploadAll}
-              disabled={isUploading}
-              className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isUploading ? "Uploading..." : "Upload All"}
-            </button>
+            <div className="flex items-center gap-2">
+              {!isUploading && (
+                <button
+                  type="button"
+                  onClick={cancelSelection}
+                  className="rounded-xl border border-red-500 px-5 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500 hover:text-white"
+                >
+                  Cancel
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={uploadAll}
+                disabled={isUploading}
+                className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUploading ? "Uploading..." : "Upload All"}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">

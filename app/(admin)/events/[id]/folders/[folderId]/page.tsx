@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { verifyAuthToken } from "@/lib/auth";
 import { Images } from "lucide-react";
+import FolderStorageUsage from "@/components/admin/folder-storage-usage";
 
 interface FolderDetailPageProps {
   params: Promise<{
@@ -125,17 +126,24 @@ export default async function FolderDetailPage({
     select: { startDate: true, endDate: true, maxImages: true },
   });
 
+
   const usedImages = subscription?.endDate
     ? await prisma.image.count({
-        where: {
-          createdAt: {
-            gte: subscription.startDate,
-            lte: subscription.endDate,
-          },
-          folder: { event: { studioId: admin.studioId } },
+      where: {
+        createdAt: {
+          gte: subscription.startDate,
+          lte: subscription.endDate,
         },
-      })
+        folder: {
+          deletedAt: null,
+          event: {
+            studioId: admin.studioId,
+          },
+        },
+      },
+    })
     : 0;
+
 
   const maxImages = subscription?.maxImages ?? 0;
   const usagePct =
@@ -257,13 +265,12 @@ export default async function FolderDetailPage({
                 <span className="text-xs text-zinc-400">Images usage</span>
 
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
-                    limitReached
-                      ? "border-red-500/60 bg-red-500/10 text-red-400"
-                      : usageWarn
-                        ? "border-amber-500/60 bg-amber-500/10 text-amber-400"
-                        : "border-zinc-700 text-zinc-400"
-                  }`}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] ${limitReached
+                    ? "border-red-500/60 bg-red-500/10 text-red-400"
+                    : usageWarn
+                      ? "border-amber-500/60 bg-amber-500/10 text-amber-400"
+                      : "border-zinc-700 text-zinc-400"
+                    }`}
                 >
                   {limitReached
                     ? "Limit reached"
@@ -300,9 +307,8 @@ export default async function FolderDetailPage({
                 {Array.from({ length: USAGE_SEGMENTS }, (_, i) => (
                   <span
                     key={i}
-                    className={`h-3.5 flex-1 rounded-[2px] transition-colors duration-300 ${
-                      i < filledSegments ? "bg-white" : "bg-zinc-800"
-                    }`}
+                    className={`h-3.5 flex-1 rounded-[2px] transition-colors duration-300 ${i < filledSegments ? "bg-white" : "bg-zinc-800"
+                      }`}
                   />
                 ))}
               </div>
@@ -323,6 +329,7 @@ export default async function FolderDetailPage({
                   {Math.max(0, maxImages - usedImages).toLocaleString()} left
                 </span>
               </div>
+              <FolderStorageUsage />
             </div>
           ) : (
             <div className="rounded-xl bg-zinc-900 px-5 py-3 text-sm">

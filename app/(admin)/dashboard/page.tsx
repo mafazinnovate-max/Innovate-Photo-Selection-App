@@ -211,22 +211,25 @@ const subscriptionPeriodEvents = subscription?.endDate
     })
   : 0;
 
-    // Images uploaded during the current subscription period.
-  const subscriptionPeriodImages = subscription?.endDate
-    ? await prisma.image.count({
-        where: {
-          createdAt: {
-            gte: subscription.startDate,
-            lte: subscription.endDate,
-          },
-          folder: {
-            event: {
-              studioId,
-            },
+    
+// Images uploaded during the current subscription period.
+const subscriptionPeriodImages = subscription?.endDate
+  ? await prisma.image.count({
+      where: {
+        createdAt: {
+          gte: subscription.startDate,
+          lte: subscription.endDate,
+        },
+        folder: {
+          deletedAt: null,
+          event: {
+            studioId,
           },
         },
-      })
-    : 0;
+      },
+    })
+  : 0;
+
 
   const subscriptionInfo = subscription
     ? {
