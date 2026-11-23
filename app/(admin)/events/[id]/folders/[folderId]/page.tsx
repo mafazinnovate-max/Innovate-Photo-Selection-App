@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { verifyAuthToken } from "@/lib/auth";
 import { Images } from "lucide-react";
+import FolderStorageUsage from "@/components/admin/folder-storage-usage";
 
 interface FolderDetailPageProps {
   params: Promise<{
@@ -126,8 +127,8 @@ export default async function FolderDetailPage({
   });
 
 
-const usedImages = subscription?.endDate
-  ? await prisma.image.count({
+  const usedImages = subscription?.endDate
+    ? await prisma.image.count({
       where: {
         createdAt: {
           gte: subscription.startDate,
@@ -141,7 +142,7 @@ const usedImages = subscription?.endDate
         },
       },
     })
-  : 0;
+    : 0;
 
 
   const maxImages = subscription?.maxImages ?? 0;
@@ -264,13 +265,12 @@ const usedImages = subscription?.endDate
                 <span className="text-xs text-zinc-400">Images usage</span>
 
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
-                    limitReached
-                      ? "border-red-500/60 bg-red-500/10 text-red-400"
-                      : usageWarn
-                        ? "border-amber-500/60 bg-amber-500/10 text-amber-400"
-                        : "border-zinc-700 text-zinc-400"
-                  }`}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] ${limitReached
+                    ? "border-red-500/60 bg-red-500/10 text-red-400"
+                    : usageWarn
+                      ? "border-amber-500/60 bg-amber-500/10 text-amber-400"
+                      : "border-zinc-700 text-zinc-400"
+                    }`}
                 >
                   {limitReached
                     ? "Limit reached"
@@ -307,9 +307,8 @@ const usedImages = subscription?.endDate
                 {Array.from({ length: USAGE_SEGMENTS }, (_, i) => (
                   <span
                     key={i}
-                    className={`h-3.5 flex-1 rounded-[2px] transition-colors duration-300 ${
-                      i < filledSegments ? "bg-white" : "bg-zinc-800"
-                    }`}
+                    className={`h-3.5 flex-1 rounded-[2px] transition-colors duration-300 ${i < filledSegments ? "bg-white" : "bg-zinc-800"
+                      }`}
                   />
                 ))}
               </div>
@@ -330,6 +329,7 @@ const usedImages = subscription?.endDate
                   {Math.max(0, maxImages - usedImages).toLocaleString()} left
                 </span>
               </div>
+              <FolderStorageUsage />
             </div>
           ) : (
             <div className="rounded-xl bg-zinc-900 px-5 py-3 text-sm">
