@@ -94,7 +94,7 @@ export default function HeroFallingCards() {
         >
             <div className="hero-falling-card -rotate-[2deg] rounded-xl bg-[#FFC93C] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#14161A]">
                 <span className="mr-6 text-[10px] font-semibold">01</span>
-                Select photos
+                 Grow your brand 
             </div>
 
             <div className="hero-falling-card -rotate-[1.5deg] rounded-xl bg-[#F4F1EA] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#14161A]">
@@ -104,7 +104,7 @@ export default function HeroFallingCards() {
 
             <div className="hero-falling-card rotate-[2deg] rounded-xl bg-[#3A3F2E] px-4 py-3 text-lg font-normal sm:px-5 sm:py-4 sm:text-xl text-[#F4F1EA]/85">
                 <span className="mr-6 text-[10px] font-semibold">03</span>
-                Grow your brand
+                 Select photos
             </div>
         </div>
     );

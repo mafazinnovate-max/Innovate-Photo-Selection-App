@@ -358,6 +358,43 @@ const styles = StyleSheet.create({
         color: "#55504a",
     },
 
+    // Event detail cards
+    eventDetailCard: {
+        marginBottom: 12,
+        padding: 12,
+        borderWidth: 0.8,
+        borderColor: BORDER,
+        borderRadius: 5,
+        backgroundColor: "#ffffff",
+    },
+
+    eventDetailTitle: {
+        fontSize: 10,
+        fontWeight: "bold",
+        color: DARK,
+        marginBottom: 9,
+    },
+
+    eventDetailRow: {
+        flexDirection: "row",
+        marginBottom: 6,
+    },
+
+    eventDetailLabel: {
+        width: 65,
+        fontSize: 7,
+        color: MUTED,
+        textTransform: "uppercase",
+        letterSpacing: 0.4,
+    },
+
+    eventDetailValue: {
+        flex: 1,
+        fontSize: 8,
+        color: DARK,
+        lineHeight: 1.5,
+    },
+
     // Rich text sections
     extraSection: {
         marginBottom: 19,
@@ -420,10 +457,12 @@ const styles = StyleSheet.create({
 
     // Signatures
     signatureArea: {
+        position: "absolute",
+        bottom: 58,
+        left: 43,
+        right: 43,
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 52,
-        marginBottom: 15,
     },
 
     signature: {
@@ -825,8 +864,10 @@ function ExtraSection({
 
 function StudioPDF({
     savedDocument,
+    logoUrl,
 }: {
     savedDocument: SavedDocument;
+    logoUrl: string | null;
 }) {
     const data = savedDocument.documentData || {};
     const studio = savedDocument.studioSnapshot || {};
@@ -850,8 +891,6 @@ function StudioPDF({
         .filter(Boolean)
         .join(", ");
 
-    const logoUrl = getText(studio.logoUrl);
-
     const phone = getText(studio.phone);
     const email = getText(studio.email);
     const website = getText(studio.website);
@@ -859,6 +898,29 @@ function StudioPDF({
     const sessions = Array.isArray(data.sessions)
         ? data.sessions as Data[]
         : [];
+
+    const eventDetails = Array.isArray(data.eventDetails)
+        ? data.eventDetails as Data[]
+        : (
+            getText(data.eventName) ||
+            getText(data.eventDate) ||
+            getText(data.venue) ||
+            getText(data.eventTime)
+        )
+            ? [{
+                name: data.eventName,
+                date: data.eventDate,
+                venue: data.venue,
+                time: data.eventTime,
+            }]
+            : [];
+
+    const celebratingNames =
+        getText(data.celebratingNames) ||
+        [
+            getText(data.brideName),
+            getText(data.groomName),
+        ].filter(Boolean).join(" & ");
 
     const totalAmount = Number(data.totalAmount || 0);
     const advanceAmount = Number(data.advanceAmount || 0);
@@ -1010,37 +1072,74 @@ function StudioPDF({
 
                     <View style={styles.sectionLine} />
 
-                    <View style={styles.detailsGrid}>
-                        <Detail
-                            label="Bride Name"
-                            value={data.brideName}
-                        />
+                    <Detail
+                        label="Celebrating Name(s)"
+                        value={celebratingNames}
+                    />
 
-                        <Detail
-                            label="Groom Name"
-                            value={data.groomName}
-                        />
+                    {eventDetails.map((event, index) => {
+                        const eventName = getText(event.name);
+                        const eventDate = formatDate(event.date);
+                        const venue = getText(event.venue);
+                        const time = getText(event.time);
 
-                        <Detail
-                            label="Event Name"
-                            value={data.eventName || savedDocument.eventName}
-                        />
+                        if (
+                            !eventName &&
+                            !venue &&
+                            !time &&
+                            eventDate === "-"
+                        ) {
+                            return null;
+                        }
 
-                        <Detail
-                            label="Event Date"
-                            value={eventDate}
-                        />
+                        return (
+                            <View
+                                key={index}
+                                style={styles.eventDetailCard}
+                                wrap={false}
+                            >
+                                <Text style={styles.eventDetailTitle}>
+                                    {eventName || `Event ${index + 1}`}
+                                </Text>
 
-                        <Detail
-                            label="Venue"
-                            value={data.venue}
-                        />
+                                {eventDate !== "-" && (
+                                    <View style={styles.eventDetailRow}>
+                                        <Text style={styles.eventDetailLabel}>
+                                            Date
+                                        </Text>
 
-                        <Detail
-                            label="Event Time"
-                            value={data.eventTime}
-                        />
-                    </View>
+                                        <Text style={styles.eventDetailValue}>
+                                            {eventDate}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {venue && (
+                                    <View style={styles.eventDetailRow}>
+                                        <Text style={styles.eventDetailLabel}>
+                                            Venue
+                                        </Text>
+
+                                        <Text style={styles.eventDetailValue}>
+                                            {venue}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {time && (
+                                    <View style={styles.eventDetailRow}>
+                                        <Text style={styles.eventDetailLabel}>
+                                            Time
+                                        </Text>
+
+                                        <Text style={styles.eventDetailValue}>
+                                            {time}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })}
                 </View>
 
                 {/* Package details */}
@@ -1070,25 +1169,29 @@ function StudioPDF({
                             </Text>
                         </View>
 
-                        <View style={styles.amountRow}>
-                            <Text style={styles.amountLabel}>
-                                Advance Amount
-                            </Text>
+                        {isContract && (
+                            <>
+                                <View style={styles.amountRow}>
+                                    <Text style={styles.amountLabel}>
+                                        Advance Amount
+                                    </Text>
 
-                            <Text style={styles.amountValue}>
-                                {currency(advanceAmount)}
-                            </Text>
-                        </View>
+                                    <Text style={styles.amountValue}>
+                                        {currency(advanceAmount)}
+                                    </Text>
+                                </View>
 
-                        <View style={[styles.amountRow, styles.balanceRow]}>
-                            <Text style={styles.balanceLabel}>
-                                Balance Amount
-                            </Text>
+                                <View style={[styles.amountRow, styles.balanceRow]}>
+                                    <Text style={styles.balanceLabel}>
+                                        Balance Amount
+                                    </Text>
 
-                            <Text style={styles.balanceValue}>
-                                {currency(balanceAmount)}
-                            </Text>
-                        </View>
+                                    <Text style={styles.balanceValue}>
+                                        {currency(balanceAmount)}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </View>
 
@@ -1140,21 +1243,28 @@ function StudioPDF({
                     </View>
                 ) : null}
 
-                {/* Optional sections */}
+                {/* FAQ */}
                 <ExtraSection
                     title="FREQUENTLY ASKED QUESTIONS"
                     content={sections.faq}
                 />
 
-                <ExtraSection
-                    title="TERMS & CONDITIONS"
-                    content={sections.terms}
-                />
-
+                {/* Policies */}
                 <ExtraSection
                     title="POLICIES"
                     content={sections.policies}
                 />
+
+                {/* Terms always start on a fresh page */}
+                {typeof sections.terms === "string" &&
+                    sections.terms.trim() && (
+                        <View break>
+                            <ExtraSection
+                                title="TERMS & CONDITIONS"
+                                content={sections.terms}
+                            />
+                        </View>
+                    )}
 
                 {/* Signatures */}
                 <View style={styles.signatureArea} wrap={false}>
@@ -1179,7 +1289,7 @@ function StudioPDF({
                     </View>
                 </View>
             </Page>
-        </Document>
+        </Document >
     );
 }
 
@@ -1193,6 +1303,7 @@ export default function DocumentPreview({
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState(false);
     const [error, setError] = useState("");
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -1216,6 +1327,59 @@ export default function DocumentPreview({
 
                 if (!cancelled) {
                     setSavedDocument(result.document);
+
+                    // Fetch fresh R2 signed logo URL.
+
+                    try {
+                        const logoResponse = await fetch(
+                            "/api/admin/documents/logo",
+                            {
+                                method: "GET",
+                                cache: "no-store",
+                            }
+                        );
+
+                        if (!logoResponse.ok) {
+                            if (!cancelled) {
+                                setLogoUrl(null);
+                            }
+                        } else {
+                            const logoBlob = await logoResponse.blob();
+
+                            const reader = new FileReader();
+
+                            const imageDataUrl: string = await new Promise(
+                                (resolve, reject) => {
+                                    reader.onloadend = () => {
+                                        if (typeof reader.result === "string") {
+                                            resolve(reader.result);
+                                        } else {
+                                            reject(
+                                                new Error("Unable to read converted logo")
+                                            );
+                                        }
+                                    };
+
+                                    reader.onerror = () => {
+                                        reject(new Error("Logo conversion read failed"));
+                                    };
+
+                                    reader.readAsDataURL(logoBlob);
+                                }
+                            );
+
+                            if (!cancelled) {
+                                setLogoUrl(imageDataUrl);
+                            }
+                        }
+                    } catch (logoError) {
+                        console.error("PDF logo loading failed:", logoError);
+
+                        if (!cancelled) {
+                            setLogoUrl(null);
+                        }
+                    }
+
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -1243,9 +1407,12 @@ export default function DocumentPreview({
         if (!savedDocument) return null;
 
         return (
-            <StudioPDF savedDocument={savedDocument} />
+            <StudioPDF
+                savedDocument={savedDocument}
+                logoUrl={logoUrl}
+            />
         );
-    }, [savedDocument]);
+    }, [savedDocument, logoUrl]);
 
     const handleDownload = async () => {
         if (!savedDocument || !pdfDocument || downloading) {
