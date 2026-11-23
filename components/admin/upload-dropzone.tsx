@@ -227,6 +227,24 @@ export default function UploadDropzone({
     setFiles(remaining);
   };
 
+    // Cancel selected files before the upload starts.
+  const cancelSelection = () => {
+    if (isUploading) return;
+
+    // Revoke all currently visible preview URLs.
+    filesRef.current.forEach((item) => {
+      URL.revokeObjectURL(item.preview);
+    });
+
+    // Clear visible files and waiting files.
+    filesRef.current = [];
+    pendingFilesRef.current = [];
+
+    setFiles([]);
+    setPendingCount(0);
+    setLimitMessage(null);
+  };
+
   const getFileHash = async (file: File): Promise<string> => {
     const fileBuffer = await file.arrayBuffer();
 
@@ -853,13 +871,26 @@ export default function UploadDropzone({
               </span>
             </h3>
 
-            <button
-              onClick={uploadAll}
-              disabled={isUploading}
-              className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isUploading ? "Uploading..." : "Upload All"}
-            </button>
+                       <div className="flex items-center gap-2">
+              {!isUploading && (
+                <button
+                  type="button"
+                  onClick={cancelSelection}
+                  className="rounded-xl border border-red-500 px-5 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500 hover:text-white"
+                >
+                  Cancel
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={uploadAll}
+                disabled={isUploading}
+                className="rounded-xl bg-white px-5 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUploading ? "Uploading..." : "Upload All"}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">

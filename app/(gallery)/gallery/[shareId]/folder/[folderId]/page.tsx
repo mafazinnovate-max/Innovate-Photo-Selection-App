@@ -261,12 +261,14 @@ export default async function FolderPage({
    * currently opened folder's parent are included.
    */
 
-  const categoryFolders =
-    folder.event.galleryMode === "bride_groom" && folder.parentId
-      ? await prisma.folder.findMany({
+  
+const categoryFolders =
+  folder.event.galleryMode === "bride_groom" && folder.parentId
+    ? await prisma.folder.findMany({
         where: {
           eventId: folder.eventId,
           parentId: folder.parentId,
+          deletedAt: null,
         },
         select: {
           id: true,
@@ -281,10 +283,11 @@ export default async function FolderPage({
           },
         },
       })
-      : await prisma.folder.findMany({
+    : await prisma.folder.findMany({
         where: {
           eventId: folder.eventId,
           parentId: null,
+          deletedAt: null,
         },
         select: {
           id: true,
@@ -299,6 +302,7 @@ export default async function FolderPage({
           },
         },
       });
+
 
   const selectionSummary: SelectionCategory[] =
     categoryFolders.map((category) => ({

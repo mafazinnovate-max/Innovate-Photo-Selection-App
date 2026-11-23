@@ -125,17 +125,24 @@ export default async function FolderDetailPage({
     select: { startDate: true, endDate: true, maxImages: true },
   });
 
-  const usedImages = subscription?.endDate
-    ? await prisma.image.count({
-        where: {
-          createdAt: {
-            gte: subscription.startDate,
-            lte: subscription.endDate,
-          },
-          folder: { event: { studioId: admin.studioId } },
+
+const usedImages = subscription?.endDate
+  ? await prisma.image.count({
+      where: {
+        createdAt: {
+          gte: subscription.startDate,
+          lte: subscription.endDate,
         },
-      })
-    : 0;
+        folder: {
+          deletedAt: null,
+          event: {
+            studioId: admin.studioId,
+          },
+        },
+      },
+    })
+  : 0;
+
 
   const maxImages = subscription?.maxImages ?? 0;
   const usagePct =
