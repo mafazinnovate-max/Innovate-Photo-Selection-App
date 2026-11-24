@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useDropzone } from "react-dropzone";
 import { useUploadNavigationGuard } from "@/components/admin/upload-navigation-guard";
+import { toast } from "react-toastify";
 
 interface UploadFile {
   file: File;
@@ -86,6 +87,7 @@ export default function UploadDropzone({
   const activeXhrsRef = useRef<Set<XMLHttpRequest>>(new Set());
 
   const [uploadedCount, setUploadedCount] = useState(0);
+  const duplicateCountRef = useRef(0);
   const [failedCount, setFailedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -437,7 +439,7 @@ export default function UploadDropzone({
           progress: 100,
           uploadedUrl: "duplicate",
         });
-
+        duplicateCountRef.current += 1;
         setUploadedCount((prev) => prev + 1);
 
         return true;
@@ -510,7 +512,7 @@ export default function UploadDropzone({
           progress: 100,
           uploadedUrl: "duplicate",
         });
-
+         duplicateCountRef.current += 1;
         setUploadedCount((prev) => prev + 1);
 
         return true;
@@ -639,6 +641,7 @@ export default function UploadDropzone({
 
     setUploadedCount(0);
     setFailedCount(0);
+    duplicateCountRef.current = 0;
 
     setTotalCount(
       initialBatch.length + pendingFilesRef.current.length
@@ -748,6 +751,18 @@ export default function UploadDropzone({
 
         currentBatch = nextBatch;
       }
+      const duplicateCount = duplicateCountRef.current;
+
+if (duplicateCount > 0) {
+  toast.info(
+    `${duplicateCount} duplicate photo${duplicateCount === 1 ? " was" : "s were"} skipped because ${
+      duplicateCount === 1 ? "it already exists" : "they already exist"
+    }.`,
+    {
+      autoClose: false,
+    }
+  );
+}
 
       startTransition(() => {
         router.refresh();

@@ -157,9 +157,22 @@ export default async function FolderDetailPage({
       ? Math.max(1, Math.round((usagePct / 100) * USAGE_SEGMENTS))
       : 0;
 
+
+      
+const sortedFolderImages = [...folder.images].sort((a, b) => {
+  if (!a.fileName) return b.fileName ? 1 : 0;
+  if (!b.fileName) return -1;
+
+  return a.fileName.localeCompare(b.fileName, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+});
+
+
   // 4. Generate private R2 signed URLs
   const imagesWithSignedUrls = await Promise.all(
-    folder.images.map(async (image) => {
+    sortedFolderImages.map(async (image) => {
       const fullImageKey = image.optimizedKey || image.storageKey;
 
       const thumbnailKey =
