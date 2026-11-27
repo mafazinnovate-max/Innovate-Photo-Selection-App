@@ -56,6 +56,7 @@ export default async function EventsPage() {
           name: true,
           parentId: true,
           selectionStatus: true,
+          deletedAt: true,
         },
       },
     },
@@ -63,6 +64,7 @@ export default async function EventsPage() {
 
   const serializedEvents = await Promise.all(
     events.map(async ({ folders, ...event }) => {
+      const activeFolders = folders.filter((folder) => !folder.deletedAt);
       const coverImageUrl = await getEventCoverUrl(
         event.coverImageKey,
         event.coverImageUrl,
@@ -72,9 +74,7 @@ export default async function EventsPage() {
        * SINGLE MODE
        */
       if (event.galleryMode !== "bride_groom") {
-        const selectableFolders = folders.filter(
-          (folder) => !folder.parentId,
-        );
+        const selectableFolders = activeFolders.filter((folder) => !folder.parentId);
 
         const completedSelectableFolders = selectableFolders.filter(
           (folder) => folder.selectionStatus === "COMPLETED",
@@ -105,15 +105,12 @@ export default async function EventsPage() {
       /*
        * BRIDE & GROOM MODE
        */
-      const parentFolders = folders.filter(
-        (folder) => !folder.parentId,
-      );
+     const parentFolders = activeFolders.filter((folder) => !folder.parentId);
 
       const parentStatuses = parentFolders.map((parent) => {
-        const childFolders = folders.filter(
-          (folder) => folder.parentId === parent.id,
-        );
-
+        const childFolders = activeFolders.filter(
+  (item) => item.parentId === parent.id,
+);
         const completedChildFolders = childFolders.filter(
           (folder) => folder.selectionStatus === "COMPLETED",
         );

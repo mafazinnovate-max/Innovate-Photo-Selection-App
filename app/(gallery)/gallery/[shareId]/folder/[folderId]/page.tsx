@@ -26,8 +26,11 @@ export default async function FolderPage({
   const { shareId, folderId } = await params;
 
   // Fetch studio details for the access modal
-  const event = await prisma.event.findUnique({
-    where: { shareId },
+   const event = await prisma.event.findFirst({
+    where: {
+      shareId,
+      deletedAt: null,
+    },
     select: {
       studio: {
         select: {
@@ -81,8 +84,10 @@ export default async function FolderPage({
   const folder = await prisma.folder.findFirst({
     where: {
       id: folderId,
+       deletedAt: null,
       event: {
         shareId: shareId,
+         deletedAt: null,
       },
     },
     select: {
@@ -135,7 +140,11 @@ export default async function FolderPage({
   });
 
   if (!folder) {
-    return <div>Folder not found</div>;
+    return (
+  <div className="flex min-h-screen items-center justify-center bg-black text-white">
+    Folder not found
+  </div>
+);
   }
 
   // Generate private R2 signed URL for Studio Logo
