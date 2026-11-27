@@ -644,7 +644,7 @@ export default function LoginPage() {
                             />
 
                             <span className="font-bold tracking-[0.25em] text-white">
-                                PICKNOVATE
+                                PICKNNOVATE
                             </span>
                         </div>
 
