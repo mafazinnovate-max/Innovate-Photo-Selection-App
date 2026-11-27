@@ -14,6 +14,10 @@ interface ApiStudio {
     logoUrl: string | null;
     createdAt: string;
     isActive: boolean;
+    Subscription?: {
+        status: string;
+        endDate: string | null;
+    }[];
     _count?: {
         events: number;
     };
@@ -24,6 +28,52 @@ interface DashboardStats {
     activeStudios: number;
     totalEvents: number;
     totalStorageGB: number;
+}
+
+type StudioStatus = "Active" | "Inactive" | "Expiring Soon";
+
+function getStudioStatus(
+    isActive: boolean,
+    subscription?: ApiStudio["Subscription"] extends (infer T)[] | undefined
+        ? T
+        : never
+): StudioStatus {
+    if (!isActive) return "Inactive";
+    if (!subscription) return "Active";
+
+    if (subscription.status.toLowerCase() !== "active") {
+        return "Inactive";
+    }
+
+    if (!subscription.endDate) return "Active";
+
+    const end = new Date(subscription.endDate);
+
+    if (Number.isNaN(end.getTime())) return "Active";
+
+    const now = new Date();
+
+    const today = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const endDay = new Date(
+        end.getFullYear(),
+        end.getMonth(),
+        end.getDate()
+    );
+
+    const remainingDays = Math.ceil(
+        (endDay.getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24)
+    );
+
+    if (remainingDays < 0) return "Inactive";
+    if (remainingDays <= 10) return "Expiring Soon";
+
+    return "Active";
 }
 
 export default function SuperAdminDashboardPage() {
@@ -79,7 +129,11 @@ export default function SuperAdminDashboardPage() {
                 setStats({
                     totalStudios: studioList.length,
                     activeStudios: studioList.filter(
-                        (studio) => studio.isActive
+                        (studio) =>
+                            getStudioStatus(
+                                studio.isActive,
+                                studio.Subscription?.[0]
+                            ) === "Active"
                     ).length,
                     totalEvents: studioList.reduce(
                         (total, studio) =>
@@ -229,7 +283,9 @@ export default function SuperAdminDashboardPage() {
                                 </div>
                             ))}
 
-                            <span className="sr-only">Loading studios...</span>
+                            <span className="sr-only">
+                                Loading studios...
+                            </span>
                         </div>
                     ) : studios.length === 0 ? (
                         <div className="flex min-h-64 items-center justify-center">
@@ -250,74 +306,97 @@ export default function SuperAdminDashboardPage() {
                         </div>
                     ) : (
                         <div className="divide-y divide-zinc-800">
-                            {studios.slice(0, 5).map((studio) => (
-                                <div
-                                    key={studio.id}
-                                    className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
-                                >
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
-                                            <img
-                                                src={studio.logoUrl || undefined}
-                                                alt={`${studio.name} logo`}
-                                                className={`h-full w-full object-cover ${studio.logoUrl ? "" : "hidden"
-                                                    }`}
-                                                onError={(e) => {
-                                                    e.currentTarget.style.display = "none";
-                                                    const fallback = e.currentTarget.nextElementSibling;
-                                                    if (fallback) {
-                                                        fallback.classList.remove("hidden");
-                                                    }
-                                                }}
-                                            />
+                            {studios.slice(0, 5).map((studio) => {
+                                const status = getStudioStatus(
+                                    studio.isActive,
+                                    studio.Subscription?.[0]
+                                );
 
-                                            <span className={studio.logoUrl ? "hidden" : ""}>
-                                                {studio.name
-                                                    .trim()
-                                                    .split(/\s+/)
-                                                    .slice(0, 2)
-                                                    .map((word) => word[0])
-                                                    .join("")
-                                                    .toUpperCase()}
+                                return (
+                                    <div
+                                        key={studio.id}
+                                        className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                                    >
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-sm font-semibold text-white">
+                                                <img
+                                                    src={studio.logoUrl || undefined}
+                                                    alt={`${studio.name} logo`}
+                                                    className={`h-full w-full object-cover ${
+                                                        studio.logoUrl ? "" : "hidden"
+                                                    }`}
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display =
+                                                            "none";
+                                                        const fallback =
+                                                            e.currentTarget.nextElementSibling;
+
+                                                        if (fallback) {
+                                                            fallback.classList.remove(
+                                                                "hidden"
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+
+                                                <span
+                                                    className={
+                                                        studio.logoUrl
+                                                            ? "hidden"
+                                                            : ""
+                                                    }
+                                                >
+                                                    {studio.name
+                                                        .trim()
+                                                        .split(/\s+/)
+                                                        .slice(0, 2)
+                                                        .map((word) => word[0])
+                                                        .join("")
+                                                        .toUpperCase()}
+                                                </span>
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-white">
+                                                    {studio.name}
+                                                </p>
+
+                                                <p className="mt-1 text-xs text-zinc-500">
+                                                    Created{" "}
+                                                    {new Date(
+                                                        studio.createdAt
+                                                    ).toLocaleDateString(
+                                                        "en-GB",
+                                                        {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        }
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex shrink-0 items-center gap-4">
+                                            <span className="hidden text-xs text-zinc-400 sm:inline">
+                                                {studio._count?.events ?? 0} events
+                                            </span>
+
+                                            <span
+                                                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                                    status === "Active"
+                                                        ? "bg-emerald-500/10 text-emerald-400"
+                                                        : status === "Expiring Soon"
+                                                          ? "bg-amber-500/10 text-amber-400"
+                                                          : "bg-zinc-800 text-zinc-400"
+                                                }`}
+                                            >
+                                                {status}
                                             </span>
                                         </div>
-
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-white">
-                                                {studio.name}
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-zinc-500">
-                                                Created{" "}
-                                                {new Date(
-                                                    studio.createdAt
-                                                ).toLocaleDateString("en-GB", {
-                                                    day: "2-digit",
-                                                    month: "short",
-                                                    year: "numeric",
-                                                })}
-                                            </p>
-                                        </div>
                                     </div>
-
-                                    <div className="flex shrink-0 items-center gap-4">
-                                        <span className="hidden text-xs text-zinc-400 sm:inline">
-                                            {studio._count?.events ?? 0} events
-                                        </span>
-
-                                        <span
-                                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${studio.isActive
-                                                ? "bg-emerald-500/10 text-emerald-400"
-                                                : "bg-zinc-800 text-zinc-400"
-                                                }`}
-                                        >
-                                            {studio.isActive
-                                                ? "Active"
-                                                : "Inactive"}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
