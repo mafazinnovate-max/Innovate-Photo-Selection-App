@@ -137,15 +137,15 @@ export async function POST(request: Request) {
             );
         }
 
-        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
+        const validPlans = ["Trial", "Basic", "Pro", "Premium"] as const;
 
         type Plan = (typeof validPlans)[number];
 
         const planPrices: Record<Plan, number> = {
             Trial: 0,
-            Basic: 3999,
-            Professional: 8999,
-            Enterprise: 24999,
+            Basic: 1999,
+            Pro: 4999,
+            Premium: 9999,
         };
 
         const plan: Plan = validPlans.includes(data.plan)

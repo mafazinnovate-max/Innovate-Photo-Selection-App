@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-type Plan = "Trial" | "Basic" | "Professional" | "Enterprise" | "Not configured";
+type Plan = "Trial" | "Basic" | "Pro" | "Premium" | "Not configured";
 
 type SubscriptionStatus =
     | "Active"
@@ -79,7 +79,7 @@ interface StudioApiRecord {
 }
 
 function toPlan(value?: string): Plan {
-    if (value === "Trial" || value === "Professional" || value === "Enterprise") return value;
+    if (value === "Trial" || value === "Pro" || value === "Premium") return value;
     return "Basic";
 }
 
@@ -466,8 +466,8 @@ export default function SubscriptionsPage() {
                                 "All",
                                 "Trial",
                                 "Basic",
-                                "Professional",
-                                "Enterprise",
+                                "Pro",
+                                "Premium",
                                 "Not configured",
                             ]}
                             label="Plan"
@@ -1174,9 +1174,9 @@ function PlanBadge({
     const classes = {
         Trial: "border-amber-500/20 bg-amber-500/10 text-amber-400",
         Basic: "border-zinc-700 bg-zinc-800 text-zinc-300",
-        Professional:
+        Pro:
             "border-blue-500/20 bg-blue-500/10 text-blue-400",
-        Enterprise:
+        Premium:
             "border-purple-500/20 bg-purple-500/10 text-purple-400",
         "Not configured": "border-amber-500/20 bg-amber-500/10 text-amber-400",
     };

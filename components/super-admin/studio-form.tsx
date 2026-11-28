@@ -25,14 +25,14 @@ import {
 export type StudioPlan =
     | "Trial"
     | "Basic"
-    | "Professional"
-    | "Enterprise";
+    | "Pro"
+    | "Premium";
 
 export const PLAN_PRICES: Record<StudioPlan, number> = {
     Trial: 0,
-    Basic: 3999,
-    Professional: 8999,
-    Enterprise: 24999,
+    Basic: 1999,
+    Pro: 4999,
+    Premium: 9999,
 };
 export type StudioStatus = "Active" | "Inactive";
 
@@ -106,7 +106,7 @@ export default function StudioForm({
     mode,
     studioId,
     initialData,
-    initialPlan = "Professional",
+    initialPlan = "Pro",
     initialStatus = "Active",
 }: StudioFormProps) {
     const router = useRouter();
@@ -621,7 +621,7 @@ export default function StudioForm({
                         </label>
 
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            {(["Trial", "Basic", "Professional", "Enterprise"] as StudioPlan[]).map(
+                            {(["Trial", "Basic", "Pro", "Premium"] as StudioPlan[]).map(
                                 (item) => (
                                     <button
                                         key={item}
@@ -654,8 +654,8 @@ export default function StudioForm({
                                         >
                                             {item === "Trial" && "Try Picnovate with the trial plan."}
                                             {item === "Basic" && "For small photography studios."}
-                                            {item === "Professional" && "For growing studios and teams."}
-                                            {item === "Enterprise" && "For high-volume studios."}
+                                            {item === "Pro" && "For growing studios and teams."}
+                                            {item === "Premium" && "For high-volume studios."}
                                         </p>
                                     </button>
                                 )
