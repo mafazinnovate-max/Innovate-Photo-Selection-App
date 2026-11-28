@@ -195,7 +195,13 @@ export async function POST(request: Request) {
         }
 
         // Check studio storage limit before generating upload URL
-        const storageUsage = await getStudioStorageUsage(admin.studioId);
+        const storageUsage = await getStudioStorageUsage(
+    admin.studioId,
+    {
+        startDate: subscription.startDate,
+        endDate: subscription.endDate,
+    }
+);
 
         const storageLimitGb = Number(subscription.storageLimitGb);
         const storageLimitBytes = storageLimitGb * (1024 ** 3);

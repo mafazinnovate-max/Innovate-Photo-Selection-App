@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { verifyAuthToken } from "@/lib/auth";
-import { getPlatformStorageUsage } from "@/lib/storage-usage";
+import { getStudioStorageUsage } from "@/lib/storage-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +35,7 @@ export async function GET() {
 
         const studioId = session.studioId;
 
-        // 2. Get actual R2 storage usage.
-        const storage = await getPlatformStorageUsage();
-
-        // 3. Get only this Admin's studio usage.
-        const studioUsage = storage.studioUsage.find(
-            (item) => item.studioId === studioId
-        );
-
-        const usedBytes = studioUsage?.totalBytes ?? 0;
-        const usedGB = usedBytes / (1024 ** 3);
-
-        // 4. Get this studio's latest subscription.
+        // 2. Get this studio's latest subscription.
         const subscription = await prisma.subscription.findFirst({
             where: {
                 studioId,
@@ -58,9 +47,25 @@ export async function GET() {
                 plan: true,
                 status: true,
                 storageLimitGb: true,
+                startDate: true,
                 endDate: true,
             },
         });
+
+        // 3. Use subscription-period storage when both dates exist.
+        // Otherwise preserve the existing all-time usage behavior.
+        const storageUsage = await getStudioStorageUsage(
+            studioId,
+            subscription?.startDate && subscription?.endDate
+                ? {
+                      startDate: subscription.startDate,
+                      endDate: subscription.endDate,
+                  }
+                : undefined
+        );
+
+        const usedBytes = storageUsage.totalBytes;
+        const usedGB = usedBytes / (1024 ** 3);
 
         const storageLimitGb =
             subscription?.storageLimitGb ?? 0;
@@ -75,7 +80,7 @@ export async function GET() {
                 ? (usedGB / storageLimitGb) * 100
                 : 0;
 
-        // 5. Return only this studio's storage information.
+        // 4. Return the same studio storage response fields.
         return NextResponse.json({
             success: true,
 
@@ -91,7 +96,7 @@ export async function GET() {
                 usedBytes,
                 usedGB,
 
-                objectCount: studioUsage?.objectCount ?? 0,
+                objectCount: storageUsage.objectCount,
 
                 storageLimitGb,
                 remainingGB,
@@ -104,7 +109,6 @@ export async function GET() {
 
             lastUpdated: new Date().toISOString(),
         });
-
     } catch (error) {
         console.error(
             "Admin Storage Usage API Error:",
