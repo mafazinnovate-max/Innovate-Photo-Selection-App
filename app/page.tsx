@@ -148,7 +148,7 @@ export default async function Home() {
         <main
             className={`${inter.className} isolate min-h-screen overflow-x-clip scroll-smooth bg-[#14161A] text-[#F4F1EA] selection:bg-[#FFC93C] selection:text-[#14161A]`}
         >
-            {/* <PicknovateIntro /> */}
+            {/* <PicknovateIntro />  */}
             <LandingPageSmoothScroll />
             <CursorRibbon />
 
