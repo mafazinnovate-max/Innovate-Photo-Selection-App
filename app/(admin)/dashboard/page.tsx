@@ -2,8 +2,6 @@ import Link from "next/link";
 import {
   CalendarDays,
   Images,
-  CheckCircle2,
-  Clock,
   ArrowUpRight,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -39,7 +37,6 @@ export default async function DashboardPage() {
   const [
     totalEvents,
     totalPhotos,
-    selectedPhotos,
     subscription,
     recentEventsData,
     pastEventsData,
@@ -57,19 +54,7 @@ export default async function DashboardPage() {
     prisma.image.count({
       where: {
         folder: {
-          event: {
-            studioId,
-            deletedAt: null,
-          },
-        },
-      },
-    }),
-
-    // Selected photos belonging to active events only
-    prisma.image.count({
-      where: {
-        isSelected: true,
-        folder: {
+          deletedAt: null,
           event: {
             studioId,
             deletedAt: null,
@@ -118,6 +103,9 @@ export default async function DashboardPage() {
         eventDate: true,
         galleryMode: true,
         folders: {
+          where: {
+            deletedAt: null,
+          },
           select: {
             id: true,
             name: true,
@@ -199,51 +187,49 @@ export default async function DashboardPage() {
   ]);
 
   // Events created during the current subscription period.
-const subscriptionPeriodEvents = subscription?.endDate
-  ? await prisma.event.count({
-      where: {
-        studioId,
-        createdAt: {
-          gte: subscription.startDate,
-          lte: subscription.endDate,
-        },
-      },
-    })
-  : 0;
-
-    
-// Images uploaded during the current subscription period.
-const subscriptionPeriodImages = subscription?.endDate
-  ? await prisma.image.count({
-      where: {
-        createdAt: {
-          gte: subscription.startDate,
-          lte: subscription.endDate,
-        },
-        folder: {
-          deletedAt: null,
-          event: {
-            studioId,
+  const subscriptionPeriodEvents = subscription?.endDate
+    ? await prisma.event.count({
+        where: {
+          studioId,
+          createdAt: {
+            gte: subscription.startDate,
+            lte: subscription.endDate,
           },
         },
-      },
-    })
-  : 0;
+      })
+    : 0;
 
+  // Images uploaded during the current subscription period.
+  const subscriptionPeriodImages = subscription?.endDate
+    ? await prisma.image.count({
+        where: {
+          createdAt: {
+            gte: subscription.startDate,
+            lte: subscription.endDate,
+          },
+          folder: {
+            deletedAt: null,
+            event: {
+              studioId,
+            },
+          },
+        },
+      })
+    : 0;
 
   const subscriptionInfo = subscription
     ? {
-      id: subscription.id,
-      plan: subscription.plan,
-      price: subscription.price,
-      status: subscription.status,
-      startDate: subscription.startDate.toISOString(),
-      endDate: subscription.endDate?.toISOString() ?? null,
-      storageLimitGb: subscription.storageLimitGb,
-      maxEvents: subscription.maxEvents,
-      maxCustomers: subscription.maxCustomers,
-      maxImages: subscription.maxImages,
-    }
+        id: subscription.id,
+        plan: subscription.plan,
+        price: subscription.price,
+        status: subscription.status,
+        startDate: subscription.startDate.toISOString(),
+        endDate: subscription.endDate?.toISOString() ?? null,
+        storageLimitGb: subscription.storageLimitGb,
+        maxEvents: subscription.maxEvents,
+        maxCustomers: subscription.maxCustomers,
+        maxImages: subscription.maxImages,
+      }
     : null;
 
   const recentEvents = recentEventsData.map((event) => {
@@ -334,6 +320,13 @@ const subscriptionPeriodImages = subscription?.endDate
         (folder) => folder.selectionStatus === "COMPLETED"
       );
 
+    const selectionStatus =
+      selectableFolders.length === 0
+        ? null
+        : allCategoriesCompleted
+          ? "COMPLETED"
+          : "SELECTING";
+
     return {
       id: event.id,
       name: event.name,
@@ -344,9 +337,7 @@ const subscriptionPeriodImages = subscription?.endDate
       categories,
       totalPhotos: eventTotalPhotos,
       selectedPhotos: eventSelectedPhotos,
-      selectionStatus: allCategoriesCompleted
-        ? "COMPLETED"
-        : "SELECTING",
+      selectionStatus,
     };
   });
 
@@ -420,18 +411,6 @@ const subscriptionPeriodImages = subscription?.endDate
       icon: Images,
       description: "Photos across active events",
     },
-    {
-      title: "Selected Photos",
-      value: selectedPhotos,
-      icon: CheckCircle2,
-      description: "Photos selected by clients",
-    },
-    {
-      title: "Pending Selection",
-      value: Math.max(totalPhotos - selectedPhotos, 0),
-      icon: Clock,
-      description: "Photos not selected yet",
-    },
   ];
 
   return (
@@ -448,7 +427,7 @@ const subscriptionPeriodImages = subscription?.endDate
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {stats.map((stat) => {
           const Icon = stat.icon;
 

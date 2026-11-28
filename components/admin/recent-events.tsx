@@ -34,7 +34,7 @@ interface RecentEvent {
   categories: Category[];
   totalPhotos: number;
   selectedPhotos: number;
-  selectionStatus: string;
+  selectionStatus: string | null;
 }
 
 export default function RecentEvents({
@@ -84,17 +84,19 @@ export default function RecentEvents({
               </div>
 
               <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
-                <span
-                  className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${
-                    isCompleted
-                      ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
-                      : "border-amber-900/60 bg-amber-950/30 text-amber-400"
-                  }`}
-                >
-                  {isCompleted
-                    ? "Client Completed Selecting Photos"
-                    : "Client Selecting Photos"}
-                </span>
+               {event.selectionStatus !== null && (
+  <span
+    className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium ${
+      isCompleted
+        ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-400"
+        : "border-amber-900/60 bg-amber-950/30 text-amber-400"
+    }`}
+  >
+    {isCompleted
+      ? "Client Completed Selecting Photos"
+      : "Client Selecting Photos"}
+  </span>
+)}
 
                 <div className="flex items-center gap-3">
                   <p className="whitespace-nowrap text-sm text-zinc-400">

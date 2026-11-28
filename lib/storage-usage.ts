@@ -19,10 +19,16 @@ type StudioUsage = {
     objectCount: number;
 };
 
+type UsagePeriod = {
+    startDate: Date;
+    endDate: Date;
+};
+
 async function getBucketUsage(
     client: typeof r2,
     bucketName: string,
-    prefix?: string
+    prefix?: string,
+    period?: UsagePeriod
 ): Promise<BucketUsage> {
     let continuationToken: string | undefined;
     let totalBytes = 0;
@@ -39,6 +45,18 @@ async function getBucketUsage(
         );
 
         for (const object of response.Contents ?? []) {
+            if (period) {
+                const lastModified = object.LastModified;
+
+                if (
+                    !lastModified ||
+                    lastModified < period.startDate ||
+                    lastModified > period.endDate
+                ) {
+                    continue;
+                }
+            }
+
             totalBytes += object.Size ?? 0;
             objectCount++;
         }
@@ -53,7 +71,8 @@ async function getBucketUsage(
 }
 
 export async function getStudioStorageUsage(
-    studioId: string
+    studioId: string,
+    period?: UsagePeriod
 ) {
     if (!studioId) {
         throw new Error("Studio ID is required.");
@@ -62,7 +81,8 @@ export async function getStudioStorageUsage(
     const usage = await getBucketUsage(
         r2,
         R2_BUCKET_NAME,
-        `studios/${studioId}/`
+        `studios/${studioId}/`,
+        period
     );
 
     return {

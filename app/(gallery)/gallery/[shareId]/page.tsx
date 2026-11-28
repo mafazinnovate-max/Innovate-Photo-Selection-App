@@ -197,10 +197,11 @@ export default async function GalleryPage({
     })
   );
 
-  const selectedImages = await prisma.image.findMany({
+   const selectedImages = await prisma.image.findMany({
     where: {
       folder: {
         eventId: event.id,
+        deletedAt: null,
         ...(parentId ? { parentId } : {}),
       },
       isSelected: true,

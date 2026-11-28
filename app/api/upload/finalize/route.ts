@@ -316,7 +316,13 @@ export async function POST(request: Request) {
 
             // Atomically enforce studio storage limit.
             // The uploaded R2 object is already included in this usage.
-            const storageUsage = await getStudioStorageUsage(admin.studioId);
+            const storageUsage = await getStudioStorageUsage(
+    admin.studioId,
+    {
+        startDate: subscription.startDate,
+        endDate: subscription.endDate,
+    }
+);
 
             const storageLimitGb = Number(subscription.storageLimitGb);
             const storageLimitBytes = storageLimitGb * (1024 ** 3);
