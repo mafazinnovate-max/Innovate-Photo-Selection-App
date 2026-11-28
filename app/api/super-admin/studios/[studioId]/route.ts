@@ -341,7 +341,7 @@ export async function PATCH(
             );
         }
 
-        const validPlans = ["Trial", "Basic", "Professional", "Enterprise"] as const;
+        const validPlans = ["Trial", "Basic", "Pro", "Premium"] as const;
 
         type Plan = (typeof validPlans)[number];
 
@@ -349,13 +349,13 @@ export async function PATCH(
             validPlans as readonly string[]
         ).includes(data.plan)
             ? (data.plan as Plan)
-            : "Professional";
+            : "Pro";
 
         const planPrices: Record<Plan, number> = {
             Trial: 0,
-            Basic: 3999,
-            Professional: 8999,
-            Enterprise: 24999,
+            Basic: 1999,
+            Pro: 4999,
+            Premium: 9999,
         };
 
         const price = planPrices[plan];

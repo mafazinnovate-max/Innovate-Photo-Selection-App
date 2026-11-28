@@ -28,7 +28,7 @@ import { useEffect, useMemo, useState } from "react";
 
 
 type StudioStatus = "Active" | "Inactive" | "Expiring Soon";
-type Plan = "Trial" | "Basic" | "Professional" | "Enterprise";
+type Plan = "Trial" | "Basic" | "Pro" | "Premium";
 
 interface Studio {
     id: string;
@@ -113,8 +113,8 @@ const planOptions = [
     "All Plans",
     "Trial",
     "Basic",
-    "Professional",
-    "Enterprise",
+    "Pro",
+    "Premium",
 ];
 
 function formatNumber(value: number) {
@@ -350,8 +350,8 @@ export default function StudiosPage() {
                     const validPlans: Plan[] = [
                         "Trial",
                         "Basic",
-                        "Professional",
-                        "Enterprise",
+                        "Pro",
+                        "Premium",
                     ];
 
                     const plan: Plan = validPlans.includes(
