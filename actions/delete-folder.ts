@@ -164,15 +164,32 @@ export const deleteFolder = async (folderId: string) => {
             }
         }
 
-        // 8. Soft delete folders only; retain Image and Folder records
-        await prisma.folder.updateMany({
-            where: {
-                id: { in: Array.from(folderIds) },
-                eventId,
-            },
-            data: {
-                deletedAt: new Date(),
-            },
+        // 8. Clear image hashes and soft-delete folders together
+        await prisma.$transaction(async (tx) => {
+            // Release duplicate hashes from images in deleted folders
+            await tx.image.updateMany({
+                where: {
+                    folderId: {
+                        in: Array.from(folderIds),
+                    },
+                },
+                data: {
+                    fileHash: null,
+                },
+            });
+
+            // Soft-delete the selected folder and its descendants
+            await tx.folder.updateMany({
+                where: {
+                    id: {
+                        in: Array.from(folderIds),
+                    },
+                    eventId,
+                },
+                data: {
+                    deletedAt: new Date(),
+                },
+            });
         });
 
         revalidatePath("/events");

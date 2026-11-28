@@ -58,7 +58,7 @@ export default function GalleryAccessModal({
                             <img
                                 src={studioLogoUrl}
                                 alt={`${studioName} logo`}
-                                className="h-20 w-20 rounded-full border border-white/10 bg-white object-contain"
+                                className="h-20 w-20 rounded-full border border-white/10 object-contain"
                             />
                         )}
 

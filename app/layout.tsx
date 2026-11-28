@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description:
     "A web application for event photo selection and management, built with Next.js, Prisma, and Tailwind CSS.",
   icons: {
-    icon: "/innovate-logo.png",
+    icon: "/picknovate-logo.png",
     shortcut: "/innovate-logo.png",
     apple: "/innovate-logo.png",
   },
