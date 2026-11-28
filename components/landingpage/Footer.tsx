@@ -308,7 +308,7 @@ export default function Footer() {
                                 href="tel:+918438430504"
                                 className="inline-block text-lg font-medium tracking-tight text-white transition-colors duration-300 hover:text-[#FFC93C] sm:text-xl"
                             >
-                                +91 84384 30504
+                                +91 93610 35209
                             </a>
                         </div>
 
